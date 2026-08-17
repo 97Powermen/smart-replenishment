@@ -1141,7 +1141,7 @@ const IMPORT_FIELDS = [
   '预测起始月份','月预测M0','月预测M1','月预测M2','月预测M3','月预测M4','月预测M5',
   '最新周销量','近四周销量',
   '安全库存周数','海外仓保底天数','生产周期(天)','计划周期(天)','备货下单频率(天)',
-  'FBA库存','下架库存','海外仓库存','挪用库存',
+  '直发比例(%)','FBA库存','下架库存','海外仓库存','挪用库存',
   '海外仓在途到仓','海外仓在途到仓周数',
   '国内在途到仓【可选】','国内在途到仓周数【可选】',
   '在制未交到仓【可选】','在制未交到仓周数【可选】',
@@ -1157,7 +1157,7 @@ const FIELD_ID = {
   '月预测M3':'fcM3','月预测M4':'fcM4','月预测M5':'fcM5',
   '最新周销量':'currentWeekSales','近四周销量':'last4WeeksSales',
   '安全库存周数':'safetyStockWeeks','海外仓保底天数':'osBufferDays','生产周期(天)':'prodCycleDays','计划周期(天)':'planningDays','备货下单频率(天)':'orderFreqDays',
-  'FBA库存':'fbaStock','下架库存':'unsellableStock','海外仓库存':'osStock','挪用库存':'divertStock',
+  '直发比例(%)':'directRatio','FBA库存':'fbaStock','下架库存':'unsellableStock','海外仓库存':'osStock','挪用库存':'divertStock',
   '海外仓在途到仓':'osInTransit','海外仓在途到仓周数':'osInTransitWeeks',
   '国内在途到仓【可选】':'domInTransit','国内在途到仓周数【可选】':'domInTransitWeeks',
   '在制未交到仓【可选】':'domInProd','在制未交到仓周数【可选】':'domInProdWeeks',
@@ -1174,6 +1174,7 @@ const FIELD_ID = {
 const NUMERIC_IDS = ['fcM0','fcM1','fcM2','fcM3','fcM4','fcM5',
   'currentWeekSales','last4WeeksSales',
   'safetyStockWeeks','osBufferDays','prodCycleDays','planningDays','orderFreqDays',
+  'directRatio',
   'fbaStock','unsellableStock','osStock','divertStock',
   'osInTransit','osInTransitWeeks','domInTransit','domInTransitWeeks','domInProd','domInProdWeeks',
   'casesPerUnit','boxVolume','unitWeight',
@@ -1236,6 +1237,19 @@ function normalizeCell(v, id){
 /* 发货模式宽松判定：包含「中转」即视为中转（兼容 中转/中转仓/中轉 等写法） */
 function isTransitShip(p){
   return !!p && /中转/.test(String(p.shipMode || ''));
+}
+/* 直发比例解析（0-100）：未配置（空）返回 null = 按 shipMode 判断；
+   0 = 全中转；100 = 全直发；0<x<100 = 混合（部分直发 + 部分海外仓） */
+function parseDirectRatio(p){
+  const raw = p ? p.directRatio : null;
+  if(raw === '' || raw == null) return null;
+  const v = Number(raw);
+  if(isNaN(v)) return null;
+  return Math.max(0, Math.min(100, v));
+}
+function isMixedShip(p){
+  const d = parseDirectRatio(p);
+  return d !== null && d > 0 && d < 100;
 }
 function transportDays(methodName){
   // 兼容旧调用方：从方法名取国内到FBA时效
@@ -1657,12 +1671,16 @@ function planProduct(p){
   const leadTimeWeeks = prodCycleDays > 0 ? Math.max(1, Math.round(prodCycleDays / 7)) : 0;
   const cartonSize = Math.max(1, num(p.casesPerUnit) || DEFAULT_CARTON);
   const methods = currentMethods();
-  /* 发货模式：直发 / 中转（默认直发）。中转 = 国内→海外仓→FBA，总前置 = domToFbaDays + osToFbaDays */
+  /* 发货模式：直发 / 中转（默认直发）。中转 = 国内→海外仓→FBA，总前置 = domToFbaDays + osToFbaDays。
+     混合模式（直发比例 0<x<100）：每个批次拆两个子批——直发子批（早到）+ 海外仓子批（晚到） */
   const isTransit = isTransitShip(p);
-  /* 海外仓保底（仅中转有效）：固定天数 × 月均预测，海外仓需常备该量 */
-  const osBufferDays = isTransit ? num(p.osBufferDays) : 0;
-  /* 计算用前置期（周）：中转取总前置，直发取原有 */
-  const leadWeeksOf = isTransit ? methodTransitLeadWeeks : methodLeadWeeks;
+  const directRatio = parseDirectRatio(p);      // null=未配置, 0=全中转, 100=全直发, 0<x<100=混合
+  const isMixed = isMixedShip(p);               // 0<x<100
+  /* 海外仓保底（仅中转/混合有效）：固定天数 × 月均预测，海外仓需常备该量 */
+  const osBufferDays = (isTransit || isMixed) ? num(p.osBufferDays) : 0;
+  /* 计算用前置期（周）：混合模式选方式用直发前置（直发子批先到、cover 早期缺口）；
+     纯中转取总前置，纯直发取原有 */
+  const leadWeeksOf = isTransit && !isMixed ? methodTransitLeadWeeks : methodLeadWeeks;
 
   // 销售状态判断
   const noStockStatuses = ['售完即止','销呆滞','销呆滞不备货'];
@@ -1745,9 +1763,10 @@ function planProduct(p){
     const coverageEnd = baseCoverageEnd;
     let qty = Math.max(0, demandInCoverage + targetWeekSafety - availableAtArrive);
 
-    /* 中转保底：海外仓需常备 osBufferDays 天的量（天数 × 月均预测）。
-       备货量至少把海外仓补到保底水位（海外仓现有库存 + 在途视作已覆盖）。 */
-    if(isTransit && osBufferDays > 0){
+    /* 中转/混合保底：海外仓需常备 osBufferDays 天的量（天数 × 月均预测）。
+       备货量至少把海外仓补到保底水位（海外仓现有库存 + 在途视作已覆盖）。
+       混合模式下同样生效——海外仓子批至少覆盖保底缺口。 */
+    if((isTransit || isMixed) && osBufferDays > 0){
       const bufferQty = Math.max(1, Math.round(osBufferDays / 30 * monthlyAvg));
       const osCovered = num(p.osStock) + num(p.osInTransit) + num(p.divertStock);
       const osGap = Math.max(0, bufferQty - osCovered);
@@ -1830,31 +1849,63 @@ function planProduct(p){
       const subLeadWeeks = leadWeeksOf(subMethod);
       /* 下单周 = 到货周 - 生产周期 - 运输前置 + 1（必须把生产周期算进去，否则货赶不上 targetArriveWeek） */
       const subOrderWeek = Math.max(0, targetArriveWeek - leadTimeWeeks - subLeadWeeks + 1);
-      /* 方案B：到货周 = 精确到仓日所在周（floor 精确总天数/7），保证「预计到仓时间」一定落在该周「日期范围」内。
-         精确总天数 = 下单周*7 + 生产天数 + 运输天数(dom) + 中转段(os) + FBA上架天数 */
       const prodDays = num(p.prodCycleDays) || 0;
       const domDays = num(subMethod.domToFbaDays != null ? subMethod.domToFbaDays : subMethod.transportDays);
-      const osDays = isTransit ? (num(subMethod.osToFbaDays) || 0) : 0;
-      const exactTotalDays = subOrderWeek * 7 + prodDays + domDays + osDays + num(fbaShelfDays);
-      const actualArriveWeek = Math.min(weeks - 1, Math.max(0, Math.floor(exactTotalDays / 7)));
-
+      const osDays = num(subMethod.osToFbaDays) || 0;
       /* 需求出货日期 = 下单日 + 生产周期天数（精确，非周取整）
          orderDate 为下单日，arriveDate 为生产完成后的出货日 */
       const orderDateComputed = addWeeks(new Date(), subOrderWeek);
       const arriveDateComputed = addDays(orderDateComputed, prodDays);
 
-      replenishments.push({
-        orderWeek: subOrderWeek,
-        orderDate: orderDateComputed,
-        arriveWeek: actualArriveWeek,
-        arriveDate: arriveDateComputed,
-        method: { ...subMethod },  /* 浅克隆，避免多产品共享同一 method 对象引用 */
-        amount: subQty,
-        cost: subQty * num(subMethod.pricePerKG),
-        isTransit: isTransit,
-        osBufferDays: osBufferDays
-      });
-      extraArrivals[actualArriveWeek] = (extraArrivals[actualArriveWeek] || 0) + subQty;
+      /* 混合模式（直发比例 0<x<100）：批次拆两个子批
+         直发子批 → isTransit=false，到 FBA 按 domDays+fbaShelf（早到，cover 近期缺口）
+         海外仓子批 → isTransit=true，到 FBA 按 domDays+osDays+fbaShelf（晚到，cover 远期缺口） */
+      let directQty = 0, osQty = 0;
+      if(isMixed){
+        directQty = Math.round(subQty * directRatio / 100);
+        if(cartonSize > 1) directQty = Math.ceil(directQty / cartonSize) * cartonSize;
+        directQty = Math.min(directQty, subQty);
+        osQty = subQty - directQty;
+      } else if(isTransit){
+        osQty = subQty;
+      } else {
+        directQty = subQty;
+      }
+
+      /* 直发子批 */
+      if(directQty > 0){
+        const exactDirectDays = subOrderWeek * 7 + prodDays + domDays + num(fbaShelfDays);
+        const awDirect = Math.min(weeks - 1, Math.max(0, Math.floor(exactDirectDays / 7)));
+        replenishments.push({
+          orderWeek: subOrderWeek,
+          orderDate: orderDateComputed,
+          arriveWeek: awDirect,
+          arriveDate: arriveDateComputed,
+          method: { ...subMethod },  /* 浅克隆，避免多产品共享同一 method 对象引用 */
+          amount: directQty,
+          cost: directQty * num(subMethod.pricePerKG),
+          isTransit: false,
+          osBufferDays: 0
+        });
+        extraArrivals[awDirect] = (extraArrivals[awDirect] || 0) + directQty;
+      }
+      /* 海外仓子批 */
+      if(osQty > 0){
+        const exactOsDays = subOrderWeek * 7 + prodDays + domDays + osDays + num(fbaShelfDays);
+        const awOs = Math.min(weeks - 1, Math.max(0, Math.floor(exactOsDays / 7)));
+        replenishments.push({
+          orderWeek: subOrderWeek,
+          orderDate: orderDateComputed,
+          arriveWeek: awOs,
+          arriveDate: arriveDateComputed,
+          method: { ...subMethod },
+          amount: osQty,
+          cost: osQty * num(subMethod.pricePerKG),
+          isTransit: true,
+          osBufferDays: osBufferDays
+        });
+        extraArrivals[awOs] = (extraArrivals[awOs] || 0) + osQty;
+      }
       allocatedQty += subQty;
     }
     /* 推到覆盖窗口末尾，使下次 deficit 检测从 coverageEnd+1 开始 —— 体现下单频率 */
@@ -2762,7 +2813,7 @@ function renderProductList(){
       <td>${esc(p.colorSet||'--')}</td>
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td>${esc(p.salesStatus||'--')}</td>
-      <td>${isTransitShip(p) ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>'}</td>
+      <td>${isMixedShip(p) ? `<span class="ship-badge ship-transit">🚚 直发${parseDirectRatio(p)}%</span>` : (isTransitShip(p) ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}</td>
       <td class="cell-num">${weeks}</td>
       <td class="cell-num">${p.orderFreqDays ? num(p.orderFreqDays) + '天' : '7天'}</td>
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
