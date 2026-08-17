@@ -525,6 +525,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             <th>国内在途</th>
             <th>在制未交</th>
             <th>含在制总数</th>
+            <th>备注</th>
           </tr>
         </thead>
         <tbody id="productTbody"></tbody>
@@ -2715,7 +2716,7 @@ function renderProductList(){
   const f = getListFilter();
   const filtered = all.filter(p => matchListFilter(p, f));
   if(filtered.length === 0){
-    $('productTbody').innerHTML = '<tr><td colspan="20" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
+    $('productTbody').innerHTML = '<tr><td colspan="21" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
     $('productTfoot').innerHTML = '';
     return;
   }
@@ -2773,6 +2774,7 @@ function renderProductList(){
       <td class="cell-num">${fmt(domT)}</td>
       <td class="cell-num">${fmt(domP)}</td>
       <td><button class="stock-expand-btn" onclick="toggleListPipeline('${safeKey}',this)">${fmt(withProdTotal)} ▾</button></td>
+      <td style="min-width:120px;">${esc(p.note||'--')}</td>
     </tr>
     <tr class="stock-detail-row" id="list-pipe-${safeKey}" style="display:none;"><td colspan="19" style="padding:8px 16px;background:var(--bg-soft);">
       <div class="panel" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
@@ -2786,7 +2788,7 @@ function renderProductList(){
   });
   $('productTbody').innerHTML = html;
   $('productTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
-    <td colspan="13" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
+    <td colspan="14" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num">${fmt(totalOS)}</td>
     <td class="cell-num">${fmt(totalDivert)}</td>
@@ -3510,6 +3512,10 @@ function renderOrderTable(){
     } else {
       note = '🟢 常规衔接';
     }
+    /* 调整（2026-08-17）：备注优先同步导入模板「备注」列（p.note），
+       有导入备注则覆盖自动状态备注；空则保留自动备注（紧急衔接/关注衔接等） */
+    const importedNote = String(p.note || '').trim();
+    if(importedNote) note = importedNote;
     totalQty += rp.amount;
     // 只渲染当前页
     if(idx < startIdx || idx >= endIdx) return;
@@ -3524,7 +3530,7 @@ function renderOrderTable(){
       <td>${esc(p.site||'--')}</td>
       <td>${esc(p.region||'--')}</td>
       <td>${esc(p.destWarehouse||'--')}</td>
-      <td contenteditable="true" class="cell-note"></td>
+      <td contenteditable="true" class="cell-note">${esc(note)}</td>
     </tr>`;
   });
   $('orderTbody').innerHTML = html;
@@ -4326,7 +4332,7 @@ function renderPerspective(){
   }
 
   if(counter === 0){
-    tbody.innerHTML = '<tr><td colspan="20" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="21" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('perspectiveTfoot').innerHTML = '';
     const ppb = $('perspectivePageBar'); if(ppb) ppb.innerHTML = '';
   } else {
