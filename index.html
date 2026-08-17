@@ -3494,28 +3494,8 @@ function renderOrderTable(){
   allOrders.forEach((g, idx) => {
     const p = g.p, rp = g.rp;
     const m = rp.method;
-    let note = '';
-    const r = (results || []).find(x => (x.p && x.p.materialCode === p.materialCode));
-    if(r){
-      const currentStock = num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
-      const monthlyAvg = r.avgWeeklyDemand * 4.33;
-      const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
-      if(r.stockoutWeeks > 0 || sellNow < 1){
-        note = '🔴 紧急衔接';
-      } else if(sellNow < 3){
-        note = '🟠 关注衔接';
-      } else if(sellNow >= 4){
-        note = '🔵 呆滞·慎下单';
-      } else {
-        note = '🟢 常规衔接';
-      }
-    } else {
-      note = '🟢 常规衔接';
-    }
-    /* 调整（2026-08-17）：备注优先同步导入模板「备注」列（p.note），
-       有导入备注则覆盖自动状态备注；空则保留自动备注（紧急衔接/关注衔接等） */
-    const importedNote = String(p.note || '').trim();
-    if(importedNote) note = importedNote;
+    /* 备注：仅同步导入模板「备注」列（p.note）；无导入备注则留空（单元格保持可编辑） */
+    const note = String(p.note || '').trim();
     totalQty += rp.amount;
     // 只渲染当前页
     if(idx < startIdx || idx >= endIdx) return;
@@ -3612,15 +3592,8 @@ function exportOrder(format){
   const rows = [head];
   allOrders.forEach(g => {
     const p = g.p, rp = g.rp, m = rp.method, r = g.r;
-    let note = '常规衔接';
-    if(r){
-      const currentStock = num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
-      const monthlyAvg = r.avgWeeklyDemand * 4.33;
-      const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
-      if(r.stockoutWeeks > 0 || sellNow < 1) note = '紧急衔接';
-      else if(sellNow < 3) note = '关注衔接';
-      else if(sellNow >= 4) note = '呆滞·慎下单';
-    }
+    /* 备注：与页面一致，仅同步导入模板「备注」列（p.note） */
+    const note = String(p.note || '').trim();
     rows.push([p.categoryLevel3, p.materialCode, p.materialName, p.specCode, rp.amount,
       rp.arriveDate, m.name,
       p.site, p.region, p.destWarehouse, note]);
