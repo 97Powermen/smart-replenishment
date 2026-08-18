@@ -1145,7 +1145,7 @@ const IMPORT_FIELDS = [
   '海外仓在途到仓','海外仓在途到仓周数',
   '国内在途到仓【可选】','国内在途到仓周数【可选】',
   '在制未交到仓【可选】','在制未交到仓周数【可选】',
-  '备注'
+  '海外仓目的仓库【可选】','备注'
 ];
 const FIELD_ID = {
   '料品编码':'materialCode','存货名称':'materialName','料品规格':'specCode',
@@ -1161,6 +1161,7 @@ const FIELD_ID = {
   '海外仓在途到仓':'osInTransit','海外仓在途到仓周数':'osInTransitWeeks',
   '国内在途到仓【可选】':'domInTransit','国内在途到仓周数【可选】':'domInTransitWeeks',
   '在制未交到仓【可选】':'domInProd','在制未交到仓周数【可选】':'domInProdWeeks',
+  '海外仓目的仓库【可选】':'osDestWarehouse',
   '备注':'note',
   /* 列名别名兼容：用户模板可能用不同写法 */
   '发货方式':'shipMode','发货类型':'shipMode','直发/中转':'shipMode',
@@ -1890,7 +1891,8 @@ function planProduct(p){
           amount: directQty,
           cost: directQty * num(subMethod.pricePerKG),
           isTransit: false,
-          osBufferDays: 0
+          osBufferDays: 0,
+          destWarehouse: String(p.destWarehouse || '').trim() || undefined  /* 直发子批 → 目的仓库 */
         });
         extraArrivals[awDirect] = (extraArrivals[awDirect] || 0) + directQty;
       }
@@ -1907,7 +1909,8 @@ function planProduct(p){
           amount: osQty,
           cost: osQty * num(subMethod.pricePerKG),
           isTransit: true,
-          osBufferDays: osBufferDays
+          osBufferDays: osBufferDays,
+          destWarehouse: String(p.osDestWarehouse || '').trim() || undefined  /* 海外仓子批 → 海外仓目的仓库 */
         });
         extraArrivals[awOs] = (extraArrivals[awOs] || 0) + osQty;
       }
