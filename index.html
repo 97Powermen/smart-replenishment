@@ -3565,7 +3565,7 @@ function renderOrderTable(){
       <td>${esc(m.name||'--')}</td>
       <td>${esc(p.site||'--')}</td>
       <td>${esc(p.region||'--')}</td>
-      <td>${esc(p.destWarehouse||'--')}</td>
+      <td>${esc(rp.destWarehouse || p.destWarehouse || '--')}</td>
       <td contenteditable="true" class="cell-note">${esc(note)}</td>
     </tr>`;
   });
@@ -3652,7 +3652,7 @@ function exportOrder(format){
     const note = String(p.note || '').trim();
     rows.push([p.categoryLevel3, p.materialCode, p.materialName, p.specCode, rp.amount,
       rp.arriveDate, m.name,
-      p.site, p.region, p.destWarehouse, note]);
+      p.site, p.region, rp.destWarehouse || p.destWarehouse, note]);
   });
   const fname = '备货下单表_'+fmtDate(new Date());
   if(format === 'xlsx'){
