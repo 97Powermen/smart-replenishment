@@ -1239,15 +1239,20 @@ function isTransitShip(p){
   return !!p && /中转/.test(String(p.shipMode || ''));
 }
 /* 直发比例解析（0-100）：未配置（空）返回 null = 按 shipMode 判断；
-   0 = 全中转；100 = 全直发；0<x<100 = 混合（部分直发 + 部分海外仓） */
+   0 = 全中转；100 = 全直发；0<x<100 = 混合（部分直发 + 部分海外仓）
+   发货模式=混合 但未填比例 → 默认 50/50 */
 function parseDirectRatio(p){
+  if(!!p && /混合/.test(String(p.shipMode || '')) && (p.directRatio === '' || p.directRatio == null)) return 50;
   const raw = p ? p.directRatio : null;
   if(raw === '' || raw == null) return null;
   const v = Number(raw);
   if(isNaN(v)) return null;
   return Math.max(0, Math.min(100, v));
 }
+/* 混合判定：发货模式含「混合」字样（宽松匹配 混合/直发+混合 等）→ true；
+   或 直发比例 0<x<100 → true */
 function isMixedShip(p){
+  if(!!p && /混合/.test(String(p.shipMode || ''))) return true;
   const d = parseDirectRatio(p);
   return d !== null && d > 0 && d < 100;
 }
@@ -1717,7 +1722,7 @@ function planProduct(p){
       replenishments: [], rec: 0, actualRec: 0, totalCost: 0,
       coverageWeeks, maxBatchSize, orderFreqDays, stockoutWeeks,
       sellableWeeks: 0, earliestArrive: '--',
-      isTransit, osBufferDays
+      isTransit, osBufferDays, isMixed, directRatio
     };
   }
 
@@ -1956,7 +1961,7 @@ function planProduct(p){
     actualRec: totalRec,
     totalCost, totalStockout, stockoutWeeks,
     sellableWeeks, earliestArrive,
-    isTransit, osBufferDays
+    isTransit, osBufferDays, isMixed, directRatio
   };
 }
 
@@ -2813,7 +2818,7 @@ function renderProductList(){
       <td>${esc(p.colorSet||'--')}</td>
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td>${esc(p.salesStatus||'--')}</td>
-      <td>${isMixedShip(p) ? `<span class="ship-badge ship-transit">🚚 直发${parseDirectRatio(p)}%</span>` : (isTransitShip(p) ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}</td>
+      <td>${isMixedShip(p) ? `<span class="ship-badge ship-transit">🚚 混合(直发${parseDirectRatio(p)}%)</span>` : (isTransitShip(p) ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}</td>
       <td class="cell-num">${weeks}</td>
       <td class="cell-num">${p.orderFreqDays ? num(p.orderFreqDays) + '天' : '7天'}</td>
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
@@ -3045,7 +3050,7 @@ function renderResultTable(){
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.salesStatus||'--')}</td>
-      <td>${r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>'}</td>
+      <td>${r.isMixed ? `<span class="ship-badge ship-transit">🚚 混合(直发${r.directRatio}%)</span>` : (r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}</td>
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td class="cell-num">${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天'}</td>
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
@@ -3920,7 +3925,7 @@ function buildDetailContent(r){
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${tier}">${tier}</span></div>
     <div><b>销售状态：</b>${esc(p.salesStatus||'--')}</div>
-    <div><b>发货模式：</b>${r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>'}${r.isTransit && r.osBufferDays ? ` <span style="color:var(--text-muted);font-size:11px;">海外仓保底 ${r.osBufferDays} 天</span>` : ''}</div>
+    <div><b>发货模式：</b>${r.isMixed ? `<span class="ship-badge ship-transit">🚚 混合(直发${r.directRatio}%)</span>` : (r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}${(r.isTransit || r.isMixed) && r.osBufferDays ? ` <span style="color:var(--text-muted);font-size:11px;">海外仓保底 ${r.osBufferDays} 天</span>` : ''}</div>
     <div><b>计划周期：</b>${r.weeks} 周</div>
     <div><b>下单频率：</b>${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天（默认）'}</div>
     <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}</div>
@@ -4506,7 +4511,7 @@ function openDetailBuild(r, p, methods){
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${p.priorityTier||99}">${p.priorityTier||'--'}</span></div>
     <div><b>销售状态：</b>${esc(p.salesStatus||'--')}</div>
-    <div><b>发货模式：</b>${r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>'}${r.isTransit && r.osBufferDays ? ` <span style="color:var(--text-muted);font-size:11px;">海外仓保底 ${r.osBufferDays} 天</span>` : ''}</div>
+    <div><b>发货模式：</b>${r.isMixed ? `<span class="ship-badge ship-transit">🚚 混合(直发${r.directRatio}%)</span>` : (r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}${(r.isTransit || r.isMixed) && r.osBufferDays ? ` <span style="color:var(--text-muted);font-size:11px;">海外仓保底 ${r.osBufferDays} 天</span>` : ''}</div>
     <div><b>计划周期：</b>${r.weeks} 周</div>
     <div><b>下单频率：</b>${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天（默认）'}</div>
     <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}</div>
