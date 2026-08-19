@@ -183,6 +183,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .result-table .cell-plan { color: var(--primary); font-weight: 600; }
 .result-table .cell-note { background: #fffef5; min-width: 80px; cursor: text; }
 .result-table .cell-note:focus { outline: 2px solid var(--primary); outline-offset: -2px; background: #fff; }
+/* 算法说明样式 */
+.algo-block { margin-bottom: 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; overflow: hidden; }
+.algo-step { padding: 8px 12px; background: var(--bg-soft, #f5f7fa); font-size: 13px; border-bottom: 1px solid var(--border, #e5e7eb); }
+.algo-note { padding: 6px 12px; font-size: 12px; color: #b45309; background: #fffbeb; }
 .result-table .cell-danger { color: var(--danger); font-weight: 600; }
 .result-table .cell-warn { color: var(--warning); font-weight: 600; }
 .result-table .cell-ok { color: var(--success); }
@@ -1004,6 +1008,107 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           </thead>
           <tbody id="userTbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 算法说明 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🧮</div>
+        <h2>算法说明（备货需求计算逻辑）</h2>
+        <button class="rec-clear-btn" style="display:inline-block;" onclick="toggleAlgoDoc()">展开 / 收起</button>
+      </div>
+      <div id="algoDoc" style="display:none;">
+        <div class="warn-box" style="margin-bottom:10px;">以下为「生成备货方案」的需求计算逻辑说明，供核对口径使用。核心链路：<b>月度预测 → 周需求 → 到货基线 → 库存模拟 → 缺口识别 → 备货量计算 → 批次下单</b>。</div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>① 输入（产品级字段）</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:100px;">类别</th><th>字段</th></tr></thead>
+            <tbody>
+              <tr><td>需求</td><td>月预测 M0~M5（6 个月）、预测起始月份、最新周销量 / 近四周销量（无月预测时兜底）</td></tr>
+              <tr><td>库存</td><td>FBA库存、下架库存、海外仓库存、挪用库存</td></tr>
+              <tr><td>在途/在制</td><td>海外仓在途（+周数）、国内在途（+周数）、在制未交（+周数）、多票导入</td></tr>
+              <tr><td>参数</td><td>安全库存周数、生产周期(天)、计划周期(天)、备货下单频率(天)、直发比例(%)、海外仓保底天数</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>② 周需求展开</b>　月度预测 → 每周需求 = 月预测 ÷ 4.33（按月内周数均摊）</div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:140px;">情况</th><th>逻辑</th></tr></thead>
+            <tbody>
+              <tr><td>有预测起始月份</td><td>起始月之前的周 → 需求 = 0；起始月起的周 → 按「周所在月 − 起始月」偏移取对应 fcMx，超出 6 个月用平均值</td></tr>
+              <tr><td>无预测起始月份</td><td>从第 0 周按 所在月索引（w÷4.33）取 fcMx 展开</td></tr>
+              <tr><td>无月预测（全空）</td><td>兜底用 实际周销量 / 近四周销量 / 最新周销量</td></tr>
+            </tbody>
+          </table>
+          <div class="algo-note">⚠️ 前导 0 月份不得 slice 掉（会左移错位）——直接按偏移取原始值，0 预测月的周需求自然为 0。</div>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>③ 到货基线</b></div>
+          <div style="padding:6px 10px;font-size:13px;">第 0 周 = <b>FBA库存 + 下架库存 + 海外仓库存 + 挪用库存</b>（期初可售）；之后各周 = 海外仓在途到仓 + 国内在途到仓 + 在制未交到仓（按各自到仓周数）+ 多票在途/在制累加。</div>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>④ 库存模拟（逐周滚动）</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">指标</th><th>公式 / 规则</th></tr></thead>
+            <tbody>
+              <tr><td>期末可售</td><td>期初可售 + 当周到货 − 当周需求</td></tr>
+              <tr><td>安全线（周级）</td><td>周需求 × 安全库存周数</td></tr>
+              <tr><td>缺货判定</td><td>可用量 &lt; 周需求 → 缺货 = 周需求 − 可用量（期末 = 0）</td></tr>
+              <tr><td>预警判定</td><td>期末可售 &lt; 安全线 → 黄色预警（周次计划表显示）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>⑤ 缺口识别</b></div>
+          <div style="padding:6px 10px;font-size:13px;">每次模拟后找<b>第一个缺口周</b>（缺货 &gt; 0 或 期末 &lt; 安全线），从上次覆盖周+1 开始扫描 → <b>firstDeficit</b>，作为本批次的目标到货周。</div>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>⑥ 备货量计算（单个批次）</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
+            <tbody>
+              <tr><td>覆盖窗口</td><td>目标到货周 ~ 目标到货周 + 下单频率覆盖周数（7天→1周 / 15天→2周 / 30天→4周）</td></tr>
+              <tr><td>覆盖窗口需求</td><td>Σ（周需求 − 已到货）</td></tr>
+              <tr><td>备货量 qty</td><td>覆盖窗口需求 + 目标周安全线 − 目标周可用量</td></tr>
+              <tr><td>缺货周补偿</td><td>目标周缺货时，qty ≥ 缺货量 + 安全线</td></tr>
+              <tr><td>海外仓保底</td><td>中转/混合：qty ≥ 保底天数 × 月均预测 − 海外仓已覆盖量</td></tr>
+              <tr><td>上限 / 取整</td><td>按最大批次量（月均 × 频率周数 ÷ 4.33）封顶；按单箱数量向上取整，且 ≥ MOQ</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
+          <div style="padding:6px 10px;font-size:13px;">
+            备货量 → 选运输方式（紧急缺口 ≤3 周升舱 / 常规方式 / 最快能到）→ 计算下单周与到货周：<br>
+            下单周 = 目标到货周 − 生产周期(周) − 运输前置(周) + 1<br>
+            到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)<br>
+            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批）。循环直到无缺口或达最大迭代数。
+          </div>
+        </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>核心公式速记</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">指标</th><th>公式</th></tr></thead>
+            <tbody>
+              <tr><td>周需求</td><td>月预测 ÷ 4.33</td></tr>
+              <tr><td>期初可售</td><td>FBA + 下架 + 海外仓 + 挪用（第 0 周）</td></tr>
+              <tr><td>期末可售</td><td>期初 + 到货 − 需求</td></tr>
+              <tr><td>缺货</td><td>max(0, 需求 − 可用)</td></tr>
+              <tr><td>安全线</td><td>周需求 × 安全库存周数</td></tr>
+              <tr><td>备货量</td><td>覆盖窗口需求 + 安全线 − 当前可用（+缺货补偿、保底、封顶、取整）</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -3421,6 +3526,14 @@ function updateWeeklyPlanFromReplenishments(r){
   const avgStartWeek = getForecastStartWeek(r.p, weeks);
   const sim = simulate(r.weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek);
   r.weeklyPlan = sim.plan;  /* simulate 返回 { plan, baseSafety }，取 .plan */
+}
+
+/* 算法说明 展开/收起 */
+function toggleAlgoDoc(){
+  const el = $('algoDoc');
+  if(!el) return;
+  const show = el.style.display !== 'block';
+  el.style.display = show ? 'block' : 'none';
 }
 
 /* 刷新当前单品详情（弹窗/行内展开），用于批次表编辑后让周次计划表/批次表同步
