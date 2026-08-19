@@ -2117,37 +2117,22 @@ function importPipelineXlsx(event){
       const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
       const header = rows[0].map(h => String(h||'').trim());
 
-/* 8 列匹配（2026-08-19 修复：优先精确/「打单」列，避免把「原料品编码」误当「打单料品编码」——
-          原料品编码/原料品规格 也含"料品编码/规格"字样，旧顺序匹配会先命中原料列，
-          导致 3436 行原料编码为空被漏抓、匹配率掉一半） */
-      function matchCol(exactList, keywords){
-        /* 第一轮：精确匹配（含「打单」优先） */
+/* 列匹配（2026-08-19 精简）：编码只认「打单料品编码」、规格只认「打单料品规格」，
+          名称列不参与匹配；原料品编码/原料品规格一律不考虑。列名精确匹配。 */
+      function exactCol(names){
         for(let i=0;i<header.length;i++){
-          if(exactList.indexOf(header[i]) >= 0) return i;
-        }
-        /* 第二轮：精确含关键词（跳过「原料品」列，防止误匹配） */
-        for(let i=0;i<header.length;i++){
-          const h = header[i];
-          if(h.indexOf('原料品') >= 0) continue;
-          if(keywords.some(kw => h === kw || h.indexOf(kw) >= 0)) return i;
-        }
-        /* 第三轮：大小写不敏感模糊（仍跳过「原料品」列） */
-        for(let i=0;i<header.length;i++){
-          const hl = header[i].toLowerCase();
-          if(hl.indexOf('原料品') >= 0) continue;
-          if(keywords.some(kw => hl.indexOf(kw.toLowerCase()) >= 0)) return i;
+          if(names.indexOf(header[i]) >= 0) return i;
         }
         return -1;
       }
-      let replyIdx=-1, codeIdx=-1, nameIdx=-1, specIdx=-1, transitIdx=-1, prodIdx=-1, leadIdx=-1, arriveIdx=-1;
-      replyIdx = matchCol(['回复出货日期','出货日期'], ['回复出货','出货日期','replydate']);
-      codeIdx  = matchCol(['打单料品编码','料品编码','产品编码','SKU'], ['料品编码','产品编码','SKU','materialcode','itemcode']);
-      nameIdx  = matchCol(['打单料品名称','料品名称','产品名称','存货名称'], ['料品名称','产品名称','存货','materialname']);
-      specIdx  = matchCol(['打单料品规格','料品规格'], ['规格','spec']);
-      transitIdx = matchCol(['在途数量'], ['在途数量','在途','transit']);
-      prodIdx    = matchCol(['未交数量'], ['未交数量','未交','undeliv']);
-      leadIdx    = matchCol(['运输时效'], ['运输时效','时效','leadtime']);
-      arriveIdx  = matchCol(['预计入库时间','预计到货日期'], ['预计入库','入库时间','预计到货日期','arrival']);
+      let replyIdx=-1, codeIdx=-1, specIdx=-1, transitIdx=-1, prodIdx=-1, leadIdx=-1, arriveIdx=-1;
+      replyIdx   = exactCol(['回复出货日期','出货日期']);
+      codeIdx    = exactCol(['打单料品编码']);
+      specIdx    = exactCol(['打单料品规格']);
+      transitIdx = exactCol(['在途数量']);
+      prodIdx    = exactCol(['未交数量']);
+      leadIdx    = exactCol(['运输时效']);
+      arriveIdx  = exactCol(['预计入库时间','预计到货日期']);
 
       const miss = [];
       if (codeIdx < 0) miss.push('打单料品编码');
@@ -2168,18 +2153,16 @@ function importPipelineXlsx(event){
       let success = 0, fail = 0;
       const failDetails = [];
 
-      /* 行级黑名单：合计行才跳过——非空格子少 + 文本含合计词（避免产品名/规格碰巧含"合计"被误跳） */
+      /* 行级黑名单：合计行才跳过——非空格子少 + 规格列含合计词（名称列不参与匹配） */
       const SKIP_KW = ['合计','汇总','小计','总计','合  计','总计：','合计：','汇总：'];
       let skippedSummary = 0;
       for (let r=1; r<rows.length; r++){
         const row = rows[r];
         if (!row || row.every(c => c==='' || c==null)) continue;
         const nonEmptyCount = row.filter(c => c !== '' && c != null).length;
-        const rowNameRaw = String((nameIdx>=0 ? row[nameIdx] : '') || '');
         const rowSpecRaw = String((specIdx>=0 ? row[specIdx] : '') || '');
-        /* 关键修复（2026-08-19）：原判定用子串匹配，产品名/规格碰巧含"合计"字样会被误跳。
-           改为只在"非空格子 ≤ 3"且含合计词时才视为合计行（更保守）。 */
-        const isSummaryRow = nonEmptyCount <= 3 && SKIP_KW.some(kw => rowNameRaw.indexOf(kw) >= 0 || rowSpecRaw.indexOf(kw) >= 0);
+        /* 保守判定：只在"非空格子 ≤ 3"且规格列含合计词时才视为合计行（避免规格碰巧含"合计"被误跳） */
+        const isSummaryRow = nonEmptyCount <= 3 && SKIP_KW.some(kw => rowSpecRaw.indexOf(kw) >= 0);
         if (isSummaryRow){ skippedSummary++; continue; }
         const code = String(row[codeIdx]||'').trim();
         if (!code){ fail++; failDetails.push({ code:'(空)', reason:'打单料品编码为空' }); continue; }
