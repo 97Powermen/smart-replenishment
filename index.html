@@ -2117,19 +2117,37 @@ function importPipelineXlsx(event){
       const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
       const header = rows[0].map(h => String(h||'').trim());
 
-      /* 8 列模糊匹配 */
+/* 8 列匹配（2026-08-19 修复：优先精确/「打单」列，避免把「原料品编码」误当「打单料品编码」——
+          原料品编码/原料品规格 也含"料品编码/规格"字样，旧顺序匹配会先命中原料列，
+          导致 3436 行原料编码为空被漏抓、匹配率掉一半） */
+      function matchCol(exactList, keywords){
+        /* 第一轮：精确匹配（含「打单」优先） */
+        for(let i=0;i<header.length;i++){
+          if(exactList.indexOf(header[i]) >= 0) return i;
+        }
+        /* 第二轮：精确含关键词（跳过「原料品」列，防止误匹配） */
+        for(let i=0;i<header.length;i++){
+          const h = header[i];
+          if(h.indexOf('原料品') >= 0) continue;
+          if(keywords.some(kw => h === kw || h.indexOf(kw) >= 0)) return i;
+        }
+        /* 第三轮：大小写不敏感模糊（仍跳过「原料品」列） */
+        for(let i=0;i<header.length;i++){
+          const hl = header[i].toLowerCase();
+          if(hl.indexOf('原料品') >= 0) continue;
+          if(keywords.some(kw => hl.indexOf(kw.toLowerCase()) >= 0)) return i;
+        }
+        return -1;
+      }
       let replyIdx=-1, codeIdx=-1, nameIdx=-1, specIdx=-1, transitIdx=-1, prodIdx=-1, leadIdx=-1, arriveIdx=-1;
-      header.forEach((h,i) => {
-        const hl = h.toLowerCase();
-        if (h.includes('回复出货') || h.includes('出货日期') || hl.includes('replydate')) replyIdx = i;
-        else if ((h.includes('料品编码') || h.includes('产品编码') || h.includes('SKU') || hl.includes('materialcode') || hl.includes('itemcode')) && codeIdx < 0) codeIdx = i;
-        else if ((h.includes('料品名称') || h.includes('产品名称') || h.includes('存货') || hl.includes('materialname')) && nameIdx < 0) nameIdx = i;
-        else if ((h.includes('规格') || hl.includes('spec')) && specIdx < 0) specIdx = i;
-        else if ((h.includes('在途数量') || (h.includes('在途') && h.includes('数量')) || hl.includes('transit')) && transitIdx < 0) transitIdx = i;
-        else if ((h.includes('未交数量') || (h.includes('未交') && h.includes('数量')) || hl.includes('undeliv')) && prodIdx < 0) prodIdx = i;
-        else if ((h.includes('运输时效') || h.includes('时效') || hl.includes('leadtime')) && leadIdx < 0) leadIdx = i;
-        else if ((h.includes('预计入库') || h.includes('入库时间') || h.includes('预计到货日期') || hl.includes('arrival')) && arriveIdx < 0) arriveIdx = i;
-      });
+      replyIdx = matchCol(['回复出货日期','出货日期'], ['回复出货','出货日期','replydate']);
+      codeIdx  = matchCol(['打单料品编码','料品编码','产品编码','SKU'], ['料品编码','产品编码','SKU','materialcode','itemcode']);
+      nameIdx  = matchCol(['打单料品名称','料品名称','产品名称','存货名称'], ['料品名称','产品名称','存货','materialname']);
+      specIdx  = matchCol(['打单料品规格','料品规格'], ['规格','spec']);
+      transitIdx = matchCol(['在途数量'], ['在途数量','在途','transit']);
+      prodIdx    = matchCol(['未交数量'], ['未交数量','未交','undeliv']);
+      leadIdx    = matchCol(['运输时效'], ['运输时效','时效','leadtime']);
+      arriveIdx  = matchCol(['预计入库时间','预计到货日期'], ['预计入库','入库时间','预计到货日期','arrival']);
 
       const miss = [];
       if (codeIdx < 0) miss.push('打单料品编码');
