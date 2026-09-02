@@ -1906,9 +1906,17 @@ function planProduct(p){
       qty = Math.max(qty, weeklyPlan[targetArriveWeek].stockout + targetWeekSafety);
     }
     // cap by maxBatchSize + round to carton
-    qty = Math.min(qty, maxBatchSize);
+    /* 2026-09-02 修复：紧急场景 cap 放宽到 2 倍——
+       原 cap（=订单频率对应批次量 ≈ 月均/4.33/箱取整）在已断货时太小，首批补不到「缺口+安全线」，
+       导致当周需求 1247 都覆盖不了、出现「首批补不够 → 断货 → 才衔接下一批」的怪现象。
+       「紧急」判定：① firstDeficit ≤ 3 周（≈ 1 个月内将断货）或 ② firstDeficit 周已经断货（stockout>0）——
+       ② 才是关键（用户案例 firstDeficit=W7/W8，远大于 3，但 W8 期末 0 缺货 354 已是断货）。
+       非紧急场景仍按原 cap（节奏优先，不打乱月度下单频率）。 */
+    const isUrgentBatch = firstDeficit >= 0 && (firstDeficit <= 3 || (weeklyPlan[firstDeficit] && weeklyPlan[firstDeficit].stockout > 0));
+    const urgentCap = isUrgentBatch ? maxBatchSize * 2 : maxBatchSize;
+    qty = Math.min(qty, urgentCap);
     qty = Math.ceil(qty / cartonSize) * cartonSize;
-    qty = Math.min(qty, maxBatchSize);
+    qty = Math.min(qty, urgentCap);
     if(qty < cartonSize && qty > 0) qty = cartonSize;
     /* 即使不补也要把 lastUnavoidableWeek 推到 coverageEnd —— 否则 cadence 会退化为相邻周 */
     if(qty <= 0){ lastUnavoidableWeek = coverageEnd; continue; }
