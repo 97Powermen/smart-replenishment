@@ -1083,7 +1083,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
         <div class="algo-block">
           <div class="algo-step"><b>⑤ 不可避免周扫描</b></div>
-          <div style="padding:6px 10px;font-size:13px;">每次模拟后从 <b>lastUnavoidableWeek+1</b> 起扫描，第一个 <b>期末 &lt; 安全线 或 已断货 stockout&gt;0</b> 的周 → <b>firstDeficit</b>。从 <b>firstDeficit</b> 起再扫一串<b>「不可避免周」</b>（条件：① 该周已断货；② 该周距今天不足 leadTimeWeeks 即最快方式也赶不上），记录 <b>unavoidableEnd</b>。<br>
+          <div style="padding:6px 10px;font-size:13px;">每次模拟后从 <b>lastUnavoidableWeek+1</b> 起扫描，第一个 <b>期末 &lt; 安全线 或 已断货 stockout&gt;0</b> 的周 → <b>firstDeficit</b>。从 <b>firstDeficit</b> 起扫<b>「不可避免周」</b>（条件：① 该周已断货；② 该周 <b>&lt; fastestArriveWeek</b>——即使今天立刻下单 + 绝对最快方式也到不了；fastestArriveWeek = floor((生产天数 + 最快方式运输天数 + 上架天数) ÷ 7)），记录 <b>unavoidableEnd</b>。<br>
+          <b>2026-09-02 修复</b>：以 fastestArriveWeek 为硬边界截断。旧逻辑以「模拟中断货延续到哪」为界，而模拟里尚未排货的周天然全断货 → 会把 unavoidableEnd 顶到计划期末 → 目标到货周被推远 → 升舱逻辑产生「很晚下单却用快递」的非常规贵订单。<br>
           <b>业务规则（演示 2）</b>：不可避免周的缺口数<b>可忽略</b>——相当于重新备货，不再追回该缺口的量，转而从 unavoidableEnd+1 之后规划。
           </div>
         </div>
@@ -1106,12 +1107,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div class="algo-block">
           <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
           <div style="padding:6px 10px;font-size:13px;">
-            单批量 = maxBatchSize → 选运输方式（<b>不可避免缺口 → 强制最快能按时到（用户原话：使用最合理的运输方式快速衔接，减少断货量及断货周期）</b>；否则常规能按时到用常规、来不及升舱、最快兜底）→ 计算下单周与到货周：<br>
-            下单周 = 目标到货周 − 生产周期(周) − 运输前置(周) + 1<br>
+            单批量 = maxBatchSize → 选运输方式（<b>不可避免缺口 → 强制绝对最快方式 fastestSub 且下单周=0（今天立刻下单止损）</b>；否则常规能按时到用常规、来不及升舱、最快兜底）→ 计算下单周与到货周：<br>
+            下单周 = 目标到货周 − 生产周期(周) − 运输前置(周) + 1（紧急单固定为 0）<br>
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)<br>
+            <b>能否按时到 = canReachTarget(方式)</b>：生产周期(周) + 运输前置(周) ≤ 目标到货周 + 1（允许 1 周余量容纳上架天数与取整误差；修复漏算生产周期的误判——「以为普船35 能按时衔接、实际晚到」导致连锁断货；也不能用严格到货日判定，否则 10.43 周的普船35 永远不达标、常规海运被全部挡在门外）。<br>
             按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批）。<br>
             <b>常规衔接（演示 1）</b>：库存缓慢消耗到接近安全线时触发 1 批 = maxBatchSize，单批覆盖该周期需求。<br>
-            <b>断货衔接（演示 2）</b>：不可避免周缺口数可忽略，从 unavoidableEnd+1 之后按频率分多批、用最快方式。循环直到无缺口或达最大迭代数。
+            <b>断货衔接（演示 2）</b>：不可避免周缺口数可忽略，首批用绝对最快方式今天下单（最快止损），从 unavoidableEnd+1 之后按频率分多批、常规方式滚动衔接。循环直到无缺口或达最大迭代数。
           </div>
         </div>
 
@@ -1837,7 +1839,9 @@ function planProduct(p){
   const orderFreqWeeks = Math.max(1, Math.round(orderFreqDays / 7));
   const coverageWeeks = orderFreqWeeks;                    // 覆盖窗口 = 下单频率
   const maxBatchSizeRaw = Math.round(monthlyAvg * orderFreqWeeks / 4.33);
-  let maxBatchSize = Math.max(cartonSize, Math.floor(maxBatchSizeRaw / cartonSize) * cartonSize);
+  /* 2026-09-02 A2c：按箱「向上」取整——向下取整可能使单批量 < 单周需求
+     （如周需求 1201、箱 24 → floor→1200），每周到货净 -1 → 库存永不恢复、残留 0.x 断货周。 */
+  let maxBatchSize = Math.max(cartonSize, Math.ceil(maxBatchSizeRaw / cartonSize) * cartonSize);
 
   if(noStock){
     // 不备货（售完即止）
@@ -1858,6 +1862,21 @@ function planProduct(p){
   let lastUnavoidableWeek = -1;
   const replenishments = [];
   let maxIter = 50;
+  /* 2026-09-02 A2：绝对最快方式 + 从今天下单(subOrderWeek=0)的最早实际到货周。
+     作为「不可避免周」的硬边界：到货周 ≥ 该边界的周，本批货能到、缺口可补救，
+     不应判为不可避免。口径与批次到货天数公式完全一致（生产 + 运输 + FBA上架）。
+     纯中转按 dom+os 总前置，混合/直发按 dom（直发子批先到、cover 早期缺口）。 */
+  let fastestSub = methods[0] || null;
+  /* 平局细化：leadWeeksOf 相同（如快递7/快递5 都 ceil 成 1 周）时，取实际运输总天数更小者（绝对最快）。
+     口径与 leadWeeksOf 一致：纯中转按 dom+os 总天数，混合/直发按 dom。 */
+  const domDaysFast = (m) => num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) + ((isTransit && !isMixed) ? (num(m.osToFbaDays) || 0) : 0);
+  for(const m of methods){
+    const lw = leadWeeksOf(m), lwCur = leadWeeksOf(fastestSub);
+    if(lw < lwCur || (lw === lwCur && domDaysFast(m) < domDaysFast(fastestSub))) fastestSub = m;
+  }
+  const fDom = fastestSub ? num(fastestSub.domToFbaDays != null ? fastestSub.domToFbaDays : fastestSub.transportDays) : 0;
+  const fOs = (fastestSub && isTransit && !isMixed) ? (num(fastestSub.osToFbaDays) || 0) : 0;
+  const fastestArriveWeek = fastestSub ? Math.max(0, Math.min(weeks - 1, Math.floor((prodCycleDays + fDom + fOs + num(fbaShelfDays)) / 7))) : (weeks - 1);
   let prevExtraArrivals = extraArrivals.slice();
   /* 回退（2026-08-14 18:59）：恢复 stable 版 firstDeficit 检测（从 lastUnavoidableWeek+1 开始），
      第四十四~四十六轮的「缺货回填」改动引入无限循环（6/161 卡死），先回退保证可用，
@@ -1881,15 +1900,20 @@ function planProduct(p){
     /* 2) 跳过一串「不可避免周」——用户业务规则（实际演示 2）：
          「分析到缺口后，如已经确认断货，且结合生产周期及更快的衔接方式也无法衔接的，
           缺口数可忽略，即相当于重新备货」。
-         两层判定：① 该周已断货（stockout>0）——缺口已成事实；② 即使最快方式从今天下单，
-         该周也赶不上（firstDeficit ≤ leadTimeWeeks-1，t<leadTimeWeeks）——其缺不可避免。
-         跳过所有不可避免周后从 unavoidableEnd+1 重新基准。 */
+         2026-09-02 A2 语义重写：不可避免周必须同时满足
+         ① 该周已断货（stockout>0）——缺口已成事实；
+         ② 该周 < fastestArriveWeek——即使今天立刻下单 + 绝对最快方式也到不了。
+         硬边界截断是本次修复关键：旧逻辑以「模拟中 stockout 延续到哪」为界，而模拟里
+         尚未排货的周天然全断货 → unavoidableEnd 被顶到计划期末 → target 被推到期末 →
+         升舱逻辑再按大 target 挑方式，产生「很晚下单却用快递5」的非常规贵订单（W13 快运5）。
+         超过 fastestArriveWeek 的周本批货能到，缺口可补救 → 一律不算不可避免。 */
     let unavoidableEnd = firstDeficit - 1;
-    for(let t=firstDeficit; t<weeks; t++){
-      const cantReach = (t < leadTimeWeeks);                            // 第 t 周距离今天不足 leadTimeWeeks → 赶不上
-      const alreadyOut = (weeklyPlan[t].stockout > 0);                  // 已断货 → 该缺已成事实
-      if(cantReach || alreadyOut) unavoidableEnd = t;
-      else break;
+    /* 扫描 [firstDeficit, fastestArriveWeek) 内所有已断货周（2026-09-02 A2b）：
+       不做「未断货即 break」——缺口段常为「低安全线→断货」混合（如 W0 仅低安全线、
+       W2 起才真正断货），若在 W0 就 break 会漏扫整个断货段、缺口无人认领。
+       区间内断货 = 今天下单也到不了 → 不可避免；区间内未断货 = 库存能撑到货到 → 不算。 */
+    for(let t=firstDeficit; t<weeks && t<fastestArriveWeek; t++){
+      if(weeklyPlan[t].stockout > 0) unavoidableEnd = t;   // 已断货 → 该缺已成事实
     }
 
     /* 3) 目标到货周 = unavoidableEnd 后第一个「能衔接上」的周。
@@ -1926,38 +1950,47 @@ function planProduct(p){
        （prevExtraArrivals 已在每轮循环开头快照，此处不再重复） */
     let allocatedQty = 0;
 
-    /* 选方式（与量完全解耦，2026-09-02 重构 v3）：
+    /* 选方式（与量完全解耦，2026-09-02 重构 v3 + A1 修复）：
        ① 有不可避免缺口（hasUnavoidableGap = true）→ 强制最快（用户原话：「使用最合理的运输方式快速衔接，
-          减少断货量及断货周期」）——缺口已不可避免 → 用最快方式把后续衔接期压到最短。
-       ② 非加急 + 设常规 → 常规能按时到用常规（省钱），常规来不及最快兜底。
+          减少断货量及断货周期」）。A2：直接取绝对最快方式 fastestSub，且下单周钳 0（今天立刻下单止损）。
+          旧逻辑按「lw ≤ target+1 的最快」挑选——target 一旦被推到期末，会选出最快方式却把下单周
+          推到很晚，产生「第 7 周才下单却用快递5」的荒诞批次（W13 快运5）。
+       ② 非加急 + 设常规 → 常规能按时到用常规（省钱），常规来不及升舱到能按时到的更快方式。
        ③ 非加急 + 未设常规 → 最快能按时到的；都不及时 → 最快兜底。
-       注：hasUnavoidableGap 已合并「已断货 + 赶不上」两个语义，对应用户「断货情况下」的强制升舱。 */
+       能否按时到 = canReachTarget(m)：与批次生成同口径的天数精确判定（生产周期 + 运输 + FBA上架），
+       修复旧判定漏算生产周期（subLead ≤ target+1）→ 误判「普船35 能 W8 衔接、实际 W10 才到」的连锁断货。 */
     const isUrgent = hasUnavoidableGap;
+    /* A1：方式 m 能否在 targetArriveWeek 前「实际衔接上」。
+       口径 = 生产周期(周) + 运输前置(周) ≤ targetArriveWeek + 1（允许 1 周索引余量，
+       容纳 FBA上架天数与跨周取整误差）。
+       修复旧判定只比 subLead ≤ target+1、漏算生产周期 → 误判「普船35 能 W8 衔接、
+       实际 W10 才到」→ 连锁断货 + 被迫升舱。
+       注意：不可用「严格 aw ≤ target」天数判定——普船35 总耗时 10.43 周，永远算不达标，
+       而低安全线周（target 周）库存仍 >0，货晚 0.4 周到并不致断货，会错误地把常规海运
+       全部挡在门外、被迫用空运/快递（成本虚高）。 */
+    const canReachTarget = (m) => {
+      if(!m) return false;
+      return leadTimeWeeks + leadWeeksOf(m) <= targetArriveWeek + 1;
+    };
+    const fastestOverall = () => methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), methods[0]);
     let subMethod = null;
     if(isUrgent){
-      /* 紧急：强制升舱到最快能按时到达的方式；都不及时则选最快方式 */
-      let fastest = null;
-      for(const m of methods){
-        const lw = leadWeeksOf(m);
-        if(lw <= targetArriveWeek + 1 && (!fastest || lw < leadWeeksOf(fastest))) fastest = m;
-      }
-      subMethod = fastest || methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), methods[0]);
+      subMethod = fastestSub;
     } else if(p.regularMethod){
       const regName = String(p.regularMethod).trim();
       let regM = methods.find(m => m.name === regName);
       if(!regM) regM = methods.find(m => (m.name||'').includes(regName) || regName.includes(m.name||''));
       if(regM){
-        const regLead = leadWeeksOf(regM);
-        if(regLead <= targetArriveWeek + 1){
+        if(canReachTarget(regM)){
           subMethod = regM;
         } else {
           /* 常规来不及：找最快能按时到的；找不到选最快方式（升舱保底） */
           let faster = null;
           for(const m of methods){
             const lw = leadWeeksOf(m);
-            if(lw <= targetArriveWeek + 1 && (!faster || lw < leadWeeksOf(faster))) faster = m;
+            if(canReachTarget(m) && (!faster || lw < leadWeeksOf(faster))) faster = m;
           }
-          subMethod = faster || methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), regM);
+          subMethod = faster || fastestOverall();
         }
       }
     }
@@ -1966,9 +1999,9 @@ function planProduct(p){
       let fastest = null;
       for(const m of methods){
         const lw = leadWeeksOf(m);
-        if(lw <= targetArriveWeek + 1 && (!fastest || lw < leadWeeksOf(fastest))) fastest = m;
+        if(canReachTarget(m) && (!fastest || lw < leadWeeksOf(fastest))) fastest = m;
       }
-      subMethod = fastest || methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), methods[0]);
+      subMethod = fastest || fastestOverall();
     }
     const moq = methodMOQ(subMethod);
 
@@ -1979,8 +2012,10 @@ function planProduct(p){
     subQty = Math.min(subQty, qty - allocatedQty);
     if(subQty > 0){
       const subLeadWeeks = leadWeeksOf(subMethod);
-      /* 下单周 = 到货周 - 生产周期 - 运输前置 + 1（必须把生产周期算进去，否则货赶不上 targetArriveWeek） */
-      const subOrderWeek = Math.max(0, targetArriveWeek - leadTimeWeeks - subLeadWeeks + 1);
+      /* 下单周 = 到货周 - 生产周期 - 运输前置 + 1（必须把生产周期算进去，否则货赶不上 targetArriveWeek）。
+         2026-09-02 A2：紧急单（不可避免缺口）直接今天下单（0）止损——旧逻辑按被推远的 target 倒推，
+         下单周可能落到未来第 7 周，与「用快递5 尽快止损」自相矛盾（W13 快运5）。 */
+      const subOrderWeek = isUrgent ? 0 : Math.max(0, targetArriveWeek - leadTimeWeeks - subLeadWeeks + 1);
       const prodDays = num(p.prodCycleDays) || 0;
       const domDays = num(subMethod.domToFbaDays != null ? subMethod.domToFbaDays : subMethod.transportDays);
       const osDays = num(subMethod.osToFbaDays) || 0;
