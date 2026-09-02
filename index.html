@@ -1096,7 +1096,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               <tr><td>备货量 qty</td><td>覆盖窗口需求 + 目标周安全线 − 目标周可用量</td></tr>
               <tr><td>缺货周补偿</td><td>目标周缺货时，qty ≥ 缺货量 + 安全线</td></tr>
               <tr><td>海外仓保底</td><td>中转/混合：qty ≥ 保底天数 × 月均预测 − 海外仓已覆盖量</td></tr>
-              <tr><td>上限 / 取整</td><td>按最大批次量（月均 × 频率周数 ÷ 4.33）封顶；紧急场景（已断货 / ≤3 周内将断货）放宽到「目标周安全线 × 2」，保证首批补够、下一批正常衔接；按单箱数量向上取整，且 ≥ MOQ</td></tr>
+              <tr><td>上限 / 取整</td><td>常规 cap = 最大批次量（月均 × 频率周数 ÷ 4.33）；紧急场景（已断货 / ≤3 周内将断货）放宽到「max(目标周安全线×2, 最大批次量)」；再叠加硬上限「产品级安全库存 × 2」，防 fcM 异常孤峰触发 cap 失控；按单箱数量向上取整，且 ≥ MOQ</td></tr>
             </tbody>
           </table>
         </div>
@@ -1906,17 +1906,21 @@ function planProduct(p){
       qty = Math.max(qty, weeklyPlan[targetArriveWeek].stockout + targetWeekSafety);
     }
     // cap by maxBatchSize + round to carton
-    /* 2026-09-02 修复（二轮）：紧急场景 cap 放宽到「目标周安全线的 2 倍」——
-       首轮只放宽到 maxBatchSize×2（≈992），首批仍补不到「缺口+安全线」（需 5342），
-       仍出现「首批连当周需求都覆盖不了 → 断货 → 才衔接下一批」。
-       现改为紧急时 cap = 目标周安全线 × 2（保底不低于常规 maxBatchSize）：
-       理论 qty（覆盖窗口需求 + 安全线 − 可用 + 缺货补偿）≈ 安全线×2 量级，
-       基本都能一次通过 cap，首批即补到「不缺货且期末≥安全线」，下一批自然正常衔接。
-       非紧急场景仍按原 cap（节奏优先，不打乱月度下单频率）。
-       「紧急」判定：① firstDeficit ≤ 3 周（≈ 1 个月内将断货）或 ② firstDeficit 周已经断货（stockout>0）——
-       ② 才是关键（用户案例 firstDeficit=W7/W8，远大于 3，但 W8 期末 0 缺货 354 已是断货）。 */
+    /* 2026-09-02 修复（三轮）：紧急 cap 双重封顶——
+       二轮改为「目标周安全线×2」后，遇到 fcM3/M4 异常大的情况：
+       targetWeekSafety = 异常周需求 × safetyWeeks（如 1,156×4=4,624）→ 安全线×2=9,248 单批异常大。
+       三轮再加硬上限 safetyStock×2（约 3,344）：
+       safetyStock = avgWeeklyDemand × safetyWeeks 是产品级平均，相对稳定，
+       防止 fcM 异常孤峰触发 cap 失控。
+       正常产品（targetWeekSafety ≈ safetyStock）：baseUrgentCap ≈ safetyStock×2，与 ceiling 一致 → 不受影响；
+       异常 fcM：baseUrgentCap 异常大 → 被 ceiling 截断到约 3,344 量级，单批仍能覆盖约 2 周缺口 + 2 周安全库存。
+       非紧急仍按原 cap（节奏优先，不打乱月度下单频率）。
+       「紧急」判定：① firstDeficit ≤ 3 周（≈ 1 个月内将断货）或 ② firstDeficit 周已断货（stockout>0）。 */
     const isUrgentBatch = firstDeficit >= 0 && (firstDeficit <= 3 || (weeklyPlan[firstDeficit] && weeklyPlan[firstDeficit].stockout > 0));
-    const urgentCap = isUrgentBatch ? Math.max(targetWeekSafety * 2, maxBatchSize) : maxBatchSize;
+    const baseUrgentCap = isUrgentBatch ? Math.max(targetWeekSafety * 2, maxBatchSize) : maxBatchSize;
+    /* 硬上限：单批不超过「产品级安全库存 × 2」—— 防 fcM 异常触发 cap 失控 */
+    const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
+    const urgentCap = isUrgentBatch ? Math.min(baseUrgentCap, safetyCeiling) : maxBatchSize;
     qty = Math.min(qty, urgentCap);
     qty = Math.ceil(qty / cartonSize) * cartonSize;
     qty = Math.min(qty, urgentCap);
