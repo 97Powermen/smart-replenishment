@@ -1913,7 +1913,8 @@ function planProduct(p){
        maxBatchSize 本身虚高（罕见），正常产品上限就是 maxBatchSize 本身。 */
     const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
     if(qty > safetyCeiling) qty = safetyCeiling;
-    if(qty <= 0){ lastUnavoidableWeek = targetArriveWeek; continue; }
+    /* qty<=0 直接跳过（不再用 lastUnavoidableWeek 推进，正常路径每轮末尾统一推进） */
+    if(qty <= 0) continue;
 
     /* 5) 推进 lastUnavoidableWeek = targetArriveWeek：下次扫描从该周 +1 找下一个缺口 →
          自然按下单频率推进 cadence（一周触发一次 → 隔 orderFreqWeeks 周再触发；7 天就每周，
@@ -2041,7 +2042,11 @@ function planProduct(p){
       }
       allocatedQty += subQty;
     }
-    /* lastUnavoidableWeek 已在「防爆上限」处推进到 coverageEnd（每轮一个覆盖窗口） */
+    /* 推进 lastUnavoidableWeek = targetArriveWeek：下次扫描从 targetArriveWeek+1 起找下一缺口，
+       自然按下单频率 cadence 推进（一周触发一次 → 隔 orderFreqWeeks 周再触发）。
+       关键：必须每轮推进，否则下次 firstDeficit 还是同一周 → 同 (arriveWeek, amount) 批次被反复追加，
+       最后 50 轮累加 + 同 key 合并出 61,800 这种爆量。v3 重构时漏写此推进，本轮修复。 */
+    lastUnavoidableWeek = targetArriveWeek;
   }
 
   /* 合并同 orderWeek + 同 arriveWeek 的批次：
