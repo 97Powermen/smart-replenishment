@@ -1710,15 +1710,14 @@ function buildWeeklyDemand(p, weeks){
   return demand;
 }
 
-// FBA + 库存 + 在途/在制 -> 每周到货数组
+// 期初可售（已存在库存，不算"未来到货"）
+function computeInitialStock(p){
+  return num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
+}
+
+// 在途/在制 -> 每周到货数组（仅含「未来到货」，不含已存在的初始库存——避免与期初可售重复）
 function buildPipelineArrivals(p, weeks){
-  // week 0 起点 = FBA库存 + 下架库存 + 海外仓库存 + 挪用库存
-  const fba = num(p.fbaStock) || 0;
-  const unsell = num(p.unsellableStock) || 0;
-  const osStock = num(p.osStock) || 0;
-  const divert = num(p.divertStock) || 0;
   const arr = new Array(weeks).fill(0);
-  arr[0] = fba + unsell + osStock + divert;
   // 海外仓在途到仓 (osInTransit) 在 osInTransitWeeks 周到达
   const osTransit = num(p.osInTransit), osTransitW = num(p.osInTransitWeeks);
   if(osTransit > 0 && osTransitW > 0 && osTransitW < weeks) arr[osTransitW] += osTransit;
@@ -1746,11 +1745,13 @@ function pipelineTotal(p){
 }
 
 // simulate week-by-week inventory
-function simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek){
+function simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, initialStock){
   extraArrivals = extraArrivals || new Array(weeks).fill(0);
   avgStartWeek = avgStartWeek || 0;
+  // 期初可售显式由参数传入（避免与 pipelineArrivals[0] 重复——之前 buildPipelineArrivals 会把初始库存塞进首元素）
+  const baseInv = typeof initialStock === 'number' ? initialStock : 0;
+  let inventory = baseInv;
   const plan = [];
-  let inventory = pipelineArrivals[0] || 0; // FBA = 期初可售
   // 周均需求：只跳过预测起始月前的零需求周，保留预测期内的 0 值
   const avgArr = weeklyDemand.slice(avgStartWeek);
   const avgD = avgArr.length > 0 ? avgArr.reduce((a,b)=>a+b,0) / avgArr.length : 0;
@@ -1836,7 +1837,7 @@ function planProduct(p){
 
   if(noStock){
     // 不备货（售完即止）
-    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, null, avgStartWeek);
+    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, null, avgStartWeek, computeInitialStock(p));
     const stockoutWeeks = sim.plan.filter(w => w.stockout > 0).length;
     return {
       p, weeks, noStock: true, avgWeeklyDemand, safetyStock, cartonSize,
@@ -1859,7 +1860,7 @@ function planProduct(p){
      后续再以「不阻塞生成」为前提重做缺货填补。 */
 
   while(maxIter-- > 0){
-    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek);
+    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
     const weeklyPlan = sim.plan;
     // find first deficit week
     let firstDeficit = -1;
@@ -2062,7 +2063,7 @@ function planProduct(p){
   }
 
   // Final simulation
-  const finalSim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek);
+  const finalSim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
   const totalRec = replenishments.reduce((a,b)=>a+b.amount, 0);
   const totalCost = replenishments.reduce((a,b)=>a+b.cost, 0);
   const totalStockout = finalSim.plan.reduce((a,w)=>a+w.stockout, 0);
@@ -3540,7 +3541,7 @@ function updateWeeklyPlanFromReplenishments(r){
   const pipelineArrivals = buildPipelineArrivals(r.p, weeks);
   const safetyWeeks = num(r.p && r.p.safetyStockWeeks) || 2;
   const avgStartWeek = getForecastStartWeek(r.p, weeks);
-  const sim = simulate(r.weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek);
+  const sim = simulate(r.weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(r.p));
   r.weeklyPlan = sim.plan;  /* simulate 返回 { plan, baseSafety }，取 .plan */
 }
 
