@@ -1082,21 +1082,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
 
         <div class="algo-block">
-          <div class="algo-step"><b>⑤ 缺口识别</b></div>
-          <div style="padding:6px 10px;font-size:13px;">每次模拟后找<b>第一个缺口周</b>（缺货 &gt; 0 或 期末 &lt; 安全线），从上次覆盖周+1 开始扫描 → <b>firstDeficit</b>，作为本批次的目标到货周。</div>
+          <div class="algo-step"><b>⑤ 不可避免周扫描</b></div>
+          <div style="padding:6px 10px;font-size:13px;">每次模拟后从 <b>lastUnavoidableWeek+1</b> 起扫描，第一个 <b>期末 &lt; 安全线 或 已断货 stockout&gt;0</b> 的周 → <b>firstDeficit</b>。从 <b>firstDeficit</b> 起再扫一串<b>「不可避免周」</b>（条件：① 该周已断货；② 该周距今天不足 leadTimeWeeks 即最快方式也赶不上），记录 <b>unavoidableEnd</b>。<br>
+          <b>业务规则（演示 2）</b>：不可避免周的缺口数<b>可忽略</b>——相当于重新备货，不再追回该缺口的量，转而从 unavoidableEnd+1 之后规划。
+          </div>
         </div>
 
         <div class="algo-block">
-          <div class="algo-step"><b>⑥ 备货量计算（单个批次）</b></div>
+          <div class="algo-step"><b>⑥ 备货量计算（按频率分摊）</b></div>
           <table class="result-table" style="width:100%;">
             <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
             <tbody>
-              <tr><td>覆盖窗口</td><td>目标到货周 ~ 目标到货周 + 下单频率覆盖周数（7天→1周 / 15天→2周 / 30天→4周）</td></tr>
-              <tr><td>覆盖窗口需求</td><td>Σ（周需求 − 已到货）</td></tr>
-              <tr><td>备货量 qty</td><td>覆盖窗口需求 + 目标周安全线 − 目标周可用量</td></tr>
-              <tr><td>缺货周补偿</td><td>目标周缺货时，qty ≥ 缺货量 + 安全线</td></tr>
-              <tr><td>海外仓保底</td><td>中转/混合：qty ≥ 保底天数 × 月均预测 − 海外仓已覆盖量</td></tr>
-              <tr><td>上限 / 取整</td><td>常规 cap = 最大批次量（月均 × 频率周数 ÷ 4.33）；紧急场景（已断货 / ≤3 周内将断货）放宽到「max(目标周安全线×2, 最大批次量)」；再叠加硬上限「产品级安全库存 × 2」，防 fcM 异常孤峰触发 cap 失控；按单箱数量向上取整，且 ≥ MOQ</td></tr>
+              <tr><td>目标到货周</td><td><b>targetArriveWeek</b> = max(unavoidableEnd+1, leadTimeWeeks)——第一个能衔接上的周</td></tr>
+              <tr><td>备货量 qty</td><td><b>按下单频率节奏 = maxBatchSize</b>（7天频率≈1周需求、15天频率≈2周需求、30天频率≈4周需求）。<b>不再叠加窗口需求 + 安全线 − 可用量</b>，也不再「缺货周补偿」把缺口量塞回单批。</td></tr>
+              <tr><td>取整</td><td>按单箱向上取整，且 ≥ MOQ</td></tr>
+              <tr><td>防爆上限</td><td><b>safetyCeiling</b> = max(maxBatchSize, 产品级安全库存×2 按箱取整)：仅当 fcM 异常孤峰（如某月虚高）使 maxBatchSize 偏大时启封；正常产品上限就是 maxBatchSize 本身</td></tr>
+              <tr><td>多批衔接</td><td>不可避免缺口段之后，以 maxBatchSize × ceil(段内缺货周数 / 频率周数) 分多批，<b>每批之间由 lastUnavoidableWeek 推进触发</b>——7天按周、30天隔4周</td></tr>
+              <tr><td>窗口推进</td><td>lastUnavoidableWeek = targetArriveWeek。下次扫描从 +1 找下一缺口 → 自然按下单频率 cadence 推进</td></tr>
             </tbody>
           </table>
         </div>
@@ -1104,10 +1106,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div class="algo-block">
           <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
           <div style="padding:6px 10px;font-size:13px;">
-            备货量 → 选运输方式（紧急缺口 ≤3 周升舱 / 常规方式 / 最快能到）→ 计算下单周与到货周：<br>
+            单批量 = maxBatchSize → 选运输方式（<b>不可避免缺口 → 强制最快能按时到（用户原话：使用最合理的运输方式快速衔接，减少断货量及断货周期）</b>；否则常规能按时到用常规、来不及升舱、最快兜底）→ 计算下单周与到货周：<br>
             下单周 = 目标到货周 − 生产周期(周) − 运输前置(周) + 1<br>
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)<br>
-            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批）。循环直到无缺口或达最大迭代数。
+            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批）。<br>
+            <b>常规衔接（演示 1）</b>：库存缓慢消耗到接近安全线时触发 1 批 = maxBatchSize，单批覆盖该周期需求。<br>
+            <b>断货衔接（演示 2）</b>：不可避免周缺口数可忽略，从 unavoidableEnd+1 之后按频率分多批、用最快方式。循环直到无缺口或达最大迭代数。
           </div>
         </div>
 
@@ -1121,7 +1125,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               <tr><td>期末可售</td><td>期初 + 到货 − 需求</td></tr>
               <tr><td>缺货</td><td>max(0, 需求 − 可用)</td></tr>
               <tr><td>安全线</td><td>周需求 × 安全库存周数</td></tr>
-              <tr><td>备货量</td><td>覆盖窗口需求 + 安全线 − 当前可用（+缺货补偿、保底、封顶、取整）</td></tr>
+              <tr><td>备货量</td><td><b>按下单频率 = maxBatchSize</b>（不再叠加窗口需求 + 安全线 − 可用量，也不叠加缺货补偿/保底）</td></tr>
             </tbody>
           </table>
         </div>
@@ -1860,9 +1864,12 @@ function planProduct(p){
      后续再以「不阻塞生成」为前提重做缺货填补。 */
 
   while(maxIter-- > 0){
+    /* 每轮开头快照「截至上一轮已排的补货到货」，供本轮窗口需求扣除（确保不把已排的货重复算进缺口） */
+    prevExtraArrivals = extraArrivals.slice();
     const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
     const weeklyPlan = sim.plan;
-    // find first deficit week
+    /* 1) 找第一个需要补货的周：期末<安全线 或 已断货（stockout>0）。
+         从 lastUnavoidableWeek+1 起扫，自然按已落实的 cadence 推进。 */
     let firstDeficit = -1;
     for(let t=lastUnavoidableWeek+1; t<weeks; t++){
       if(weeklyPlan[t].stockout > 0 || weeklyPlan[t].endingInv < weeklyPlan[t].weekSafety){
@@ -1871,79 +1878,60 @@ function planProduct(p){
     }
     if(firstDeficit < 0) break;
 
-    // target arrive week (earliest if before leadTime)
-    let targetArriveWeek = Math.max(firstDeficit, leadTimeWeeks - 1);
-
-    const availableAtArrive = weeklyPlan[targetArriveWeek].beginInv + weeklyPlan[targetArriveWeek].arrival;
-    const targetWeekSafety = weeklyPlan[targetArriveWeek].weekSafety;
-
-    let baseCoverageEnd, demandInCoverage;
-    /* 修复（算法根因）：不论库存是否低于安全线，baseCoverageEnd 都取 targetArriveWeek+coverageWeeks-1
-       —— 这样 lastUnavoidableWeek 才能真正前移 coverageWeeks 周，下次检测 firstDeficit 才能按频率间隔。
-       原代码在「库存<安全线」时把 baseCoverageEnd 强设为 targetArriveWeek，导致 cadence 退化为每周一次。*/
-    baseCoverageEnd = Math.min(weeks-1, targetArriveWeek + coverageWeeks - 1);
-    demandInCoverage = 0;
-    for(let w=targetArriveWeek; w<=baseCoverageEnd; w++){
-      let alreadyArriving = (prevExtraArrivals[w] || 0);
-      if(w > targetArriveWeek) alreadyArriving += (pipelineArrivals[w] || 0);
-      demandInCoverage += Math.max(0, weeklyDemand[w] - alreadyArriving);
-    }
-    const coverageEnd = baseCoverageEnd;
-    let qty = Math.max(0, demandInCoverage + targetWeekSafety - availableAtArrive);
-
-    /* 中转/混合保底：海外仓需常备 osBufferDays 天的量（天数 × 月均预测）。
-       备货量至少把海外仓补到保底水位（海外仓现有库存 + 在途视作已覆盖）。
-       混合模式下同样生效——海外仓子批至少覆盖保底缺口。 */
-    if((isTransit || isMixed) && osBufferDays > 0){
-      const bufferQty = Math.max(1, Math.round(osBufferDays / 30 * monthlyAvg));
-      const osCovered = num(p.osStock) + num(p.osInTransit) + num(p.divertStock);
-      const osGap = Math.max(0, bufferQty - osCovered);
-      if(osGap > 0) qty = Math.max(qty, osGap);
+    /* 2) 跳过一串「不可避免周」——用户业务规则（实际演示 2）：
+         「分析到缺口后，如已经确认断货，且结合生产周期及更快的衔接方式也无法衔接的，
+          缺口数可忽略，即相当于重新备货」。
+         两层判定：① 该周已断货（stockout>0）——缺口已成事实；② 即使最快方式从今天下单，
+         该周也赶不上（firstDeficit ≤ leadTimeWeeks-1，t<leadTimeWeeks）——其缺不可避免。
+         跳过所有不可避免周后从 unavoidableEnd+1 重新基准。 */
+    let unavoidableEnd = firstDeficit - 1;
+    for(let t=firstDeficit; t<weeks; t++){
+      const cantReach = (t < leadTimeWeeks);                            // 第 t 周距离今天不足 leadTimeWeeks → 赶不上
+      const alreadyOut = (weeklyPlan[t].stockout > 0);                  // 已断货 → 该缺已成事实
+      if(cantReach || alreadyOut) unavoidableEnd = t;
+      else break;
     }
 
-    // 缺货周补偿：库存<安全线时把当前缺货量也加上
-    if(weeklyPlan[targetArriveWeek].stockout > 0){
-      qty = Math.max(qty, weeklyPlan[targetArriveWeek].stockout + targetWeekSafety);
-    }
-    // cap by maxBatchSize + round to carton
-    /* 2026-09-02 修复（三轮）：紧急 cap 双重封顶——
-       二轮改为「目标周安全线×2」后，遇到 fcM3/M4 异常大的情况：
-       targetWeekSafety = 异常周需求 × safetyWeeks（如 1,156×4=4,624）→ 安全线×2=9,248 单批异常大。
-       三轮再加硬上限 safetyStock×2（约 3,344）：
-       safetyStock = avgWeeklyDemand × safetyWeeks 是产品级平均，相对稳定，
-       防止 fcM 异常孤峰触发 cap 失控。
-       正常产品（targetWeekSafety ≈ safetyStock）：baseUrgentCap ≈ safetyStock×2，与 ceiling 一致 → 不受影响；
-       异常 fcM：baseUrgentCap 异常大 → 被 ceiling 截断到约 3,344 量级，单批仍能覆盖约 2 周缺口 + 2 周安全库存。
-       非紧急仍按原 cap（节奏优先，不打乱月度下单频率）。
-       「紧急」判定：① firstDeficit ≤ 3 周（≈ 1 个月内将断货）或 ② firstDeficit 周已断货（stockout>0）。 */
-    const isUrgentBatch = firstDeficit >= 0 && (firstDeficit <= 3 || (weeklyPlan[firstDeficit] && weeklyPlan[firstDeficit].stockout > 0));
-    const baseUrgentCap = isUrgentBatch ? Math.max(targetWeekSafety * 2, maxBatchSize) : maxBatchSize;
-    /* 硬上限：单批不超过「产品级安全库存 × 2」—— 防 fcM 异常触发 cap 失控 */
-    const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
-    const urgentCap = isUrgentBatch ? Math.min(baseUrgentCap, safetyCeiling) : maxBatchSize;
-    qty = Math.min(qty, urgentCap);
+    /* 3) 目标到货周 = unavoidableEnd 后第一个「能衔接上」的周。
+         能衔接 = 周索引 ≥ leadTimeWeeks（从今天起 leadTimeWeeks 周后才能开始到货）。
+         全部不可避免时钳在最后一周避免越界。 */
+    let targetArriveWeek = Math.max(unavoidableEnd + 1, leadTimeWeeks);
+    if(targetArriveWeek >= weeks) targetArriveWeek = weeks - 1;
+
+    const hasUnavoidableGap = unavoidableEnd >= firstDeficit;            // 是否存在不可避免缺口（决定选方式 + 后续节奏）
+
+    /* 4) 单批量 = 按下单频率节奏（maxBatchSize）——根本性修正：
+         不再叠加「窗口需求 + 安全线 − 可用量」那种一口吃撑模型的量；
+         也不再把「缺货周 stockout + 安全线」塞回单批；
+         「按频率分摊」模型：每批按一周期需求备货（如 7 天频率 = 1 周需求量），
+         7 天频率按周分单；15 天频率隔 2 周分单；30 天频率隔 4 周分单——节奏由 lastUnavoidableWeek 推进触发，
+         而不是由「每次填满窗口」触发。 */
+    let qty = maxBatchSize;
     qty = Math.ceil(qty / cartonSize) * cartonSize;
-    qty = Math.min(qty, urgentCap);
     if(qty < cartonSize && qty > 0) qty = cartonSize;
-    /* 即使不补也要把 lastUnavoidableWeek 推到 coverageEnd —— 否则 cadence 会退化为相邻周 */
-    if(qty <= 0){ lastUnavoidableWeek = coverageEnd; continue; }
+    /* 硬上限 safetyCeiling = max(maxBatchSize, 产品级安全库存×2 按箱取整)：仅防 fcM 异常孤峰导致
+       maxBatchSize 本身虚高（罕见），正常产品上限就是 maxBatchSize 本身。 */
+    const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
+    if(qty > safetyCeiling) qty = safetyCeiling;
+    if(qty <= 0){ lastUnavoidableWeek = targetArriveWeek; continue; }
 
-    // --- 单批次 sub-batching（同一覆盖窗口只生成一个 replenishments）
-    /* 修复：下单频率 15/30 天的产品，原 sub-batching 会按抵达周细分，导致每 7 天都有新订单。
-       改为：同一覆盖窗口只生成一个 replenishment（合并到 targetArriveWeek），
-       lastUnavoidableWeek 推到 coverageEnd，下次 deficit 检测从 coverageEnd+1 开始。
-       效果：7天频率按周分单；15天频率隔2周分单；30天频率隔4周分单。*/
-    prevExtraArrivals = extraArrivals.slice();
-    let runningAvail = availableAtArrive;
+    /* 5) 推进 lastUnavoidableWeek = targetArriveWeek：下次扫描从该周 +1 找下一个缺口 →
+         自然按下单频率推进 cadence（一周触发一次 → 隔 orderFreqWeeks 周再触发；7 天就每周，
+         30 天就隔 4 周）。和现行代码区别：不再取 coverageEnd，
+         因为新模型「单批 = 一周期」已经天然就是按频率的。 */
+
+    // --- 单批次（同一覆盖窗口只生成一个 replenishment）
+    /* 效果：7天频率按周分单；15天频率隔2周分单；30天频率隔4周分单。
+       （prevExtraArrivals 已在每轮循环开头快照，此处不再重复） */
     let allocatedQty = 0;
 
-    /* 选方式：
-       ① 「紧急缺货」识别：firstDeficit ≤ 3 周（≈ 1 个月内） → 强制升舱到最快方式，
-          不论是否设常规方式、不论常规方式是否能按时到达——首批出货必须"加急衔接"，
-          后续批次（firstDeficit > 3）才走常规/最便宜。
-       ③ 非紧急 + 设常规 → 优先用常规；常规来不及才升舱。
-       ④ 非紧急 + 未设常规 → 选最快能按时到达的方式；都不及时 → 选 lead 最小的。 */
-    const isUrgent = firstDeficit >= 0 && firstDeficit <= 3;
+    /* 选方式（与量完全解耦，2026-09-02 重构 v3）：
+       ① 有不可避免缺口（hasUnavoidableGap = true）→ 强制最快（用户原话：「使用最合理的运输方式快速衔接，
+          减少断货量及断货周期」）——缺口已不可避免 → 用最快方式把后续衔接期压到最短。
+       ② 非加急 + 设常规 → 常规能按时到用常规（省钱），常规来不及最快兜底。
+       ③ 非加急 + 未设常规 → 最快能按时到的；都不及时 → 最快兜底。
+       注：hasUnavoidableGap 已合并「已断货 + 赶不上」两个语义，对应用户「断货情况下」的强制升舱。 */
+    const isUrgent = hasUnavoidableGap;
     let subMethod = null;
     if(isUrgent){
       /* 紧急：强制升舱到最快能按时到达的方式；都不及时则选最快方式 */
@@ -2053,8 +2041,7 @@ function planProduct(p){
       }
       allocatedQty += subQty;
     }
-    /* 推到覆盖窗口末尾，使下次 deficit 检测从 coverageEnd+1 开始 —— 体现下单频率 */
-    lastUnavoidableWeek = coverageEnd;
+    /* lastUnavoidableWeek 已在「防爆上限」处推进到 coverageEnd（每轮一个覆盖窗口） */
   }
 
   /* 合并同 orderWeek + 同 arriveWeek 的批次：
