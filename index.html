@@ -1096,7 +1096,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               <tr><td>备货量 qty</td><td>覆盖窗口需求 + 目标周安全线 − 目标周可用量</td></tr>
               <tr><td>缺货周补偿</td><td>目标周缺货时，qty ≥ 缺货量 + 安全线</td></tr>
               <tr><td>海外仓保底</td><td>中转/混合：qty ≥ 保底天数 × 月均预测 − 海外仓已覆盖量</td></tr>
-              <tr><td>上限 / 取整</td><td>按最大批次量（月均 × 频率周数 ÷ 4.33）封顶；按单箱数量向上取整，且 ≥ MOQ</td></tr>
+              <tr><td>上限 / 取整</td><td>按最大批次量（月均 × 频率周数 ÷ 4.33）封顶；紧急场景（已断货 / ≤3 周内将断货）放宽到「目标周安全线 × 2」，保证首批补够、下一批正常衔接；按单箱数量向上取整，且 ≥ MOQ</td></tr>
             </tbody>
           </table>
         </div>
@@ -1906,14 +1906,17 @@ function planProduct(p){
       qty = Math.max(qty, weeklyPlan[targetArriveWeek].stockout + targetWeekSafety);
     }
     // cap by maxBatchSize + round to carton
-    /* 2026-09-02 修复：紧急场景 cap 放宽到 2 倍——
-       原 cap（=订单频率对应批次量 ≈ 月均/4.33/箱取整）在已断货时太小，首批补不到「缺口+安全线」，
-       导致当周需求 1247 都覆盖不了、出现「首批补不够 → 断货 → 才衔接下一批」的怪现象。
+    /* 2026-09-02 修复（二轮）：紧急场景 cap 放宽到「目标周安全线的 2 倍」——
+       首轮只放宽到 maxBatchSize×2（≈992），首批仍补不到「缺口+安全线」（需 5342），
+       仍出现「首批连当周需求都覆盖不了 → 断货 → 才衔接下一批」。
+       现改为紧急时 cap = 目标周安全线 × 2（保底不低于常规 maxBatchSize）：
+       理论 qty（覆盖窗口需求 + 安全线 − 可用 + 缺货补偿）≈ 安全线×2 量级，
+       基本都能一次通过 cap，首批即补到「不缺货且期末≥安全线」，下一批自然正常衔接。
+       非紧急场景仍按原 cap（节奏优先，不打乱月度下单频率）。
        「紧急」判定：① firstDeficit ≤ 3 周（≈ 1 个月内将断货）或 ② firstDeficit 周已经断货（stockout>0）——
-       ② 才是关键（用户案例 firstDeficit=W7/W8，远大于 3，但 W8 期末 0 缺货 354 已是断货）。
-       非紧急场景仍按原 cap（节奏优先，不打乱月度下单频率）。 */
+       ② 才是关键（用户案例 firstDeficit=W7/W8，远大于 3，但 W8 期末 0 缺货 354 已是断货）。 */
     const isUrgentBatch = firstDeficit >= 0 && (firstDeficit <= 3 || (weeklyPlan[firstDeficit] && weeklyPlan[firstDeficit].stockout > 0));
-    const urgentCap = isUrgentBatch ? maxBatchSize * 2 : maxBatchSize;
+    const urgentCap = isUrgentBatch ? Math.max(targetWeekSafety * 2, maxBatchSize) : maxBatchSize;
     qty = Math.min(qty, urgentCap);
     qty = Math.ceil(qty / cartonSize) * cartonSize;
     qty = Math.min(qty, urgentCap);
