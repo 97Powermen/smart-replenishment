@@ -168,6 +168,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 /* Tables */
 .result-table-wrap { overflow: auto; max-height: 460px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
 .result-table-wrap.no-scroll { max-height: none; }
+/* 可自由拉伸的表格容器（仿对话框右下角）：
+   - resize:vertical 开启浏览器原生高度拉伸
+   - min-height 防止拉到看不见
+   - max-height 改用 vh 上限，跟随视口
+   - 背景画一个右下角斜纹抓手，给出明显的拖拽提示（不再只靠浏览器那个几乎看不见的小三角） */
+.result-table-wrap.is-resizable {
+  resize: vertical;
+  min-height: 220px;
+  max-height: min(80vh, 900px);
+  background-image:
+    linear-gradient(135deg, transparent 0 68%, rgba(0,0,0,.22) 68% 72%, transparent 72% 82%, rgba(0,0,0,.22) 82% 86%, transparent 86%);
+  background-position: right 6px bottom 6px;
+  background-repeat: no-repeat;
+  background-attachment: local;
+  background-size: 16px 16px;
+}
 .result-table { width:100%; border-collapse: collapse; font-size: 12.5px; }
 .result-table th, .result-table td { padding: 2px 4px; border-bottom: 1px solid var(--border); white-space: nowrap; text-align: left; }
 .result-table thead th { background: var(--primary-light); color: var(--text); font-weight: 600; position: sticky; top: 0; z-index: 2; text-align: center; }
@@ -427,7 +443,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
     <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。</div>
-    <div class="result-table-wrap" style="max-height:320px;">
+    <div class="result-table-wrap is-resizable">
       <table class="result-table" id="methodTable" style="min-width:1050px;table-layout:fixed;">
         <thead>
           <tr>
@@ -505,7 +521,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <button class="filter-clear" onclick="clearListFilters()">清除筛选</button>
     </div>
 
-    <div class="result-table-wrap">
+    <div class="result-table-wrap is-resizable">
       <table class="result-table" id="productTable" style="min-width:2000px;">
         <thead>
           <tr>
@@ -639,7 +655,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
         <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearResultFilters()">🔄 清空筛选</button>
       </div>
-      <div class="result-table-wrap">
+      <div class="result-table-wrap is-resizable">
         <table class="result-table" id="resultTable" style="min-width:2560px;">
           <thead>
             <tr>
@@ -734,7 +750,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           </select>
         </div>
       </div>
-      <div class="result-table-wrap">
+      <div class="result-table-wrap is-resizable">
         <table class="result-table" id="detailTable" style="min-width:1650px;">
           <thead>
             <tr>
@@ -793,7 +809,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
     <div class="warn-box">每个产品可能按多个"周次+运输方式"被拆成多批。本表仅展示<b>本周需下单</b>的批次（根据生产交期推算 orderWeek=0），可延后的批次下周分析时再下。每周滚动备货，需求变动也能及时管控。</div>
-    <div class="result-table-wrap">
+    <div class="result-table-wrap is-resizable">
       <table class="result-table" id="orderTable" style="min-width:1200px;">
         <thead>
           <tr>
@@ -916,7 +932,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。
       </div>
 
-      <div class="result-table-wrap" style="max-height:640px;">
+      <div class="result-table-wrap is-resizable">
         <table class="result-table" id="perspectiveTable" style="min-width:2000px;">
           <thead>
             <tr>
@@ -995,7 +1011,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <h2>用户管理（多人协作）</h2>
       </div>
       <div class="warn-box">默认包含管理员账号 admin（admin / 123456）。新增用户需填写姓名、角色。导入/生成/提交等操作会写入审计日志。</div>
-      <div class="result-table-wrap" style="max-height:300px;">
+      <div class="result-table-wrap is-resizable">
         <table class="result-table" id="userTable" style="min-width:900px;">
           <thead>
             <tr>
@@ -4082,7 +4098,7 @@ function buildDetailContent(r){
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
     <button class="btn btn-sm btn-confirm week-confirm-bar" data-pcode="${esc(p.materialCode||'')}" onclick="confirmWeekEdits(this)" style="display:none;">✓ 确认更改</button>
   </div>
-  <div class="result-table-wrap" style="max-height:560px;">
+  <div class="result-table-wrap is-resizable">
     <table class="result-table" style="min-width:1010px;">
       <thead><tr>
         <th style="width:36px;">周</th><th style="width:148px;">日期范围</th><th style="width:58px;">期初可售</th><th style="width:58px;">到货</th><th style="width:58px;">周需求</th>
@@ -4155,7 +4171,7 @@ function buildDetailContent(r){
   if(r.replenishments.length > 0){
     let totQty = 0;
     h += `<div class="section-label" style="margin-top:14px;">📦 本品下单批次（${r.replenishments.length} 批）</div>
-      <div class="result-table-wrap" style="max-height:260px;">
+      <div class="result-table-wrap is-resizable">
       <table class="result-table batch-table" style="min-width:1190px;">
         <thead><tr>
           <th style="width:100px;">三级</th><th style="width:110px;">料品编码</th><th style="width:140px;">存货名称</th><th style="width:120px;">规格型号</th>
@@ -4669,7 +4685,7 @@ function openDetailBuild(r, p, methods){
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
     <button class="btn btn-sm btn-confirm week-confirm-bar" data-pcode="${esc(p.materialCode||'')}" onclick="confirmWeekEdits(this)" style="display:none;">✓ 确认更改</button>
   </div>
-  <div class="result-table-wrap" style="max-height:300px;">
+  <div class="result-table-wrap is-resizable">
     <table class="result-table" style="min-width:1010px;">
       <thead>
         <tr>
@@ -4741,7 +4757,7 @@ function openDetailBuild(r, p, methods){
   /* 调整4：本品下单批次改为跟备货下单表一致 11 列格式 */
   if(r.replenishments.length > 0){
     html += `<div class="section-label" style="margin-top:14px;">📦 本品下单批次（${r.replenishments.length} 批）</div>
-    <div class="result-table-wrap" style="max-height:280px;">
+    <div class="result-table-wrap is-resizable">
     <table class="result-table" style="min-width:1190px;">
       <thead>
         <tr>
