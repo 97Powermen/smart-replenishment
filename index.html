@@ -2164,21 +2164,36 @@ function planProduct(p){
     if(qty <= 0){ batchCount++; continue; }
 
     /* 4) placeBatch：moq/按箱/直发-海外仓子批拆分/push/extraArrivals/超期丢弃 全在内部处理 */
-    /* 2026-09-03 断货应急运输分配优化：当首批用最快方式时，将 qty 拆分为最快+常规两部分，
-       同一下单周走不同运输方式——快件补缺口（首批到货止住断货），慢件省钱（同周出，后续到货）。
-       条件：断货应急 + 常规方式可用且不同于最快方式 + 常规方式能在计划期内到货。 */
-    const isEmergencySplit = (firstStockout >= 0 && aw >= firstStockout && regM && subMethod !== regM && arriveWeekOf(regM) < weeks);
-    if(isEmergencySplit){
-      const altAw = Math.min(weeks - 1, Math.max(0, arriveWeekOf(regM)));
-      if(altAw > aw && altAw < weeks){
-        /* 拆分：紧急部分用最快方式（最快到货止住断货），剩余用常规方式（同一下单周，省钱慢到） */
-        const urgentQty = Math.ceil(qty / 2);
-        const restQty = qty - urgentQty;
-        placeBatch(cadenceOrderWeek, subMethod, urgentQty);
-        if(restQty > 0) placeBatch(cadenceOrderWeek, regM, restQty);
-      } else {
-        placeBatch(cadenceOrderWeek, subMethod, qty);
+    /* 2026-09-03 v4.5 快慢分流（方案B，替代 f3eecd2 的 50/50 应急拆分）：
+       - 本批到货周 aw 之前若存在「衔接槽」——最快方式到货周(awFast)之后、本批到货之前，
+         某周期末低于该周半安全线（≈1 周需求，几乎断货）——说明整批压到最后才到太薄。
+         此时把缺口拆给最快方式提前到货托底：快件量 = 把槽底托到 ≥ 半安全线（按箱取整、封顶本批 qty），
+         剩余量仍走本批方式（常规普船35 / 升舱方式）在 aw 到货——同一 cadence 下单周、两种运输方式，
+         对应实际备货「调一周需求量走快运衔接，其余正常走普船」。
+       - 断货应急（aw >= firstStockout）时 subMethod 必已是最快能救方式：没有再快的可拆 → 单批整走，
+         量 = 到货周安全线（规则 2），不再出现「半批快件补不够 + 半批慢船拖到断货后」的脱节。
+       - 总量约束：qty 已在上一步被 safetyCeiling（max(maxBatchSize, 2×安全库存)）钳制，
+         快慢分流只重排不增量，不会突破「应急当周 ≤ 安全线 2 倍」的口径。 */
+    const awFast = Math.min(weeks - 1, Math.max(0, arriveWeekOf(fastestSub)));
+    const hasFaster = !!fastestSub && fastestSub !== subMethod && awFast < aw;
+    let splitFastQty = 0;
+    if(hasFaster && qty > 0){
+      /* 衔接槽 = [awFast, aw) 内期末最低周（快件到货之后、本批到货之前的薄点） */
+      let troughT = -1, troughEnd = Infinity;
+      for(let t = Math.max(cadenceOrderWeek + 1, awFast); t < aw && t < weeks; t++){
+        if(weeklyPlan[t].endingInv < troughEnd){ troughEnd = weeklyPlan[t].endingInv; troughT = t; }
       }
+      if(troughT >= 0){
+        const halfTarget = weeklyPlan[troughT].weekSafety / 2;   /* 半安全线 ≈ 1 周需求 */
+        if(troughEnd < halfTarget){
+          splitFastQty = Math.min(qty, Math.max(cartonSize, Math.ceil((halfTarget - troughEnd) / cartonSize) * cartonSize));
+        }
+      }
+    }
+    if(splitFastQty > 0){
+      placeBatch(cadenceOrderWeek, fastestSub, splitFastQty);           /* 快件提前到货托底 */
+      const restQty = qty - splitFastQty;
+      if(restQty > 0) placeBatch(cadenceOrderWeek, subMethod, restQty); /* 其余按本批方式到 aw */
     } else {
       placeBatch(cadenceOrderWeek, subMethod, qty);
     }
