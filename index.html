@@ -2056,10 +2056,24 @@ function planProduct(p){
   }
   let prevExtraArrivals = extraArrivals.slice();
 
+  // cadence 0 earliest arrive（全局最早能补救的周）——所有 cadence 都用这个下限扫 firstStockout，
+  // 避免 cadence N 误把 cadence 0 已尽力却救不回的历史缺口（如 W8 已发生、cadence 0 应急批最快只能 W9 到）
+  // 视为不可避免的"现在断货"再触发一次升舱。该值固定（不随 cadenceOrderWeek 变化）。
+  const cadence0ArriveWeekOf = (m) => {
+    if(!m) return weeks;
+    const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays);
+    const osM = (isTransit && !isMixed) ? (num(m.osToFbaDays) || 0) : 0;
+    return Math.floor((prodCycleDays + domM + osM + num(fbaShelfDays)) / 7);
+  };
+  const reachFromGlobal = Math.max(0, Math.min(weeks, cadence0ArriveWeekOf(fastestSub)));
+  /* 注意：reachFromGlobal >= weeks 的保护统一在 while 内首行判断（避免循环外 break 报错） */
+
   while(maxIter-- > 0){
+    /* 全局保护——reachFromGlobal >= weeks 时无法补救任何断货周 */
+    if(reachFromGlobal >= weeks) break;
     /* 每轮开头快照「截至上一轮已排的补货到货」，供本轮窗口需求扣除（确保不把已排的货重复算进缺口） */
     prevExtraArrivals = extraArrivals.slice();
-    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
+    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, prevExtraArrivals, avgStartWeek, computeInitialStock(p));
     const weeklyPlan = sim.plan;
 
     /* cadence 下单周：按已落实的下单频率滚动（7天→0,1,2…每周一单；15天→0,2,4…两周一单；30天→0,4,8…每月一单）。
@@ -2084,11 +2098,11 @@ function planProduct(p){
     };
 
     /* 当前模拟下、本轮 cadence 下单「可补救范围内」的首个断货周：
-       reachFrom = 本 cadence 用最快方式下单能到的最早周；早于它的断货无法被任何
-       （本 cadence 或更晚 cadence）新批挽回 → 属不可避免历史断货，不再触发下单，
-       否则会因历史断货周永远存在而无限应急。 */
-    const reachFrom = Math.max(0, Math.min(weeks, arriveWeekOf(fastestSub)));
-    if(reachFrom >= weeks) break;   /* 最快方式都到不了计划期 → 无货可补，排单结束 */
+       reachFrom = cadence 0 用最快方式能补救的最早周（全局最早）；早于它的断货无法被任何
+       cadence 的新批挽回 → 属不可避免历史断货，不再触发应急。
+       v4.6: 改为全局不变值——cadence N 不再用 cadenceOrderWeek 偏移的 reachFrom（会导致 cadence N
+       误把 cadence 0 已尽力却救不回的历史缺口重新判为 firstStockout、错误升舱）。 */
+    const reachFrom = reachFromGlobal;
     let firstStockout = -1;
     for(let t=reachFrom; t<weeks; t++){
       if(weeklyPlan[t].stockout > 0){ firstStockout = t; break; }
@@ -2139,9 +2153,12 @@ function planProduct(p){
       /* 应急：断货已发生（含到货当周）→ cap 到安全线，不加当周需求 */
       qty = wAw.weekSafety;
     } else {
-      /* 2026-09-03 衔接缓冲：常规衔接档 qty 加 safetyStock/2 缓冲，
-         确保首批衔接后库存不低于安全线一半，为后续周留出余量。 */
-      qty = Math.max(0, wAw.weekSafety + safetyStock / 2 - (wAw.beginInv - wAw.demand));
+      /* 2026-09-03 v4.6：衔接档回归朴素公式——aw 期末刚好回安全线即可，
+         不再加普适 safetyStock/2 缓冲（之前会让每个 cadence 期末都超出安全线，
+         叠加 16 周累积后 W12-W16 期末远超安全线 ~50%）。
+         中间薄点周（trough < 半安全线）由 v4.5 衔接槽检测单独拆快件托底，
+         不再每个 cadence 都普适加缓冲。 */
+      qty = Math.max(0, wAw.weekSafety - (wAw.beginInv - wAw.demand));
       if(qty <= 0){
         /* 到货周期末已 ≥ 安全线：只处理「到货周之前、新货可补救范围内已发生真断货」的补足
            （早到多少补多少）。未断货的低安全线周不在此补——货已无法早于它到达，
@@ -2152,8 +2169,8 @@ function planProduct(p){
         }
         if(earlierStockout < 0){ batchCount++; continue; }
         const wg = weeklyPlan[earlierStockout];
-        /* 2026-09-03 同上：应急补缺也加 safetyStock/2 缓冲 */
-        qty = wg.weekSafety + safetyStock / 2;
+        /* v4.6 应急补缺同步去普适缓冲——以真断货周安全线为上限，不堆。 */
+        qty = wg.weekSafety;
       }
     }
 
