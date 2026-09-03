@@ -1160,6 +1160,20 @@ tr.method-disabled .cell-input { background:#f8fafc; }
             </tbody>
           </table>
         </div>
+
+        <div class="algo-block">
+          <div class="algo-step"><b>备货透视表（Page 4）口径</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">列</th><th>口径</th></tr></thead>
+            <tbody>
+              <tr><td>周需求</td><td>优先取自方案 <code>r.avgWeeklyDemand</code>（与 Page 1 结果表周均需求完全同源）；未生成方案的产品退回 <code>last4WeeksSales</code>（业务侧已确认字段语义=近四周平均周销量）</td></tr>
+              <tr><td>月均需求</td><td>优先取自方案 <code>r.monthlyAvg</code>（基于 fcM0~M5 月度均值），否则周需求 × 4.33</td></tr>
+              <tr><td>库存可售时间(月)</td><td>当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图）</td></tr>
+              <tr><td>含本周下单可售时间(月)</td><td>(当前库存 + 本周下单量) ÷ 月均需求（更保守：本周下单入库后视角）</td></tr>
+              <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / <code>replenishments.filter(orderWeek===0).amount</code></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -4475,8 +4489,14 @@ function toggleExpandAllDetail(btn){
  * Page 4: 备货透视（按三级+颜色套装逐品分析）
  * ============================================================ */
 function computePerspectiveRow(p, resultMap){
-  const weeklyDemand = num(p.last4WeeksSales) || num(p.actualWeeklySales) || 0;
-  const monthlyAvg = weeklyDemand * 4.33;
+  /* 关联方案结果（预测口径优先）：已跑 planProduct 的产品优先取 r.avgWeeklyDemand / r.monthlyAvg，
+     与 Page 1 结果表 / 备货下单表口径完全同源，避免两页「周需求/月均需求」对不上；
+     未生成方案的产品退回 last4WeeksSales（业务已确认=近四周平均周销量）× 4.33 估算月均 */
+  const r = resultMap[p.materialCode];
+  const weeklyDemand = r ? num(r.avgWeeklyDemand)
+    : (num(p.last4WeeksSales) || num(p.actualWeeklySales) || 0);
+  const monthlyAvg = r ? (num(r.monthlyAvg) || weeklyDemand * 4.33)
+    : weeklyDemand * 4.33;
 
   // 四源当前库存
   const fba = num(p.fbaStock);
@@ -4504,7 +4524,6 @@ function computePerspectiveRow(p, resultMap){
   const withProdTotal = fba + osStock + osInTransit + divert + inboundDomestic + inboundProd;
 
   // 本次备货（来自 results，否则为 0）
-  const r = resultMap[p.materialCode];
   const replenish = r ? r.actualRec : 0;
   // 本周下单量（orderWeek === 0 的批次合计，反映本周滚动需下单的部分）
   const thisWeekQty = r ? (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0) : 0;
