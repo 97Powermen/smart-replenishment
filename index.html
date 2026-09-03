@@ -317,6 +317,9 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .ship-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap; }
 .ship-direct { background:#eef0f3; color:#6b7280; }
 .ship-transit { background:#fdecec; color:#d9534f; }
+/* 常规运输方式停用/失效自动回退提示（2026-09-03 v4.7） */
+.route-fallback-tip { background:#fff7e6; border:1px solid #f0c27b; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#7a4b00; }
+tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 
 /* Expandable inventory cell */
 .stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: all .15s; }
@@ -1138,6 +1141,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
           <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
           <div style="padding:6px 10px;font-size:13px;">
             <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<br>
+            <b>常规方式停用自动回退（2026-09-03 v4.7）</b>：产品导入的「常规运输方式」若在管理中已被停用/改名 → 不再静默漏补（旧逻辑：库存中等无断货时 regM 匹配失败直接结束排单、期末库存跌破安全线；有断货时被迫连后续批次全走最快方式、运费高）。现自动就近回退到已启用池中的方式衔接：同档（时效相同，如 普船35→卡航35）→ 次慢档 → 最快档 → 最慢兜底；方案仍保持「常规滚动衔接 + 断货才升舱」语义，回退结果在 分析结果表（行下橙色提示条）/ 单品详情 / 导出（末列「运输方式回退」）醒目提示。<br>
             下单周 <b>cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br>
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
             常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量（v4.6 朴素公式，不含普适半安全线缓冲），
@@ -1652,6 +1656,53 @@ function currentMethods(){
   const active = methodConfig.filter(m => m.enabled !== false);
   return (active.length > 0 ? active : methodConfig).map(m => ({ ...m }));
 }
+/* 常规运输方式解析 + 停用/失效回退（2026-09-03 v4.7）
+   产品导入的「常规运输方式」（如普船35）可能在运输方式管理中被停用/改名，
+   导致 planProduct 中 regM 匹配失败：库存中等无断货时 break 漏补、真断货时被迫全走最快方式（运费高）。
+   回退规则（在已启用候选池 methods 内就近替换，保持「常规滚动衔接 + 断货才升舱」语义）：
+   1) 精确/宽松匹配命中 → 原样使用（无回退）
+   2) 未命中 → 以全量配置(含停用)中该名字的 domToFbaDays 为参考时效：
+      a. 同档（dom 相同，如 普船35→卡航35）→ 最理想
+      b. 无同档 → 更慢档（dom 更大）中 dom 最小者（如 普船35→普船55）
+      c. 无更慢 → 更快档（dom 更小）中 dom 最大者（最接近原时效）
+   3) 全量池也查不到该名字（疑似笔误/旧名）→ 取启用池 dom 最大（最慢最省钱）者兜底
+   返回 { method, note }：method=用于常规衔接的方式对象（可能=null，全池停用极端场景）；
+   note=非空表示发生了回退，供 UI/导出醒目提示。 */
+function resolveRegularMethod(p, methods){
+  const out = { method: null, note: '' };
+  const regName = String((p && p.regularMethod) || '').trim();
+  if(!regName || !Array.isArray(methods) || methods.length === 0) return out;
+  const domOf = m => num(m && (m.domToFbaDays != null ? m.domToFbaDays : m.transportDays));
+  /* 1) 启用池内精确/宽松匹配 */
+  let hit = methods.find(m => m.name === regName) || null;
+  if(!hit) hit = methods.find(m => (m.name||'').includes(regName) || regName.includes(m.name||'')) || null;
+  if(hit){ out.method = hit; return out; }
+  /* 2) 参考时效：全量配置（含停用）中按名查找 */
+  const fullPool = (Array.isArray(methodConfig) && methodConfig.length) ? methodConfig : DEFAULT_METHODS.slice();
+  const ref = fullPool.find(m => m.name === regName)
+    || fullPool.find(m => (m.name||'').includes(regName) || regName.includes(m.name||'')) || null;
+  const refDom = ref ? domOf(ref) : 0;
+  let fb = null;
+  if(refDom > 0){
+    fb = methods.find(m => domOf(m) === refDom) || null;                       /* a. 同档 */
+    if(!fb){
+      const slower = methods.filter(m => domOf(m) > refDom).sort((a,b) => domOf(a) - domOf(b));
+      fb = slower[0] || null;                                                   /* b. 更慢档最近 */
+    }
+    if(!fb){
+      const faster = methods.filter(m => domOf(m) < refDom).sort((a,b) => domOf(b) - domOf(a));
+      fb = faster[0] || null;                                                   /* c. 更快档最近 */
+    }
+  }
+  if(!fb && methods.length){ fb = methods.reduce((a,b) => (domOf(b) > domOf(a) ? b : a), methods[0]); }
+  if(fb){
+    out.method = fb;
+    const reason = ref && ref.enabled === false ? '已停用' : '不可用/不存在';
+    const sameTier = refDom > 0 && domOf(fb) === refDom ? '同档' : (refDom > 0 && domOf(fb) > refDom ? '更慢档' : (refDom > 0 ? '更快档' : '可用'));
+    out.note = '常规运输方式「' + regName + '」' + reason + '，自动改走' + sameTier + '「' + fb.name + '」衔接';
+  }
+  return out;
+}
 function addMethodRow(){
   const n = methodConfig.length + 1;
   methodConfig.push({
@@ -1946,6 +1997,7 @@ function planProduct(p){
       replenishments: [], rec: 0, actualRec: 0, totalCost: 0,
       coverageWeeks, maxBatchSize, orderFreqDays, stockoutWeeks,
       sellableWeeks: 0, earliestArrive: '--',
+      regFallbackNote: '',
       isTransit, osBufferDays, isMixed, directRatio
     };
   }
@@ -2070,6 +2122,16 @@ function planProduct(p){
   const reachFromGlobal = Math.max(0, Math.min(weeks, cadence0ArriveWeekOf(fastestSub)));
   /* 注意：reachFromGlobal >= weeks 的保护统一在 while 内首行判断（避免循环外 break 报错） */
 
+  /* 常规运输方式解析 + 停用/失效回退（2026-09-03 v4.7）：
+     产品导入的「常规运输方式」（如普船35）被停用/改名时，regM 在启用池内精确/宽松匹配会失败。
+     旧逻辑后果：库存中等无断货时命中 `awReg>=weeks && firstStockout<0 → break` 静默漏补；
+     有断货时跳过常规档直接升舱、连后续批次也全走最快方式（无慢船衔接、运费高）。
+     现改为 resolveRegularMethod 就近回退（以全量配置中该名字的时效为参考：同档→更慢→更快→最慢兜底），
+     保持「常规滚动衔接 + 断货才升舱」语义；regFallbackNote 非空 = 发生了回退，供结果表/详情/导出醒目提示。 */
+  const _resolvedReg = resolveRegularMethod(p, methods);
+  const regM = _resolvedReg.method;
+  const regFallbackNote = _resolvedReg.note || '';
+
   while(maxIter-- > 0){
     /* 全局保护——reachFromGlobal >= weeks 时无法补救任何断货周 */
     if(reachFromGlobal >= weeks) break;
@@ -2083,13 +2145,7 @@ function planProduct(p){
     const cadenceOrderWeek = batchCount * orderFreqWeeks;
     if(cadenceOrderWeek >= weeks) break;
 
-    /* 常规方式解析（宽松匹配：空运↔空运15） */
-    let regM = null;
-    if(p.regularMethod){
-      const regName = String(p.regularMethod).trim();
-      regM = methods.find(m => m.name === regName);
-      if(!regM) regM = methods.find(m => (m.name||'').includes(regName) || regName.includes(m.name||''));
-    }
+    /* 常规方式 regM 已在 while 外统一解析（resolveRegularMethod，v4.7）：命中启用池直接用；未命中自动回退 */
 
     /* 到货周计算（原始天数，不钳 weeks-1：≥weeks 的批在 placeBatch 内部会被丢弃） */
     const arriveWeekOf = (m) => {
@@ -2136,9 +2192,9 @@ function planProduct(p){
       subMethod = best || fastestSub;
     } else if(regM){
       subMethod = regM;
-    } else {
-      subMethod = fastestOverall();
     }
+    /* regM=null 的极端兜底分支实际不可达（awReg=weeks 且无断货已被上方 break 拦截；
+       有断货走 firstStockout 分支）——v4.7 移除原 fastestOverall() 无定义死代码 */
     const aw = subMethod ? Math.min(weeks - 1, Math.max(0, arriveWeekOf(subMethod))) : -1;
     if(aw < 0 || aw >= weeks){ if(firstStockout >= 0){ batchCount++; continue; } break; }
 
@@ -2264,6 +2320,7 @@ function planProduct(p){
     actualRec: totalRec,
     totalCost, totalStockout, stockoutWeeks,
     sellableWeeks, earliestArrive,
+    regFallbackNote,
     isTransit, osBufferDays, isMixed, directRatio
   };
 }
@@ -3458,7 +3515,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -3623,14 +3680,13 @@ function ensureThisWeekBatch(r, w, newVal){
   const rps = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
   if(rps.length > 0 || newVal <= 0) return rps;
   const methods = currentMethods();
-  let m = null;
   const p = r.p || {};
-  if(p.regularMethod){
-    const regName = String(p.regularMethod).trim();
-    m = methods.find(x => x.name === regName);
-    if(!m) m = methods.find(x => (x.name||'').includes(regName) || regName.includes(x.name||''));
-  }
+  /* v4.7：与 planProduct 同口径——常规方式在启用池未命中时自动就近回退（同档→更慢→更快→最慢），
+     回退提示记入 r.regFallbackNote（首回退优先保留），供结果表/详情/导出醒目提示 */
+  const _rr = resolveRegularMethod(p, methods);
+  let m = _rr.method;
   if(!m) m = methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), methods[0]);
+  if(_rr.note && !r.regFallbackNote) r.regFallbackNote = _rr.note;
   const newRp = {
     orderWeek: 0,
     orderDate: addWeeks(new Date(), 0),
@@ -4004,7 +4060,7 @@ function exportResultCSV(){ exportResult('csv'); }
 function exportResultXLSX(){ exportResult('xlsx'); }
 function exportResult(format){
   if(results.length === 0){ alert('暂无结果'); return; }
-  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态'];
+  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退'];  /* v4.7 末列=常规运输方式停用/失效回退提示 */
   const rows = [head];
   results.forEach((r, idx) => {
     const p = r.p;
@@ -4047,7 +4103,7 @@ function exportResult(format){
       fbaV, osStockV, divertV, osInTrV, domT, domP, withProdTotal,
       Math.round(r.avgWeeklyDemand * (Math.round((num(p.prodCycleDays)||42)/7) + (num(p.safetyStockWeeks)||2))),
       r.rec, r.actualRec, thisWeekQty, r.sellableWeeks,
-      r.stockoutWeeks, status]);
+      r.stockoutWeeks, status, r.regFallbackNote || '']);
   });
   const fname = '备货分析结果_'+fmtDate(new Date());
   if(format === 'xlsx'){
@@ -4403,6 +4459,7 @@ function buildDetailContent(r){
     <div><b>单箱数量：</b>${fmt(p.casesPerUnit)||DEFAULT_CARTON}</div>
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>
+  ${r.regFallbackNote ? `<div class="route-fallback-tip" style="margin:0 0 12px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>` : ''}
   <div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
     <button class="btn btn-sm btn-confirm week-confirm-bar" data-pcode="${esc(p.materialCode||'')}" onclick="confirmWeekEdits(this)" style="display:none;">✓ 确认更改</button>
@@ -4995,6 +5052,7 @@ function openDetailBuild(r, p, methods){
     <div><b>单箱数量：</b>${fmt(p.casesPerUnit)||DEFAULT_CARTON}</div>
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>`;
+  if(r.regFallbackNote) html += `<div class="route-fallback-tip" style="margin:0 0 14px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>`;
   // 周次计划表
   html += `<div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
