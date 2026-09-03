@@ -2139,7 +2139,9 @@ function planProduct(p){
       /* 应急：断货已发生（含到货当周）→ cap 到安全线，不加当周需求 */
       qty = wAw.weekSafety;
     } else {
-      qty = Math.max(0, wAw.weekSafety - (wAw.beginInv - wAw.demand));
+      /* 2026-09-03 衔接缓冲：常规衔接档 qty 加 safetyStock/2 缓冲，
+         确保首批衔接后库存不低于安全线一半，为后续周留出余量。 */
+      qty = Math.max(0, wAw.weekSafety + safetyStock / 2 - (wAw.beginInv - wAw.demand));
       if(qty <= 0){
         /* 到货周期末已 ≥ 安全线：只处理「到货周之前、新货可补救范围内已发生真断货」的补足
            （早到多少补多少）。未断货的低安全线周不在此补——货已无法早于它到达，
@@ -2150,7 +2152,8 @@ function planProduct(p){
         }
         if(earlierStockout < 0){ batchCount++; continue; }
         const wg = weeklyPlan[earlierStockout];
-        qty = wg.weekSafety;
+        /* 2026-09-03 同上：应急补缺也加 safetyStock/2 缓冲 */
+        qty = wg.weekSafety + safetyStock / 2;
       }
     }
 
@@ -2161,7 +2164,24 @@ function planProduct(p){
     if(qty <= 0){ batchCount++; continue; }
 
     /* 4) placeBatch：moq/按箱/直发-海外仓子批拆分/push/extraArrivals/超期丢弃 全在内部处理 */
-    const batchResult = placeBatch(cadenceOrderWeek, subMethod, qty);
+    /* 2026-09-03 断货应急运输分配优化：当首批用最快方式时，将 qty 拆分为最快+常规两部分，
+       同一下单周走不同运输方式——快件补缺口（首批到货止住断货），慢件省钱（同周出，后续到货）。
+       条件：断货应急 + 常规方式可用且不同于最快方式 + 常规方式能在计划期内到货。 */
+    const isEmergencySplit = (firstStockout >= 0 && aw >= firstStockout && regM && subMethod !== regM && arriveWeekOf(regM) < weeks);
+    if(isEmergencySplit){
+      const altAw = Math.min(weeks - 1, Math.max(0, arriveWeekOf(regM)));
+      if(altAw > aw && altAw < weeks){
+        /* 拆分：紧急部分用最快方式（最快到货止住断货），剩余用常规方式（同一下单周，省钱慢到） */
+        const urgentQty = Math.ceil(qty / 2);
+        const restQty = qty - urgentQty;
+        placeBatch(cadenceOrderWeek, subMethod, urgentQty);
+        if(restQty > 0) placeBatch(cadenceOrderWeek, regM, restQty);
+      } else {
+        placeBatch(cadenceOrderWeek, subMethod, qty);
+      }
+    } else {
+      placeBatch(cadenceOrderWeek, subMethod, qty);
+    }
     /* 无论本批是否落实都推进 cadence（防死循环：下单周单调递增，必然收敛） */
     batchCount++;
   }
