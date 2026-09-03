@@ -1108,9 +1108,9 @@ tr.method-disabled .cell-input { background:#f8fafc; }
         <div class="algo-block">
           <div class="algo-step"><b>⑤ 缺口扫描（按 cadence 逐轮评估，2026-09-03 v4）</b></div>
           <div style="padding:6px 10px;font-size:13px;">
-            每轮先做<b>全量库存模拟</b>（含已排补货），再从<b>本轮 cadence 最快可补救范围</b>（reachFrom = 最快方式到货周）起扫描：<br>
-            <b>firstStockout</b> = reachFrom 起首个<b>真断货</b>周（available &lt; 周需求，期末 = 0）。早于 reachFrom 的断货
-            无论本批还是更晚批次都无法挽回（不可避免历史断货），不再触发下单，避免因历史断货周永远存在而无限应急。<br>
+            每轮先做<b>全量库存模拟</b>（含已排补货用 prevExtraArrivals 快照，扣除下游已排避免重复计入缺口），再从<b>全局最早可补救范围</b>（reachFromGlobal = cadence 0 用最快方式能到货的最早周，<b>所有 cadence 共用同一个下限</b>，而非每轮按 cadenceOrderWeek 重算）起扫描：<br>
+            <b>firstStockout</b> = reachFromGlobal 起首个<b>真断货</b>周（available &lt; 周需求，期末 = 0）。早于 reachFromGlobal 的断货
+            无论本批还是更晚批次都无法挽回（不可避免历史断货），不再触发下单，避免因历史断货周永远存在而无限应急；同时 cadence N 不会再误把 cadence 0 已尽力却救不回的历史缺口重新判为"现在断货"触发升舱。<br>
             cadence 下单周 = 批序 × 频率周数（7天→0,1,2…每周一单；15天→0,2,4…；30天→0,4,8…每月一单）；
             <b>下单周 ≥ 计划期 或 常规到货周 ≥ 计划期且无断货需救 → 排单结束</b>（不再升舱堆货）。<br>
             分档（用户三规则）：<br>
@@ -1121,14 +1121,15 @@ tr.method-disabled .cell-input { background:#f8fafc; }
         </div>
 
         <div class="algo-block">
-          <div class="algo-step"><b>⑥ 下单量（qty）</b></div>
+          <div class="algo-step"><b>⑥ 下单量（qty，2026-09-03 v4.6）</b></div>
           <table class="result-table" style="width:100%;">
             <thead><tr><th style="width:160px;">档位</th><th>规则</th></tr></thead>
             <tbody>
               <tr><td>应急档（到货周 ≥ 首断货周）</td><td><b>qty = 到货周安全线</b>（规则 2：不加当周需求——断货周需求已丢失，补不回已丢销量；最大即安全线，此后批次接力慢慢衔接）</td></tr>
-              <tr><td>衔接档（到货早于任何断货）</td><td>反推 <b>qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3）</td></tr>
-              <tr><td>到货周已 ≥ 安全线</td><td>查 reachFrom..到货周 之间是否仍有真断货：无 → 本 cadence <b>空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线</td></tr>
-              <tr><td>取整/上限</td><td>按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆</td></tr>
+              <tr><td>衔接档（到货早于任何断货）</td><td>反推 <b>qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3，<b>2026-09-03 v4.6 去普适 safetyStock/2 缓冲</b>——之前会让每个 cadence 期末都超安全线、16 周累积过量）</td></tr>
+              <tr><td>到货周已 ≥ 安全线</td><td>查 reachFromGlobal..到货周 之间是否仍有真断货：无 → 本 cadence <b>空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线（v4.6 同步去 +safetyStock/2）</td></tr>
+              <tr><td>快慢分流衔接槽（v4.5 保留）</td><td>本批到货周 aw 之前若存在期末 &lt; 该周半安全线（≈1 周需求）的薄点周 → 把缺口拆给最快方式提前到货托底，剩余仍走本批方式到 aw（同一 cadence 下单周、两种运输方式，对应实际「调约一周需求走快运衔接」）</td></tr>
+              <tr><td>取整/上限</td><td>按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆（≈2×安全线口径）</td></tr>
             </tbody>
           </table>
         </div>
@@ -1139,9 +1140,10 @@ tr.method-disabled .cell-input { background:#f8fafc; }
             <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<br>
             下单周 <b>cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br>
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
-            常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量，
-            常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（2026-09-03 修复前：W9 出 4,960 快船22）。<br>
+            常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量（v4.6 朴素公式，不含普适半安全线缓冲），
+            常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br>
             断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
+            快慢分流衔接槽：衔接档下到货周 aw 前若出现低于半安全线的薄点周，把缺口拆给最快方式（提前到货托底）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<br>
             按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
             循环终止：无缺口 / 下单周 ≥ 计划期 / 常规到不了计划期且无断货需救 / 达最大迭代数。
           </div>
