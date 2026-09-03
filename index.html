@@ -329,7 +329,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 /* 调整2：折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交），基于 nth-child 隐藏特定列 */
 .result-table-wrap.pipe-collapsed #resultTable thead th:nth-child(n+13):nth-child(-n+17),
 .result-table-wrap.pipe-collapsed #resultTable tbody td:nth-child(n+13):nth-child(-n+17),
-.result-table-wrap.pipe-collapsed #resultTable tfoot td:nth-child(n+13):nth-child(-n+17) { display: none; }
+.result-table-wrap.pipe-collapsed #resultTable tfoot td:nth-child(n+5):nth-child(-n+9) { display: none; }
 
 /* 调整3：透视表「当前库存」列头折叠按钮 —— 切换 FBA库存/海外仓库存/海外仓在途/挪用库存 4 列明细 */
 .result-table-wrap.persp-collapsed #perspectiveTable thead th:nth-child(n+8):nth-child(-n+11),
@@ -797,6 +797,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
             </tr>
           </thead>
           <tbody id="detailTbody"></tbody>
+          <tfoot id="detailTfoot"></tfoot>
         </table>
       </div>
       <div id="detailPageBar"></div>
@@ -3100,9 +3101,11 @@ function renderProductList(){
   const endIdx = Math.min(startIdx + PAGE_SIZE, filtered.length);
   let html = '';
   let totalFBA = 0, totalOS = 0, totalDivert = 0, totalOSTr = 0, totalDomT = 0, totalDomP = 0, totalWithProd = 0;
+  let totalLatestWk = 0, totalMonthlyAvg = 0;   // 2026-09-03 合计行补「最新周销量 / 月均需求」两列
   filtered.forEach((p, idx) => {
     const fcs = [num(p.fcM0), num(p.fcM1), num(p.fcM2), num(p.fcM3), num(p.fcM4), num(p.fcM5)].filter(v => v > 0);
     const monthlyAvg = fcs.length > 0 ? Math.round(fcs.reduce((a,b)=>a+b,0) / fcs.length) : 0;
+    totalLatestWk += num(p.currentWeekSales); totalMonthlyAvg += monthlyAvg;
     const planD = num(p.planningDays) || 84;
     const weeks = Math.max(4, Math.round(planD / 7));
     const fbaV = num(p.fbaStock);
@@ -3162,7 +3165,9 @@ function renderProductList(){
   });
   $('productTbody').innerHTML = html;
   $('productTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
-    <td colspan="13" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
+    <td colspan="11" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
+    <td class="cell-num">${fmt(totalLatestWk)}</td>
+    <td class="cell-num">${fmt(totalMonthlyAvg)}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num">${fmt(totalOS)}</td>
     <td class="cell-num">${fmt(totalDivert)}</td>
@@ -3302,11 +3307,13 @@ function renderResultTable(){
   let html = '';
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
+  let totalCurSales=0, totalLast4=0, totalAvgDemand=0;  // 2026-09-03 合计行补 最新周销量/近四周销量/周均需求
   filtered.forEach((item, idx) => {
     const r = item.r;
     const p = r.p;
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
+    totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalAvgDemand += num(r.avgWeeklyDemand);
     /* 本周下单量：orderWeek === 0 的批次合计 */
     const thisWeekQty = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
     totalThisWeekRec += thisWeekQty;
@@ -3394,7 +3401,10 @@ function renderResultTable(){
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
-    <td colspan="12" style="text-align:right;">合计（${filtered.length} 个产品）</td>
+    <td colspan="9" style="text-align:right;">合计（${filtered.length} 个产品）</td>
+    <td class="cell-num">${fmt(totalCurSales)}</td>
+    <td class="cell-num">${fmt(totalLast4)}</td>
+    <td class="cell-num">${fmt(totalAvgDemand.toFixed(1))}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num">${fmt(totalOS)}</td>
     <td class="cell-num">${fmt(totalDivert)}</td>
@@ -4134,6 +4144,7 @@ function renderDetailTable(){
   if(!tbody) return;
   if(results.length === 0){
     tbody.innerHTML = '<tr><td colspan="17" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「🚀 生成备货方案」。</td></tr>';
+    const dtf0 = $('detailTfoot'); if(dtf0) dtf0.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品';
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
     return;
@@ -4180,10 +4191,37 @@ function renderDetailTable(){
   }
   if(filtered.length === 0){
     tbody.innerHTML = '<tr><td colspan="17" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    const dtf1 = $('detailTfoot'); if(dtf1) dtf1.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品（筛选后）/ 总 ' + results.length;
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
     return;
   }
+  /* 2026-09-03 合计行：遍历全量 filtered（含跨页），与 body 单元格同口径累计 */
+  let tCurSales = 0, tAvgDemand = 0, tMonthAvg = 0, tWithProd = 0, tRec = 0, tThisWeek = 0, tStockout = 0;
+  filtered.forEach(({ r }) => {
+    const p = r.p;
+    const wkDemand = num(r.avgWeeklyDemand);
+    const monthAvg = num(r.monthlyAvg) || (wkDemand * 4.33);
+    const fbaV = num(p.fbaStock), osV = num(p.osStock), divertV = num(p.divertStock), osInV = num(p.osInTransit);
+    let domT = num(p.domInTransit), domP = num(p.domInProd);
+    if(Array.isArray(p.pipelineTickets)){
+      p.pipelineTickets.forEach(t => {
+        const q = num(t && t.qty);
+        if(q > 0){
+          if(t.type === 'domInTransit') domT += q;
+          else if(t.type === 'domInProd') domP += q;
+        }
+      });
+    }
+    tCurSales += num(p.currentWeekSales);
+    tAvgDemand += wkDemand;
+    tMonthAvg += monthAvg;
+    tWithProd += fbaV + osV + divertV + osInV + domT + domP;
+    tRec += num(r.actualRec);
+    tThisWeek += (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    tStockout += num(r.stockoutWeeks);
+  });
+
   // 分页
   const curPage = clampPage('detail', filtered.length);
   const startIdx = (curPage - 1) * PAGE_SIZE;
@@ -4257,6 +4295,22 @@ function renderDetailTable(){
     </tr>`;
   }
   tbody.innerHTML = html;
+  const dtf = $('detailTfoot');
+  if(dtf){
+    dtf.innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
+      <td colspan="7" style="text-align:right;">合计（${filtered.length} 个产品）</td>
+      <td class="cell-num">${fmt(tCurSales)}</td>
+      <td class="cell-num">${fmt(tAvgDemand.toFixed(1))}</td>
+      <td class="cell-num">${fmt(tMonthAvg.toFixed(1))}</td>
+      <td>--</td>
+      <td class="cell-num">${fmt(tWithProd)}</td>
+      <td class="cell-num cell-plan">${fmt(tRec)}</td>
+      <td class="cell-num cell-plan" style="color:var(--primary);font-weight:600;">${tThisWeek > 0 ? fmt(tThisWeek) : '—'}</td>
+      <td class="cell-num">${fmt(tStockout)}</td>
+      <td></td>
+      <td></td>
+    </tr>`;
+  }
   const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 ' + filtered.length + ' 个产品（筛选后）/ 总 ' + results.length;
   const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = paginationBar(filtered.length, curPage, 'detail');
 }
