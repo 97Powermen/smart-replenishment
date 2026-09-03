@@ -692,7 +692,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
               <th>梯队</th>
               <th>下单频率</th>
               <th>最新周销量</th>
-              <th>近四周销量</th>
+              <th>近四周平均销量</th>
               <th>周均需求</th>
               <th>FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）">▾</button></th>
               <th>海外仓库存</th>
@@ -786,7 +786,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
               <th style="width:60px;text-align:left;">梯队</th>
               <th style="width:95px;">最新周销量</th>
               <th style="width:95px;">周均需求</th>
-              <th style="width:95px;">月均预测</th>
+              <th style="width:95px;">月均需求</th>
               <th style="width:95px;">最新周达成</th>
               <th style="width:95px;">含在制总数</th>
               <th style="width:95px;">建议下单量</th>
@@ -1168,7 +1168,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
             <thead><tr><th style="width:160px;">列</th><th>口径</th></tr></thead>
             <tbody>
               <tr><td>周需求</td><td>优先取自方案 <code>r.avgWeeklyDemand</code>（与 Page 1 结果表周均需求完全同源）；未生成方案的产品退回 <code>last4WeeksSales</code>（业务侧已确认字段语义=近四周平均周销量）</td></tr>
-              <tr><td>月均需求</td><td>优先取自方案 <code>r.monthlyAvg</code>（基于 fcM0~M5 月度均值），否则周需求 × 4.33</td></tr>
+              <tr><td>月均需求</td><td>以导入时按月预测计算为准：<code>monthlyAvgImport(p)</code>（fcM0~M5 中 &gt;0 的均值、取整）；与 备货清单 / 分析结果明细「月均需求」逐品同源；预测全空 = 0，不使用销量兜底（2026-09-03 用户确认）</td></tr>
               <tr><td>库存可售时间(月)</td><td>当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图）</td></tr>
               <tr><td>含本周下单可售时间(月)</td><td>(当前库存 + 本周下单量) ÷ 月均需求（更保守：本周下单入库后视角）</td></tr>
               <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / <code>replenishments.filter(orderWeek===0).amount</code></td></tr>
@@ -1797,6 +1797,14 @@ function buildWeeklyDemand(p, weeks){
     }
   }
   return demand;
+}
+
+/* 月均需求统一口径（2026-09-03 用户确认）：以「导入时按月预测计算」为准 =
+   fcM0~M5 中 >0 的均值并取整；预测全空/全 0 → 0。
+   备货清单 / 分析结果明细(月均预测) / 备货透视 三处共用，保证逐品数值完全一致。 */
+function monthlyAvgImport(p){
+  const fcs = [num(p && p.fcM0), num(p && p.fcM1), num(p && p.fcM2), num(p && p.fcM3), num(p && p.fcM4), num(p && p.fcM5)].filter(v => v > 0);
+  return fcs.length > 0 ? Math.round(fcs.reduce((a,b)=>a+b,0) / fcs.length) : 0;
 }
 
 // 期初可售（已存在库存，不算"未来到货"）
@@ -3103,8 +3111,7 @@ function renderProductList(){
   let totalFBA = 0, totalOS = 0, totalDivert = 0, totalOSTr = 0, totalDomT = 0, totalDomP = 0, totalWithProd = 0;
   let totalLatestWk = 0, totalMonthlyAvg = 0;   // 2026-09-03 合计行补「最新周销量 / 月均需求」两列
   filtered.forEach((p, idx) => {
-    const fcs = [num(p.fcM0), num(p.fcM1), num(p.fcM2), num(p.fcM3), num(p.fcM4), num(p.fcM5)].filter(v => v > 0);
-    const monthlyAvg = fcs.length > 0 ? Math.round(fcs.reduce((a,b)=>a+b,0) / fcs.length) : 0;
+    const monthlyAvg = monthlyAvgImport(p);   // 2026-09-03 口径统一：与分析结果/备货透视共用 monthlyAvgImport
     totalLatestWk += num(p.currentWeekSales); totalMonthlyAvg += monthlyAvg;
     const planD = num(p.planningDays) || 84;
     const weeks = Math.max(4, Math.round(planD / 7));
@@ -3307,7 +3314,7 @@ function renderResultTable(){
   let html = '';
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
-  let totalCurSales=0, totalLast4=0, totalAvgDemand=0;  // 2026-09-03 合计行补 最新周销量/近四周销量/周均需求
+  let totalCurSales=0, totalLast4=0, totalAvgDemand=0;  // 2026-09-03 合计行补 最新周销量/近四周平均销量(周均)/周均需求
   filtered.forEach((item, idx) => {
     const r = item.r;
     const p = r.p;
@@ -3943,7 +3950,7 @@ function exportResultCSV(){ exportResult('csv'); }
 function exportResultXLSX(){ exportResult('xlsx'); }
 function exportResult(format){
   if(results.length === 0){ alert('暂无结果'); return; }
-  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态'];
+  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态'];
   const rows = [head];
   results.forEach((r, idx) => {
     const p = r.p;
@@ -4076,7 +4083,7 @@ function exportPerspective(format){
     else status = '呆滞';
     if(fStatus && fStatus !== status) return;
     counter++;
-    rows.push([counter, g.lv3, g.color, g.products.length, weeklyDemand, monthlyAvg.toFixed(1),
+    rows.push([counter, g.lv3, g.color, g.products.length, weeklyDemand, monthlyAvg,
       fba, osStock, osInTransit, divert, currentStock, domT, domP, withProdTotal,
       replenish, thisWeekQty,
       sellNow >= 999 ? '∞' : sellNow.toFixed(1),
@@ -4201,7 +4208,7 @@ function renderDetailTable(){
   filtered.forEach(({ r }) => {
     const p = r.p;
     const wkDemand = num(r.avgWeeklyDemand);
-    const monthAvg = num(r.monthlyAvg) || (wkDemand * 4.33);
+    const monthAvg = monthlyAvgImport(p);   // 2026-09-03 与备货清单同口径（fcM0~M5 >0 均值取整，全空=0）
     const fbaV = num(p.fbaStock), osV = num(p.osStock), divertV = num(p.divertStock), osInV = num(p.osInTransit);
     let domT = num(p.domInTransit), domP = num(p.domInProd);
     if(Array.isArray(p.pipelineTickets)){
@@ -4237,7 +4244,11 @@ function renderDetailTable(){
     /* 新增展示字段 */
     const curWeekSales = num(p.currentWeekSales);
     const weeklyDemand = num(r.avgWeeklyDemand);
-    const monthlyForecast = num(r.monthlyAvg) || (weeklyDemand * 4.33);
+    /* 2026-09-03 口径统一：月均需求列 = 备货清单同源（monthlyAvgImport：fcM0~M5 >0 均值取整，全空=0）；
+       可售月数估算仍以「月均>0 用月均，否则周均需求×4.33」兜底，避免空预测产品被误判为库存呆滞 */
+    const monthDisp = monthlyAvgImport(p);
+    const monthSell = monthDisp || (weeklyDemand * 4.33);
+    const monthlyForecast = monthDisp;
     /* 最新周达成 = 最新周销量 / 周均需求（预测），体现最新一周实际销售与预测的达成情况 */
     const rate = weeklyDemand > 0 ? (curWeekSales / weeklyDemand) : 0;
     const rateTxt = weeklyDemand > 0 ? (rate * 100).toFixed(0) + '%' : '--';
@@ -4258,7 +4269,7 @@ function renderDetailTable(){
     /* 本周下单量 */
     const thisWeekQty = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
     /* 备货建议 */
-    const sellNowMonths = monthlyForecast > 0 ? ((fbaV + osV + divertV + osInV) / monthlyForecast) : (fbaV + osV + divertV + osInV > 0 ? 999 : 0);
+    const sellNowMonths = monthSell > 0 ? ((fbaV + osV + divertV + osInV) / monthSell) : (fbaV + osV + divertV + osInV > 0 ? 999 : 0);
     let advice, adviceCls;
     if(r.noStock){ advice = '售完即止·不备货'; adviceCls = 's-售完即止'; }
     else if(weeklyDemand <= 0){ advice = '无需求·不备货'; adviceCls = 's-无需求'; }
@@ -4276,7 +4287,7 @@ function renderDetailTable(){
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td class="cell-num">${fmt(curWeekSales)}</td>
       <td class="cell-num">${fmt(weeklyDemand.toFixed(1))}</td>
-      <td class="cell-num">${fmt(monthlyForecast.toFixed(1))}</td>
+      <td class="cell-num">${fmt(monthlyForecast)}</td>
       <td class="cell-num ${rateCls}" title="最新周销量 ${fmt(curWeekSales)} ÷ 周均需求 ${fmt(weeklyDemand.toFixed(1))}">${rateTxt}</td>
       <td class="cell-num">${fmt(withProdTotal)}</td>
       <td class="cell-num cell-plan">${fmt(r.actualRec)}</td>
@@ -4301,7 +4312,7 @@ function renderDetailTable(){
       <td colspan="7" style="text-align:right;">合计（${filtered.length} 个产品）</td>
       <td class="cell-num">${fmt(tCurSales)}</td>
       <td class="cell-num">${fmt(tAvgDemand.toFixed(1))}</td>
-      <td class="cell-num">${fmt(tMonthAvg.toFixed(1))}</td>
+      <td class="cell-num">${fmt(tMonthAvg)}</td>
       <td>--</td>
       <td class="cell-num">${fmt(tWithProd)}</td>
       <td class="cell-num cell-plan">${fmt(tRec)}</td>
@@ -4543,14 +4554,15 @@ function toggleExpandAllDetail(btn){
  * Page 4: 备货透视（按三级+颜色套装逐品分析）
  * ============================================================ */
 function computePerspectiveRow(p, resultMap){
-  /* 关联方案结果（预测口径优先）：已跑 planProduct 的产品优先取 r.avgWeeklyDemand / r.monthlyAvg，
-     与 Page 1 结果表 / 备货下单表口径完全同源，避免两页「周需求/月均需求」对不上；
-     未生成方案的产品退回 last4WeeksSales（业务已确认=近四周平均周销量）× 4.33 估算月均 */
+  /* 2026-09-03 口径统一（用户确认）：
+     周需求 —— 已跑方案优先取 r.avgWeeklyDemand（与 Page 1 结果表 / 备货下单表完全同源），
+               未生成方案退回 last4WeeksSales（业务已确认 = 近四周平均周销量）；
+     月均需求 —— 一律以「导入时按月预测计算」为准（monthlyAvgImport：fcM0~M5 >0 均值取整），
+               与 备货清单 / 分析结果明细 逐品完全一致；预测全空 = 0，不再用 周需求×4.33 兜底显示 */
   const r = resultMap[p.materialCode];
   const weeklyDemand = r ? num(r.avgWeeklyDemand)
     : (num(p.last4WeeksSales) || num(p.actualWeeklySales) || 0);
-  const monthlyAvg = r ? (num(r.monthlyAvg) || weeklyDemand * 4.33)
-    : weeklyDemand * 4.33;
+  const monthlyAvg = monthlyAvgImport(p);
 
   // 四源当前库存
   const fba = num(p.fbaStock);
@@ -4752,7 +4764,7 @@ function renderPerspective(){
       <td>${esc(agg.g.color||'--')}</td>
       <td class="cell-num">${productCount}</td>
       <td class="cell-num">${fmt(agg.weeklyDemand)}</td>
-      <td class="cell-num">${fmt(agg.monthlyAvg.toFixed(1))}</td>
+      <td class="cell-num">${fmt(agg.monthlyAvg)}</td>
       <td class="cell-num cell-plan">${fmt(agg.currentStock)}</td>
       <td class="cell-num">${fmt(agg.fba)}</td>
       <td class="cell-num">${fmt(agg.osStock)}</td>
@@ -4782,7 +4794,7 @@ function renderPerspective(){
       <td colspan="3" style="text-align:right;">合计（${counter} 组 / ${totalProductCount} 个产品）</td>
       <td class="cell-num">${totalProductCount}</td>
       <td class="cell-num">${fmt(totalWeeklyDemand)}</td>
-      <td class="cell-num">${fmt(totalMonthly.toFixed(1))}</td>
+      <td class="cell-num">${fmt(totalMonthly)}</td>
       <td class="cell-num cell-plan">${fmt(totalStockNow)}</td>
       <td class="cell-num">${fmt(totalFba)}</td>
       <td class="cell-num">${fmt(totalOsStock)}</td>
