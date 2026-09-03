@@ -148,6 +148,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .row-actions .btn { padding:4px 8px; font-size:12px; line-height:1; min-width:26px; }
 .row-actions .btn-icon { padding:5px 7px; }
 
+/* 运输方式「是否启用」开关 */
+.switch { position:relative; display:inline-block; width:40px; height:22px; vertical-align:middle; }
+.switch input { opacity:0; width:0; height:0; }
+.switch .slider { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:22px; transition:background .2s; }
+.switch .slider::before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+.switch input:checked + .slider { background:var(--success, #22c55e); }
+.switch input:checked + .slider::before { transform:translateX(18px); }
+.method-state-txt { font-size:12px; color:var(--text-secondary); margin-left:6px; }
+tr.method-disabled td { opacity:.55; }
+tr.method-disabled .cell-input { background:#f8fafc; }
+
 /* Metric cards (4-card grid for analysis result section) */
 .metric-cards { display:grid; grid-template-columns: repeat(5, 1fr); gap:14px; margin-bottom:18px; }
 .metric-card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:18px 20px; text-align:center; transition: box-shadow .2s; }
@@ -348,6 +359,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .pipeline-status.err { background:#fde8e8; color:#c62828; border:1px solid #f5b7b7; }
 .pipeline-status .close { cursor:pointer; opacity:.6; font-weight:400; padding:0 4px; }
 .pipeline-status .close:hover { opacity:1; }
+/* 在途/在制「当前数据摘要」徽章：导入后实时显示当前条数与类型分布，避免重复导入累加导致两批测试结果一样 */
+.pipeline-summary { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:14px; font-size:12px; font-weight:600; margin-left:8px; background:var(--bg-soft); color:var(--text-secondary); border:1px solid var(--border-light); }
+.pipeline-summary .chip { display:inline-block; padding:2px 8px; border-radius:10px; background:var(--primary-light); color:var(--primary); font-size:11px; margin-left:4px; }
+.pipeline-mode-toggle { display:inline-flex; align-items:center; gap:4px; margin-left:6px; cursor:pointer; padding:4px 8px; border-radius:6px; border:1px solid var(--border-light); background:var(--bg-soft); }
+.pipeline-mode-toggle:hover { background:var(--primary-light); }
 .stock-detail-row { background: linear-gradient(180deg, #fafbff 0%, #f6f7fb 100%); }
 .stock-detail-row .panel { padding: 8px 14px; display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; font-size:12.5px; }
 .stock-detail-row .panel .cell { background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; }
@@ -442,18 +458,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <button class="btn btn-sm btn-outline" onclick="addMethodRow()">＋ 新增方式</button>
       </div>
     </div>
-    <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。</div>
+    <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b>「是否启用」开关</b>：停用的方式<b>不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。</div>
     <div class="result-table-wrap is-resizable">
-      <table class="result-table" id="methodTable" style="min-width:1050px;table-layout:fixed;">
+      <table class="result-table" id="methodTable" style="min-width:1170px;table-layout:fixed;">
         <thead>
           <tr>
-            <th style="width:150px;text-align:center;">优先级</th>
-            <th style="width:150px;">运输方式</th>
-            <th style="width:150px;">单位运费(¥/KG)</th>
-            <th style="width:150px;">海外仓到FBA时效(天)</th>
-            <th style="width:150px;">国内到FBA时效(天)</th>
-            <th style="width:150px;">最小批次量</th>
-            <th style="width:150px;">操作</th>
+            <th style="width:130px;text-align:center;">优先级</th>
+            <th style="width:140px;">运输方式</th>
+            <th style="width:120px;">单位运费(¥/KG)</th>
+            <th style="width:130px;">海外仓到FBA时效(天)</th>
+            <th style="width:130px;">国内到FBA时效(天)</th>
+            <th style="width:120px;">最小批次量</th>
+            <th style="width:140px;text-align:center;">是否启用</th>
+            <th style="width:160px;text-align:center;">操作</th>
           </tr>
         </thead>
         <tbody id="methodTbody"></tbody>
@@ -497,7 +514,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <button class="btn btn-outline" onclick="document.getElementById('pipelineInput').click()">📦 导入在途/在制</button>
       <input type="file" id="pipelineInput" accept=".xlsx,.xls" style="display:none;" onchange="importPipelineXlsx(event)">
       <button class="btn btn-sm btn-outline" onclick="downloadPipelineTemplate()" title="下载在途/在制导入模板">📋 模板</button>
+      <label class="pipeline-mode-toggle" title="勾选后下次导入将覆盖（先清空原数据）再写入；未勾选则追加（保留原数据）">
+        <input type="checkbox" id="pipelineOverwriteMode" />
+        <span style="font-size:12px;color:var(--text-secondary);">覆盖模式</span>
+      </label>
+      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的在制在制数据（pipelineTickets + 单字段）" style="color:var(--danger);">🧹 清空在制在制</button>
       <span id="pipelineImportStatus" class="pipeline-status" style="display:none;"></span>
+      <span id="pipelineDataSummary" class="pipeline-summary" style="display:none;"></span>
       <div class="divider-v"></div>
       <button class="btn btn-outline" onclick="exportProductList()">📊 导出当前列表</button>
       <div class="divider-v"></div>
@@ -1082,24 +1105,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
 
         <div class="algo-block">
-          <div class="algo-step"><b>⑤ 不可避免周扫描</b></div>
-          <div style="padding:6px 10px;font-size:13px;">每次模拟后从 <b>lastUnavoidableWeek+1</b> 起扫描，第一个 <b>期末 &lt; 安全线 或 已断货 stockout&gt;0</b> 的周 → <b>firstDeficit</b>。从 <b>firstDeficit</b> 起扫<b>「不可避免周」</b>（条件：① 该周已断货；② 该周 <b>&lt; fastestArriveWeek</b>——即使今天立刻下单 + 绝对最快方式也到不了；fastestArriveWeek = floor((生产天数 + 最快方式运输天数 + 上架天数) ÷ 7)），记录 <b>unavoidableEnd</b>。<br>
-          <b>2026-09-02 修复</b>：以 fastestArriveWeek 为硬边界截断。旧逻辑以「模拟中断货延续到哪」为界，而模拟里尚未排货的周天然全断货 → 会把 unavoidableEnd 顶到计划期末 → 目标到货周被推远 → 升舱逻辑产生「很晚下单却用快递」的非常规贵订单。<br>
-          <b>业务规则（演示 2）</b>：不可避免周的缺口数<b>可忽略</b>——相当于重新备货，不再追回该缺口的量，转而从 unavoidableEnd+1 之后规划。
+          <div class="algo-step"><b>⑤ 缺口扫描（按 cadence 逐轮评估，2026-09-03 v4）</b></div>
+          <div style="padding:6px 10px;font-size:13px;">
+            每轮先做<b>全量库存模拟</b>（含已排补货），再从<b>本轮 cadence 最快可补救范围</b>（reachFrom = 最快方式到货周）起扫描：<br>
+            <b>firstStockout</b> = reachFrom 起首个<b>真断货</b>周（available &lt; 周需求，期末 = 0）。早于 reachFrom 的断货
+            无论本批还是更晚批次都无法挽回（不可避免历史断货），不再触发下单，避免因历史断货周永远存在而无限应急。<br>
+            cadence 下单周 = 批序 × 频率周数（7天→0,1,2…每周一单；15天→0,2,4…；30天→0,4,8…每月一单）；
+            <b>下单周 ≥ 计划期 或 常规到货周 ≥ 计划期且无断货需救 → 排单结束</b>（不再升舱堆货）。<br>
+            分档（用户三规则）：<br>
+            <b>① 常规滚动</b>：常规方式到货周在计划期内、且不晚于首个断货周（无断货时只看能否到货）→ 用常规 35 天慢衔接，不因低安全线就升舱快运。<br>
+            <b>② 缺货能衔接（升舱）</b>：常规到不了 / 到货晚于断货 → 升舱到最早能 ≤ 首断货周到货的方式。<br>
+            <b>③ 断货应急</b>：连最快都救不回断货周 → fastestSub（最快方式）首批止损，后续批次接力。
           </div>
         </div>
 
         <div class="algo-block">
-          <div class="algo-step"><b>⑥ 备货量计算（按频率分摊）</b></div>
+          <div class="algo-step"><b>⑥ 下单量（qty）</b></div>
           <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
+            <thead><tr><th style="width:160px;">档位</th><th>规则</th></tr></thead>
             <tbody>
-              <tr><td>目标到货周</td><td><b>targetArriveWeek</b> = max(unavoidableEnd+1, leadTimeWeeks)——第一个能衔接上的周</td></tr>
-              <tr><td>备货量 qty</td><td><b>按下单频率节奏 = maxBatchSize</b>（7天频率≈1周需求、15天频率≈2周需求、30天频率≈4周需求）。<b>不再叠加窗口需求 + 安全线 − 可用量</b>，也不再「缺货周补偿」把缺口量塞回单批。</td></tr>
-              <tr><td>取整</td><td>按单箱向上取整，且 ≥ MOQ</td></tr>
-              <tr><td>防爆上限</td><td><b>safetyCeiling</b> = max(maxBatchSize, 产品级安全库存×2 按箱取整)：仅当 fcM 异常孤峰（如某月虚高）使 maxBatchSize 偏大时启封；正常产品上限就是 maxBatchSize 本身</td></tr>
-              <tr><td>多批衔接</td><td>不可避免缺口段之后，以 maxBatchSize × ceil(段内缺货周数 / 频率周数) 分多批，<b>每批之间由 lastUnavoidableWeek 推进触发</b>——7天按周、30天隔4周</td></tr>
-              <tr><td>窗口推进</td><td>lastUnavoidableWeek = targetArriveWeek。下次扫描从 +1 找下一缺口 → 自然按下单频率 cadence 推进</td></tr>
+              <tr><td>应急档（到货周 ≥ 首断货周）</td><td><b>qty = 到货周安全线</b>（规则 2：不加当周需求——断货周需求已丢失，补不回已丢销量；最大即安全线，此后批次接力慢慢衔接）</td></tr>
+              <tr><td>衔接档（到货早于任何断货）</td><td>反推 <b>qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3）</td></tr>
+              <tr><td>到货周已 ≥ 安全线</td><td>查 reachFrom..到货周 之间是否仍有真断货：无 → 本 cadence <b>空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线</td></tr>
+              <tr><td>取整/上限</td><td>按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆</td></tr>
             </tbody>
           </table>
         </div>
@@ -1107,13 +1135,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div class="algo-block">
           <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
           <div style="padding:6px 10px;font-size:13px;">
-            单批量 = maxBatchSize → 选运输方式（<b>不可避免缺口 → 强制绝对最快方式 fastestSub 且下单周=0（今天立刻下单止损）</b>；否则常规能按时到用常规、来不及升舱、最快兜底）→ 计算下单周与到货周：<br>
-            下单周 = 目标到货周 − 生产周期(周) − 运输前置(周) + 1（紧急单固定为 0）<br>
-            到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)<br>
-            <b>能否按时到 = canReachTarget(方式)</b>：生产周期(周) + 运输前置(周) ≤ 目标到货周 + 1（允许 1 周余量容纳上架天数与取整误差；修复漏算生产周期的误判——「以为普船35 能按时衔接、实际晚到」导致连锁断货；也不能用严格到货日判定，否则 10.43 周的普船35 永远不达标、常规海运被全部挡在门外）。<br>
-            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批）。<br>
-            <b>常规衔接（演示 1）</b>：库存缓慢消耗到接近安全线时触发 1 批 = maxBatchSize，单批覆盖该周期需求。<br>
-            <b>断货衔接（演示 2）</b>：不可避免周缺口数可忽略，首批用绝对最快方式今天下单（最快止损），从 unavoidableEnd+1 之后按频率分多批、常规方式滚动衔接。循环直到无缺口或达最大迭代数。
+            <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<br>
+            下单周 <b>cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br>
+            到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
+            常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量，
+            常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（2026-09-03 修复前：W9 出 4,960 快船22）。<br>
+            断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
+            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
+            循环终止：无缺口 / 下单周 ≥ 计划期 / 常规到不了计划期且无断货需救 / 达最大迭代数。
           </div>
         </div>
 
@@ -1248,16 +1277,17 @@ const DEFAULT_USERS = [
 ];
 
 // 默认运输方式（按优先级排序，越前越便宜；单价为 KG/¥）
+// enabled=false 表示停用：不参与备货计算（无需删除，随时可重新开启）
 const DEFAULT_METHODS = [
-  { name: '普船55', pricePerKG: 7.56,  osToFbaDays: 14, domToFbaDays: 55, minBatchQty: 50, note: '' },
-  { name: '普船35', pricePerKG: 5.87,  osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '' },
-  { name: '卡航35', pricePerKG: 4.5,   osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '' },
-  { name: '快船27', pricePerKG: 6.93,  osToFbaDays: 14, domToFbaDays: 27, minBatchQty: 50, note: '' },
-  { name: '快船22', pricePerKG: 10.31, osToFbaDays: 14, domToFbaDays: 22, minBatchQty: 50, note: '' },
-  { name: '空运15', pricePerKG: 60,    osToFbaDays: 14, domToFbaDays: 15, minBatchQty: 20, note: '' },
-  { name: '快递10', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 10, minBatchQty: 10, note: '' },
-  { name: '快递7',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 7,  minBatchQty: 10, note: '' },
-  { name: '快递5',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 5,  minBatchQty: 10, note: '' }
+  { name: '普船55', pricePerKG: 7.56,  osToFbaDays: 14, domToFbaDays: 55, minBatchQty: 50, note: '', enabled: true },
+  { name: '普船35', pricePerKG: 5.87,  osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
+  { name: '卡航35', pricePerKG: 4.5,   osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
+  { name: '快船27', pricePerKG: 6.93,  osToFbaDays: 14, domToFbaDays: 27, minBatchQty: 50, note: '', enabled: true },
+  { name: '快船22', pricePerKG: 10.31, osToFbaDays: 14, domToFbaDays: 22, minBatchQty: 50, note: '', enabled: true },
+  { name: '空运15', pricePerKG: 60,    osToFbaDays: 14, domToFbaDays: 15, minBatchQty: 20, note: '', enabled: true },
+  { name: '快递10', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 10, minBatchQty: 10, note: '', enabled: true },
+  { name: '快递7',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 7,  minBatchQty: 10, note: '', enabled: true },
+  { name: '快递5',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 5,  minBatchQty: 10, note: '', enabled: true }
 ];
 
 // 导入模板字段（按三级、料品编码、名称、规格、月预测、库存、计划周期等）
@@ -1422,7 +1452,7 @@ function calcEstFbaArrival(rp){
 let importedProducts = {};   // {key: product}
 let results = [];            // [{product, plan, ...}]
 let currentUser = null;      // {name, role}
-let methodConfig = [];       // [{name, pricePerKG, osToFbaDays, domToFbaDays, minBatchQty, note}]  顺序即优先级
+let methodConfig = [];       // [{name, pricePerKG, osToFbaDays, domToFbaDays, minBatchQty, note, enabled}]  顺序即优先级；enabled=false 停用（不参与计算）
 let fbaShelfDays = 3;        // FBA上架天数（全局设定），用于计算预计到仓时间
 
 /* ============================================================
@@ -1448,7 +1478,9 @@ function migrateMethods(arr){
       // 兼容旧字段 transportDays
       domToFbaDays: num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) || 0,
       minBatchQty: Math.max(1, num(m.minBatchQty) || 1),
-      note: m.note || ''
+      note: m.note || '',
+      /* 是否启用：老配置无该字段时默认启用（undefined/null → true） */
+      enabled: m.enabled !== false
     };
   });
 }
@@ -1530,6 +1562,7 @@ function clearAllData(){
   renderImportRecords();
   renderDetailTable();
   renderPerspective();
+  updatePipelineDataSummary();   /* 2026-09-02 增：清除数据后刷新摘要 */
   setDataStatus('草稿');
 
   // 4) 切换到基础数据页
@@ -1595,9 +1628,12 @@ function renderUsers(){
 /* ============================================================
  * 运输方式
  * ============================================================ */
+/* 参与计算/下拉可选的运输方式 = 已启用的（enabled !== false）。
+   停用的方式不会出现在任何计算与批次下拉里；若全部停用则回退全量，避免算法无方式可选 */
 function currentMethods(){
   if(!methodConfig || methodConfig.length === 0) return DEFAULT_METHODS.slice();
-  return methodConfig;
+  const active = methodConfig.filter(m => m.enabled !== false);
+  return (active.length > 0 ? active : methodConfig).map(m => ({ ...m }));
 }
 function addMethodRow(){
   const n = methodConfig.length + 1;
@@ -1607,19 +1643,29 @@ function addMethodRow(){
     osToFbaDays: 0,
     domToFbaDays: 14,
     minBatchQty: 1,
-    note: ''
+    note: '',
+    enabled: true
   });
   saveMethods(); renderMethods();
 }
 function renderMethods(){
-  $('methodTbody').innerHTML = methodConfig.map((m, idx) => `
-    <tr>
+  $('methodTbody').innerHTML = methodConfig.map((m, idx) => {
+    const on = m.enabled !== false;
+    return `
+    <tr class="${on ? '' : 'method-disabled'}" id="method-row-${idx}">
       <td style="text-align:center;font-weight:700;color:var(--primary);font-size:14px;">${idx+1}</td>
       <td><input class="cell-input name-input" value="${esc(m.name)}" placeholder="如 普船35" onchange="methodConfig[${idx}].name=this.value;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" step="0.1" value="${m.pricePerKG}" placeholder="0.0" onchange="methodConfig[${idx}].pricePerKG=Number(this.value)||0;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" value="${m.osToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].osToFbaDays=Number(this.value)||0;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" value="${m.domToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].domToFbaDays=Number(this.value)||0;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="1" value="${m.minBatchQty}" placeholder="1" onchange="methodConfig[${idx}].minBatchQty=Math.max(1,Number(this.value)||1);saveMethods()"></td>
+      <td style="text-align:center;">
+        <label class="switch" title="${on ? '点击停用：该方式不再参与备货计算（无需删除）' : '点击启用：恢复参与备货计算'}">
+          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleMethodEnabled(${idx}, this.checked)">
+          <span class="slider"></span>
+        </label>
+        <span class="method-state-txt" style="color:${on ? 'var(--success)' : 'var(--text-muted)'};">${on ? '启用' : '停用'}</span>
+      </td>
       <td>
         <div class="row-actions">
           <button class="btn btn-sm btn-outline btn-icon" onclick="sortMethodsUp(${idx})" title="上移提高优先级">↑</button>
@@ -1627,7 +1673,29 @@ function renderMethods(){
           <button class="btn btn-sm btn-danger btn-icon" onclick="delMethod(${idx})" title="删除">✕</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+}
+/* 启用/停用开关：只改数据并保存，行内同步视觉（不整体重绘，避免打断同页其它编辑） */
+function toggleMethodEnabled(idx, checked){
+  if(!methodConfig[idx]) return;
+  methodConfig[idx].enabled = checked;
+  saveMethods();
+  const activeCount = methodConfig.filter(m => m.enabled !== false).length;
+  if(activeCount === 0){
+    toast('⚠️ 已全部停用：备货计算将暂时回退使用全部方式，建议至少保留一种启用的运输方式');
+  } else {
+    toast((checked ? '已启用「' : '已停用「') + methodConfig[idx].name + (checked ? '」：将参与备货计算' : '」：备货计算将自动跳过该方式'));
+  }
+  const row = $('method-row-' + idx);
+  if(row){
+    row.classList.toggle('method-disabled', !checked);
+    const st = row.querySelector('.method-state-txt');
+    if(st){
+      st.textContent = checked ? '启用' : '停用';
+      st.style.color = checked ? 'var(--success)' : 'var(--text-muted)';
+    }
+  }
 }
 function delMethod(idx){
   if(!confirm('确认删除「'+methodConfig[idx].name+'」？')) return;
@@ -1857,192 +1925,51 @@ function planProduct(p){
     };
   }
 
-  // Phase 1: baseline simulation
-  const extraArrivals = new Array(weeks).fill(0);
-  let lastUnavoidableWeek = -1;
-  const replenishments = [];
-  let maxIter = 50;
-  /* 2026-09-02 A2：绝对最快方式 + 从今天下单(subOrderWeek=0)的最早实际到货周。
-     作为「不可避免周」的硬边界：到货周 ≥ 该边界的周，本批货能到、缺口可补救，
-     不应判为不可避免。口径与批次到货天数公式完全一致（生产 + 运输 + FBA上架）。
-     纯中转按 dom+os 总前置，混合/直发按 dom（直发子批先到、cover 早期缺口）。 */
-  let fastestSub = methods[0] || null;
-  /* 平局细化：leadWeeksOf 相同（如快递7/快递5 都 ceil 成 1 周）时，取实际运输总天数更小者（绝对最快）。
-     口径与 leadWeeksOf 一致：纯中转按 dom+os 总天数，混合/直发按 dom。 */
-  const domDaysFast = (m) => num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) + ((isTransit && !isMixed) ? (num(m.osToFbaDays) || 0) : 0);
-  for(const m of methods){
-    const lw = leadWeeksOf(m), lwCur = leadWeeksOf(fastestSub);
-    if(lw < lwCur || (lw === lwCur && domDaysFast(m) < domDaysFast(fastestSub))) fastestSub = m;
-  }
-  const fDom = fastestSub ? num(fastestSub.domToFbaDays != null ? fastestSub.domToFbaDays : fastestSub.transportDays) : 0;
-  const fOs = (fastestSub && isTransit && !isMixed) ? (num(fastestSub.osToFbaDays) || 0) : 0;
-  const fastestArriveWeek = fastestSub ? Math.max(0, Math.min(weeks - 1, Math.floor((prodCycleDays + fDom + fOs + num(fbaShelfDays)) / 7))) : (weeks - 1);
-  let prevExtraArrivals = extraArrivals.slice();
-  /* 回退（2026-08-14 18:59）：恢复 stable 版 firstDeficit 检测（从 lastUnavoidableWeek+1 开始），
-     第四十四~四十六轮的「缺货回填」改动引入无限循环（6/161 卡死），先回退保证可用，
-     后续再以「不阻塞生成」为前提重做缺货填补。 */
-
-  while(maxIter-- > 0){
-    /* 每轮开头快照「截至上一轮已排的补货到货」，供本轮窗口需求扣除（确保不把已排的货重复算进缺口） */
-    prevExtraArrivals = extraArrivals.slice();
-    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
-    const weeklyPlan = sim.plan;
-    /* 1) 找第一个需要补货的周：期末<安全线 或 已断货（stockout>0）。
-         从 lastUnavoidableWeek+1 起扫，自然按已落实的 cadence 推进。 */
-    let firstDeficit = -1;
-    for(let t=lastUnavoidableWeek+1; t<weeks; t++){
-      if(weeklyPlan[t].stockout > 0 || weeklyPlan[t].endingInv < weeklyPlan[t].weekSafety){
-        firstDeficit = t; break;
-      }
-    }
-    if(firstDeficit < 0) break;
-
-    /* 2) 跳过一串「不可避免周」——用户业务规则（实际演示 2）：
-         「分析到缺口后，如已经确认断货，且结合生产周期及更快的衔接方式也无法衔接的，
-          缺口数可忽略，即相当于重新备货」。
-         2026-09-02 A2 语义重写：不可避免周必须同时满足
-         ① 该周已断货（stockout>0）——缺口已成事实；
-         ② 该周 < fastestArriveWeek——即使今天立刻下单 + 绝对最快方式也到不了。
-         硬边界截断是本次修复关键：旧逻辑以「模拟中 stockout 延续到哪」为界，而模拟里
-         尚未排货的周天然全断货 → unavoidableEnd 被顶到计划期末 → target 被推到期末 →
-         升舱逻辑再按大 target 挑方式，产生「很晚下单却用快递5」的非常规贵订单（W13 快运5）。
-         超过 fastestArriveWeek 的周本批货能到，缺口可补救 → 一律不算不可避免。 */
-    let unavoidableEnd = firstDeficit - 1;
-    /* 扫描 [firstDeficit, fastestArriveWeek) 内所有已断货周（2026-09-02 A2b）：
-       不做「未断货即 break」——缺口段常为「低安全线→断货」混合（如 W0 仅低安全线、
-       W2 起才真正断货），若在 W0 就 break 会漏扫整个断货段、缺口无人认领。
-       区间内断货 = 今天下单也到不了 → 不可避免；区间内未断货 = 库存能撑到货到 → 不算。 */
-    for(let t=firstDeficit; t<weeks && t<fastestArriveWeek; t++){
-      if(weeklyPlan[t].stockout > 0) unavoidableEnd = t;   // 已断货 → 该缺已成事实
-    }
-
-    /* 3) 目标到货周 = unavoidableEnd 后第一个「能衔接上」的周。
-         能衔接 = 周索引 ≥ leadTimeWeeks（从今天起 leadTimeWeeks 周后才能开始到货）。
-         全部不可避免时钳在最后一周避免越界。 */
-    let targetArriveWeek = Math.max(unavoidableEnd + 1, leadTimeWeeks);
-    if(targetArriveWeek >= weeks) targetArriveWeek = weeks - 1;
-
-    const hasUnavoidableGap = unavoidableEnd >= firstDeficit;            // 是否存在不可避免缺口（决定选方式 + 后续节奏）
-
-    /* 4) 单批量 = 按下单频率节奏（maxBatchSize）——根本性修正：
-         不再叠加「窗口需求 + 安全线 − 可用量」那种一口吃撑模型的量；
-         也不再把「缺货周 stockout + 安全线」塞回单批；
-         「按频率分摊」模型：每批按一周期需求备货（如 7 天频率 = 1 周需求量），
-         7 天频率按周分单；15 天频率隔 2 周分单；30 天频率隔 4 周分单——节奏由 lastUnavoidableWeek 推进触发，
-         而不是由「每次填满窗口」触发。 */
-    let qty = maxBatchSize;
-    qty = Math.ceil(qty / cartonSize) * cartonSize;
-    if(qty < cartonSize && qty > 0) qty = cartonSize;
-    /* 硬上限 safetyCeiling = max(maxBatchSize, 产品级安全库存×2 按箱取整)：仅防 fcM 异常孤峰导致
-       maxBatchSize 本身虚高（罕见），正常产品上限就是 maxBatchSize 本身。 */
-    const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
-    if(qty > safetyCeiling) qty = safetyCeiling;
-    /* qty<=0 直接跳过（不再用 lastUnavoidableWeek 推进，正常路径每轮末尾统一推进） */
-    if(qty <= 0) continue;
-
-    /* 5) 推进 lastUnavoidableWeek = targetArriveWeek：下次扫描从该周 +1 找下一个缺口 →
-         自然按下单频率推进 cadence（一周触发一次 → 隔 orderFreqWeeks 周再触发；7 天就每周，
-         30 天就隔 4 周）。和现行代码区别：不再取 coverageEnd，
-         因为新模型「单批 = 一周期」已经天然就是按频率的。 */
-
-    // --- 单批次（同一覆盖窗口只生成一个 replenishment）
-    /* 效果：7天频率按周分单；15天频率隔2周分单；30天频率隔4周分单。
-       （prevExtraArrivals 已在每轮循环开头快照，此处不再重复） */
-    let allocatedQty = 0;
-
-    /* 选方式（与量完全解耦，2026-09-02 重构 v3 + A1 修复）：
-       ① 有不可避免缺口（hasUnavoidableGap = true）→ 强制最快（用户原话：「使用最合理的运输方式快速衔接，
-          减少断货量及断货周期」）。A2：直接取绝对最快方式 fastestSub，且下单周钳 0（今天立刻下单止损）。
-          旧逻辑按「lw ≤ target+1 的最快」挑选——target 一旦被推到期末，会选出最快方式却把下单周
-          推到很晚，产生「第 7 周才下单却用快递5」的荒诞批次（W13 快运5）。
-       ② 非加急 + 设常规 → 常规能按时到用常规（省钱），常规来不及升舱到能按时到的更快方式。
-       ③ 非加急 + 未设常规 → 最快能按时到的；都不及时 → 最快兜底。
-       能否按时到 = canReachTarget(m)：与批次生成同口径的天数精确判定（生产周期 + 运输 + FBA上架），
-       修复旧判定漏算生产周期（subLead ≤ target+1）→ 误判「普船35 能 W8 衔接、实际 W10 才到」的连锁断货。 */
-    const isUrgent = hasUnavoidableGap;
-    /* A1：方式 m 能否在 targetArriveWeek 前「实际衔接上」。
-       口径 = 生产周期(周) + 运输前置(周) ≤ targetArriveWeek + 1（允许 1 周索引余量，
-       容纳 FBA上架天数与跨周取整误差）。
-       修复旧判定只比 subLead ≤ target+1、漏算生产周期 → 误判「普船35 能 W8 衔接、
-       实际 W10 才到」→ 连锁断货 + 被迫升舱。
-       注意：不可用「严格 aw ≤ target」天数判定——普船35 总耗时 10.43 周，永远算不达标，
-       而低安全线周（target 周）库存仍 >0，货晚 0.4 周到并不致断货，会错误地把常规海运
-       全部挡在门外、被迫用空运/快递（成本虚高）。 */
-    const canReachTarget = (m) => {
-      if(!m) return false;
-      return leadTimeWeeks + leadWeeksOf(m) <= targetArriveWeek + 1;
-    };
-    const fastestOverall = () => methods.reduce((a, b) => (leadWeeksOf(b) < leadWeeksOf(a) ? b : a), methods[0]);
-    let subMethod = null;
-    if(isUrgent){
-      subMethod = fastestSub;
-    } else if(p.regularMethod){
-      const regName = String(p.regularMethod).trim();
-      let regM = methods.find(m => m.name === regName);
-      if(!regM) regM = methods.find(m => (m.name||'').includes(regName) || regName.includes(m.name||''));
-      if(regM){
-        if(canReachTarget(regM)){
-          subMethod = regM;
-        } else {
-          /* 常规来不及：找最快能按时到的；找不到选最快方式（升舱保底） */
-          let faster = null;
-          for(const m of methods){
-            const lw = leadWeeksOf(m);
-            if(canReachTarget(m) && (!faster || lw < leadWeeksOf(faster))) faster = m;
-          }
-          subMethod = faster || fastestOverall();
-        }
-      }
-    }
-    if(!subMethod){
-      /* 未设常规：找最快能按时到达的方式 */
-      let fastest = null;
-      for(const m of methods){
-        const lw = leadWeeksOf(m);
-        if(canReachTarget(m) && (!fastest || lw < leadWeeksOf(fastest))) fastest = m;
-      }
-      subMethod = fastest || fastestOverall();
-    }
+  // ---- 辅助：下单批 subOrderWeek + 方式 subMethod + 单批上限 qty => 实际下 1~2 个子批 ----
+  // 2026-09-02 抽离：原内联 L2107-2168（直发/海外仓子批拆分 + push + extraArrivals + batchPlaced）。
+  // 抽出为内部函数便于应急多批循环复用（同 cadence 周内多批调多次 + 单一 cadence 周单批调一次）。
+  // 入参 qty 为本批上限量（cadence = maxBatchSize）；moq/按箱取整/子批拆分/到期周超期丢弃 全在内部处理。
+  // 返回 { placed, lastArriveWeek }：本批次任一子批实际到货（<weeks 内）即 placed=true, 用于 cadence 推进判断。
+  function placeBatch(subOrderWeek, subMethod, qty){
     const moq = methodMOQ(subMethod);
-
-    /* 单一批次：整个覆盖窗口的需求合并到 targetArriveWeek */
-    let subQty = qty - allocatedQty;
+    let subQty = qty;
     if(subQty < moq) subQty = moq;
     if(cartonSize > 1) subQty = Math.ceil(subQty / cartonSize) * cartonSize;
-    subQty = Math.min(subQty, qty - allocatedQty);
-    if(subQty > 0){
-      const subLeadWeeks = leadWeeksOf(subMethod);
-      /* 下单周 = 到货周 - 生产周期 - 运输前置 + 1（必须把生产周期算进去，否则货赶不上 targetArriveWeek）。
-         2026-09-02 A2：紧急单（不可避免缺口）直接今天下单（0）止损——旧逻辑按被推远的 target 倒推，
-         下单周可能落到未来第 7 周，与「用快递5 尽快止损」自相矛盾（W13 快运5）。 */
-      const subOrderWeek = isUrgent ? 0 : Math.max(0, targetArriveWeek - leadTimeWeeks - subLeadWeeks + 1);
-      const prodDays = num(p.prodCycleDays) || 0;
-      const domDays = num(subMethod.domToFbaDays != null ? subMethod.domToFbaDays : subMethod.transportDays);
-      const osDays = num(subMethod.osToFbaDays) || 0;
-      /* 需求出货日期 = 下单日 + 生产周期天数（精确，非周取整）
-         orderDate 为下单日，arriveDate 为生产完成后的出货日 */
-      const orderDateComputed = addWeeks(new Date(), subOrderWeek);
-      const arriveDateComputed = addDays(orderDateComputed, prodDays);
+    subQty = Math.min(subQty, qty);
+    if(subQty <= 0) return { placed: false, lastArriveWeek: null };
 
-      /* 混合模式（直发比例 0<x<100）：批次拆两个子批
-         直发子批 → isTransit=false，到 FBA 按 domDays+fbaShelf（早到，cover 近期缺口）
-         海外仓子批 → isTransit=true，到 FBA 按 domDays+osDays+fbaShelf（晚到，cover 远期缺口） */
-      let directQty = 0, osQty = 0;
-      if(isMixed){
-        directQty = Math.round(subQty * directRatio / 100);
-        if(cartonSize > 1) directQty = Math.ceil(directQty / cartonSize) * cartonSize;
-        directQty = Math.min(directQty, subQty);
-        osQty = subQty - directQty;
-      } else if(isTransit){
-        osQty = subQty;
-      } else {
-        directQty = subQty;
-      }
+    const prodDays = num(p.prodCycleDays) || 0;
+    const domDays = num(subMethod.domToFbaDays != null ? subMethod.domToFbaDays : subMethod.transportDays);
+    const osDays = num(subMethod.osToFbaDays) || 0;
+    /* 2026-09-02 cadence 修复：订单相关日期全部来自 subOrderWeek 而非 targetArriveWeek 反推。
+       orderDate = 下单日 = 计划起始 + subOrderWeek 周；arriveDate = 生产完成后的出货日 = 下单日 + 生产天数。
+       验证案例：9/22（W1 起始 +0 周）下单快船22 + 35 天生产 → arriveDate = 9/22 + 35d = 10/27，
+       到货周 floor((0×7 + 35 + 22 + 3)/7) = floor(60/7) = 8 = W9，对应 10/28~11/03 ✓ */
+    const orderDateComputed = addWeeks(new Date(), subOrderWeek);
+    const arriveDateComputed = addDays(orderDateComputed, prodDays);
 
-      /* 直发子批 */
-      if(directQty > 0){
-        const exactDirectDays = subOrderWeek * 7 + prodDays + domDays + num(fbaShelfDays);
-        const awDirect = Math.min(weeks - 1, Math.max(0, Math.floor(exactDirectDays / 7)));
+    let directQty = 0, osQty = 0;
+    if(isMixed){
+      directQty = Math.round(subQty * directRatio / 100);
+      if(cartonSize > 1) directQty = Math.ceil(directQty / cartonSize) * cartonSize;
+      directQty = Math.min(directQty, subQty);
+      osQty = subQty - directQty;
+    } else if(isTransit){
+      osQty = subQty;
+    } else {
+      directQty = subQty;
+    }
+
+    let lastAw = null;
+    let placed = false;
+    /* 子批到货周严格按天数公式计算（不再钳 weeks-1）：到货周 ≥ weeks = 计划期内到不了货，
+       属计划外废单，不生成——旧逻辑钳到 weeks-1 会把计划外批次全部压到计划期末，
+       渲染成「W16 单批集中补齐安全线」。cadence 下单周已按频率错开（ow 0,1,2…），
+       到货周自然错开，只有超期批才被丢弃。 */
+    if(directQty > 0){
+      const exactDirectDays = subOrderWeek * 7 + prodDays + domDays + num(fbaShelfDays);
+      const awDirect = Math.floor(exactDirectDays / 7);
+      if(awDirect < weeks){
         replenishments.push({
           orderWeek: subOrderWeek,
           orderDate: orderDateComputed,
@@ -2056,11 +1983,14 @@ function planProduct(p){
           destWarehouse: String(p.destWarehouse || '').trim() || undefined  /* 直发子批 → 目的仓库 */
         });
         extraArrivals[awDirect] = (extraArrivals[awDirect] || 0) + directQty;
+        lastAw = awDirect;
+        placed = true;
       }
-      /* 海外仓子批 */
-      if(osQty > 0){
-        const exactOsDays = subOrderWeek * 7 + prodDays + domDays + osDays + num(fbaShelfDays);
-        const awOs = Math.min(weeks - 1, Math.max(0, Math.floor(exactOsDays / 7)));
+    }
+    if(osQty > 0){
+      const exactOsDays = subOrderWeek * 7 + prodDays + domDays + osDays + num(fbaShelfDays);
+      const awOs = Math.floor(exactOsDays / 7);
+      if(awOs < weeks){
         replenishments.push({
           orderWeek: subOrderWeek,
           orderDate: orderDateComputed,
@@ -2074,20 +2004,149 @@ function planProduct(p){
           destWarehouse: String(p.osDestWarehouse || '').trim() || undefined  /* 海外仓子批 → 海外仓目的仓库 */
         });
         extraArrivals[awOs] = (extraArrivals[awOs] || 0) + osQty;
+        lastAw = awOs;
+        placed = true;
       }
-      allocatedQty += subQty;
     }
-    /* 推进 lastUnavoidableWeek = targetArriveWeek：下次扫描从 targetArriveWeek+1 起找下一缺口，
-       自然按下单频率 cadence 推进（一周触发一次 → 隔 orderFreqWeeks 周再触发）。
-       关键：必须每轮推进，否则下次 firstDeficit 还是同一周 → 同 (arriveWeek, amount) 批次被反复追加，
-       最后 50 轮累加 + 同 key 合并出 61,800 这种爆量。v3 重构时漏写此推进，本轮修复。 */
-    lastUnavoidableWeek = targetArriveWeek;
+    return { placed, lastArriveWeek: lastAw };
   }
 
-  /* 合并同 orderWeek + 同 arriveWeek 的批次：
-     缺口太急时 subOrderWeek 被钳到 0，多个批次的 actualArriveWeek 挤在同一实际到货周，
-     且升舱逻辑会把它们都指向同一个最快运输方式 → 出现「同一天 N 批同一方式」的奇怪观感。
-     这类批次本质是同一订单被 maxBatchSize 拆分，应合并为一批（amount/cost 相加）。 */
+  // Phase 1: baseline simulation
+  const extraArrivals = new Array(weeks).fill(0);
+  const replenishments = [];
+  /* 2026-09-02 cadence 修复：批次计数（0,1,2,…）。本批下单周 = batchCount × orderFreqWeeks，
+     严格按下单频率滚动排布（7天→0,1,2…每周一单；30天→0,4,8…每4周一单）。
+     不用 replenishments.length 当计数——混合模式一轮会 push 两个子批，长度翻倍会错位。 */
+  let batchCount = 0;
+  let maxIter = 50;
+  /* 2026-09-02 A2：绝对最快方式 + 从今天下单(subOrderWeek=0)的最早实际到货周。
+     作为「不可避免周」的硬边界：到货周 ≥ 该边界的周，本批货能到、缺口可补救，
+     不应判为不可避免。口径与批次到货天数公式完全一致（生产 + 运输 + FBA上架）。
+     纯中转按 dom+os 总前置，混合/直发按 dom（直发子批先到、cover 早期缺口）。 */
+  let fastestSub = methods[0] || null;
+  /* 平局细化：leadWeeksOf 相同（如快递7/快递5 都 ceil 成 1 周）时，取实际运输总天数更小者（绝对最快）。
+     口径与 leadWeeksOf 一致：纯中转按 dom+os 总天数，混合/直发按 dom。 */
+  const domDaysFast = (m) => num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) + ((isTransit && !isMixed) ? (num(m.osToFbaDays) || 0) : 0);
+  for(const m of methods){
+    const lw = leadWeeksOf(m), lwCur = leadWeeksOf(fastestSub);
+    if(lw < lwCur || (lw === lwCur && domDaysFast(m) < domDaysFast(fastestSub))) fastestSub = m;
+  }
+  let prevExtraArrivals = extraArrivals.slice();
+
+  while(maxIter-- > 0){
+    /* 每轮开头快照「截至上一轮已排的补货到货」，供本轮窗口需求扣除（确保不把已排的货重复算进缺口） */
+    prevExtraArrivals = extraArrivals.slice();
+    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
+    const weeklyPlan = sim.plan;
+
+    /* cadence 下单周：按已落实的下单频率滚动（7天→0,1,2…每周一单；15天→0,2,4…两周一单；30天→0,4,8…每月一单）。
+       超过计划期即停止排单（计划期末之外到货无意义）。 */
+    const cadenceOrderWeek = batchCount * orderFreqWeeks;
+    if(cadenceOrderWeek >= weeks) break;
+
+    /* 常规方式解析（宽松匹配：空运↔空运15） */
+    let regM = null;
+    if(p.regularMethod){
+      const regName = String(p.regularMethod).trim();
+      regM = methods.find(m => m.name === regName);
+      if(!regM) regM = methods.find(m => (m.name||'').includes(regName) || regName.includes(m.name||''));
+    }
+
+    /* 到货周计算（原始天数，不钳 weeks-1：≥weeks 的批在 placeBatch 内部会被丢弃） */
+    const arriveWeekOf = (m) => {
+      if(!m) return weeks;
+      const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays);
+      const osM = (isTransit && !isMixed) ? (num(m.osToFbaDays) || 0) : 0;
+      return Math.floor((cadenceOrderWeek * 7 + prodCycleDays + domM + osM + num(fbaShelfDays)) / 7);
+    };
+
+    /* 当前模拟下、本轮 cadence 下单「可补救范围内」的首个断货周：
+       reachFrom = 本 cadence 用最快方式下单能到的最早周；早于它的断货无法被任何
+       （本 cadence 或更晚 cadence）新批挽回 → 属不可避免历史断货，不再触发下单，
+       否则会因历史断货周永远存在而无限应急。 */
+    const reachFrom = Math.max(0, Math.min(weeks, arriveWeekOf(fastestSub)));
+    if(reachFrom >= weeks) break;   /* 最快方式都到不了计划期 → 无货可补，排单结束 */
+    let firstStockout = -1;
+    for(let t=reachFrom; t<weeks; t++){
+      if(weeklyPlan[t].stockout > 0){ firstStockout = t; break; }
+    }
+
+    /* 1) 选运输方式（用户三规则 v4.2）：
+         - 常规滚动（规则 1/3 主路径）：常规方式到货周在计划期内、且不晚于首个断货周
+           （无断货时仅看能否在计划期内到货）→ 用常规。核心诉求：常规 35 天滚动衔接，
+           不要一低安全线就升舱快运。
+         - 常规超出计划期且计划期无断货需救 → 滚动已到尽头，终止排单（不再升舱堆货）。
+         - 常规到不了 / 常规到货晚于断货 → 升舱到最早能 ≤ 首断货周到货的方式（规则 3 衔接）。
+         - 连最快都救不回断货周 → fastestSub 应急（规则 2：首批最快衔接，能早到多少到多少）。 */
+    const awReg = regM ? arriveWeekOf(regM) : weeks;
+    if(awReg >= weeks && firstStockout < 0) break;   /* 常规到不了计划期 + 无断货 → 排单结束 */
+    let subMethod = null;
+    if(regM && awReg < weeks && (firstStockout < 0 || awReg <= firstStockout)){
+      subMethod = regM;
+    } else if(firstStockout >= 0){
+      let best = null, bestAw = Infinity;
+      for(const m of methods){
+        const a = arriveWeekOf(m);
+        if(a >= weeks) continue;
+        if(a > firstStockout) continue;
+        const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays);
+        if(a < bestAw || (a === bestAw && best && domM < num(best.domToFbaDays != null ? best.domToFbaDays : best.transportDays))){
+          best = m; bestAw = a;
+        }
+      }
+      subMethod = best || fastestSub;
+    } else if(regM){
+      subMethod = regM;
+    } else {
+      subMethod = fastestOverall();
+    }
+    const aw = subMethod ? Math.min(weeks - 1, Math.max(0, arriveWeekOf(subMethod))) : -1;
+    if(aw < 0 || aw >= weeks){ if(firstStockout >= 0){ batchCount++; continue; } break; }
+
+    /* 2) 下单量（用户三规则核心 v4.4）：
+         断货应急档（到货周不早于首断货周 aw >= firstStockout —— 含「货到当周库存已 0」：
+           断货周需求已丢失，补再多也补不回已丢销量）：
+           qty = 到货周安全线（规则 2：不加当周需求，最大即安全线；此后批次接力慢慢衔接）。
+         常规衔接档（本批到货早于任何断货 aw < firstStockout，或全程无断货）：
+           到货周 aw 期末（不含本批）= beginInv - demand，
+           反推 qty = weekSafety - (beginInv - demand)，让到货后期末刚好回到安全线（规则 1/3，不多补）。 */
+    const wAw = weeklyPlan[aw];
+    let qty;
+    if(firstStockout >= 0 && aw >= firstStockout){
+      /* 应急：断货已发生（含到货当周）→ cap 到安全线，不加当周需求 */
+      qty = wAw.weekSafety;
+    } else {
+      qty = Math.max(0, wAw.weekSafety - (wAw.beginInv - wAw.demand));
+      if(qty <= 0){
+        /* 到货周期末已 ≥ 安全线：只处理「到货周之前、新货可补救范围内已发生真断货」的补足
+           （早到多少补多少）。未断货的低安全线周不在此补——货已无法早于它到达，
+           交给后续 cadence 批次在各自到货周自然修复（常规滚动允许周期内的临时低安全线）。 */
+        let earlierStockout = -1;
+        for(let t=reachFrom; t<aw && t<weeks; t++){
+          if(weeklyPlan[t].stockout > 0){ earlierStockout = t; break; }
+        }
+        if(earlierStockout < 0){ batchCount++; continue; }
+        const wg = weeklyPlan[earlierStockout];
+        qty = wg.weekSafety;
+      }
+    }
+
+    /* 3) 按箱向上取整 + 防爆上限（一次下足，仅剩单层上限 safetyCeiling） */
+    qty = Math.max(cartonSize, Math.ceil(qty / cartonSize) * cartonSize);
+    const safetyCeiling = Math.max(maxBatchSize, Math.round(safetyStock * 2 / cartonSize) * cartonSize);
+    if(qty > safetyCeiling) qty = safetyCeiling;
+    if(qty <= 0){ batchCount++; continue; }
+
+    /* 4) placeBatch：moq/按箱/直发-海外仓子批拆分/push/extraArrivals/超期丢弃 全在内部处理 */
+    const batchResult = placeBatch(cadenceOrderWeek, subMethod, qty);
+    /* 无论本批是否落实都推进 cadence（防死循环：下单周单调递增，必然收敛） */
+    batchCount++;
+  }
+
+  /* 合并同 orderWeek + 同 arriveWeek 的批次（防御性）：
+     cadence 修复后各逻辑批 orderWeek 唯一（0,1,2…×freq），正常情况下不会再出现同 key 多批；
+     仅混合模式直发/中转两个子批可能 orderWeek 相同——若两者到货周恰好一致（极端），
+     合并为一批（amount/cost 相加），避免渲染层出现「同一行两笔」的奇怪观感。 */
   if(replenishments.length > 1){
     const merged = [];
     replenishments.forEach(rp => {
@@ -2363,6 +2422,21 @@ function importPipelineXlsx(event){
 
         if (!Array.isArray(p.pipelineTickets)) p.pipelineTickets = [];
 
+        /* 2026-09-02 覆盖模式（用户实测反馈："导入 vs 不导入结果一样"）：
+           若勾选「覆盖模式」，导入前先清空该产品的所有 pipeline-import 来源 tickets，
+           以及基础数据导入的单字段 domInProd/domInTransit/osInTransit + 对应周数字段——
+           否则二次测试场景下残留旧数据会让 planProduct 误判"已有在制在制补库"，两次结果一致。
+           默认追加模式（保留用户行为兼容），UI 提供切换。
+           覆盖模式不清手填的 pipelineTickets（如 source !== 'pipeline-import'），保留其他来源。 */
+        if ($ && $('pipelineOverwriteMode') && $('pipelineOverwriteMode').checked){
+          p.pipelineTickets = (p.pipelineTickets || []).filter(t => t.source !== 'pipeline-import');
+          if(!p._keepSingleFieldsOnOverwrite){
+            p.domInProd = 0; p.domInProdWeeks = 0;
+            p.domInTransit = 0; p.domInTransitWeeks = 0;
+            p.osInTransit = 0; p.osInTransitWeeks = 0;
+          }
+        }
+
         /* 在途：预计入库时间 → 到货周数（≤ 今天 → 当前周 0）
            预计入库时间为空时，默认 = 当前时间 + 运输时效 */
         if (transitQty > 0){
@@ -2416,6 +2490,7 @@ function importPipelineXlsx(event){
       saveProducts();
       renderProductList();
       renderPerspective();
+      updatePipelineDataSummary();   /* 2026-09-02 增：导入后实时刷新当前在制在制数据摘要 */
       addLog({ action: '导入在途/在制', rows: rows.length-1, success, fail, note: file.name });
 
       const stats = { domInTransit:0, domInProd:0, osInTransit:0 };
@@ -2463,6 +2538,64 @@ function clearPipelineImportBadge(){
   if(!el) return;
   el.style.display = 'none';
   el.innerHTML = '';
+}
+
+/* 2026-09-02 增：实时显示「当前在制在制数据总量 + 类型分布」。
+   解决问题：用户两次测试"导入 vs 不导入"结果一样——根因是 pipelineTickets 累加且无清除入口，
+   用户不知道当前还有残留数据。导入后/清空后立即刷新摘要徽章，让用户一眼看到当前真实状态。*/
+function updatePipelineDataSummary(){
+  const el = $('pipelineDataSummary');
+  if(!el) return;
+  let total = 0, byType = { domInTransit:0, domInProd:0, osInTransit:0 };
+  let matched = 0;
+  Object.values(importedProducts).forEach(p => {
+    if(Array.isArray(p.pipelineTickets) && p.pipelineTickets.length){
+      matched++;
+      p.pipelineTickets.forEach(t => {
+        if(byType[t.type] != null){
+          byType[t.type] += num(t.qty);
+          total += num(t.qty);
+        }
+      });
+    }
+  });
+  if(total === 0 && matched === 0){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  const TYPE_LABEL = { domInTransit:'国内在途', domInProd:'在制未交', osInTransit:'海外仓在途' };
+  const chips = Object.keys(TYPE_LABEL).map(k => {
+    const q = byType[k];
+    return q > 0 ? `<span class="chip">${TYPE_LABEL[k]}：${fmt(q)}</span>` : '';
+  }).filter(Boolean).join('');
+  el.style.display = 'inline-flex';
+  el.innerHTML = `<span>📊 当前在制在制：${matched} 个产品 / 共 ${fmt(total)}</span>${chips}<span class="close" onclick="clearAllPipelineData()" title="一键清空所有在制在制数据" style="cursor:pointer;opacity:.6;font-weight:400;padding:0 4px;">🧹</span>`;
+}
+
+/* 2026-09-02 增：一键清空所有产品的在制在制数据（pipelineTickets 全部 + 单字段 6 个）。
+   解决问题：测试两种场景（导入 vs 不导入）时，旧数据残留导致 planProduct 两次结果一样——
+   用户以为"不导入"=空，实际 pipelineTickets 仍有上次导入的数据。*/
+function clearAllPipelineData(){
+  let ticketCount = 0, prodCount = 0;
+  Object.values(importedProducts).forEach(p => {
+    if(Array.isArray(p.pipelineTickets) && p.pipelineTickets.length){
+      ticketCount += p.pipelineTickets.length;
+      prodCount++;
+      p.pipelineTickets = [];
+    }
+    /* 单字段也清（基础数据导入的 domInProd 等） */
+    if(num(p.domInProd) || num(p.domInProdWeeks) || num(p.domInTransit) || num(p.domInTransitWeeks) || num(p.osInTransit) || num(p.osInTransitWeeks)){
+      p.domInProd = 0; p.domInProdWeeks = 0;
+      p.domInTransit = 0; p.domInTransitWeeks = 0;
+      p.osInTransit = 0; p.osInTransitWeeks = 0;
+    }
+  });
+  saveProducts();
+  renderProductList();
+  renderPerspective();
+  updatePipelineDataSummary();
+  toast(`已清空 ${prodCount} 个产品的 ${ticketCount} 条在制在制数据`);
 }
 
 function exportProductList(){
@@ -4918,6 +5051,7 @@ function init(){
   renderImportRecords();
   renderDetailTable();
   renderPerspective();
+  updatePipelineDataSummary();   /* 2026-09-02 增：页面初始化时显示当前在制在制摘要 */
   // 键盘 ESC 关闭弹窗
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape'){ closeDetail(); closeUserModal(); }
