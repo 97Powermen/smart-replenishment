@@ -320,6 +320,9 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 /* 常规运输方式停用/失效自动回退提示（2026-09-03 v4.7） */
 .route-fallback-tip { background:#fff7e6; border:1px solid #f0c27b; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#7a4b00; }
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
+/* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
+.tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
+tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #b9cdea !important; padding-top:3px !important; padding-bottom:3px !important; color:#2d5a8e; }
 
 /* Expandable inventory cell */
 .stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: all .15s; }
@@ -493,6 +496,35 @@ tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dash
         <label>FBA上架天数</label>
         <input type="number" min="0" id="fbaShelfDaysInput" value="3" onchange="onFbaShelfDaysChange(this.value)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
         <div class="hint">默认 3 天</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1.6: 尾数顺延设定（v4.8） -->
+  <div class="card" id="sec-tail-defer">
+    <div class="card-header">
+      <div class="icon">🕓</div>
+      <h2>一(补2)、尾数顺延设定</h2>
+    </div>
+    <div class="warn-box">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b>顺延一两周</b>、等缺口累积足够后一次性集中下单。<b>尾数顺延</b>即按此规则：本周应下单量<b>不足阈值</b>（默认 1 周需求）且推演未来<b>不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b>强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
+    <div class="form-grid" style="grid-template-columns: 240px 1fr 1fr;align-items:end;">
+      <div class="form-group">
+        <label>启用尾数顺延</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 0;">
+          <input type="checkbox" id="tailDeferToggle" checked onchange="onTailDeferToggle(this.checked)">
+          <span style="font-size:13px;">本周缺口不足阈值时自动顺延（默认开启）</span>
+        </label>
+        <div class="hint">关闭后恢复 v4.6 行为：缺口再小也照常排本周批次</div>
+      </div>
+      <div class="form-group">
+        <label>尾数阈值（缺口 &lt; N × 周均需求 视为尾数）</label>
+        <select id="tailDeferThreshold" onchange="onTailDeferThresholdChange(this.value)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
+          <option value="0.5">0.5 周需求（较激进：只顺延极小缺口）</option>
+          <option value="1" selected>1 周需求（推荐：不足一周的量不值得排单）</option>
+          <option value="1.5">1.5 周需求</option>
+          <option value="2">2 周需求（较保守：缺口需达两周才下单）</option>
+        </select>
+        <div class="hint">周均需求 = 方案「周均需求」列（月预测均摊口径）</div>
       </div>
     </div>
   </div>
@@ -1154,6 +1186,21 @@ tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dash
         </div>
 
         <div class="algo-block">
+          <div class="algo-step"><b>⑧ 尾数顺延（2026-09-04 v4.8）</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
+            <tbody>
+              <tr><td>触发条件</td><td>衔接档本 cadence 应下量 <b>qty &gt; 0 且 qty &lt; 阈值</b>（阈值 = 尾数阈值 N × 周均需求，默认 1 周需求），<b>且推演全程无真断货</b>（firstStockout &lt; 0）</td></tr>
+              <tr><td>动作</td><td>本 cadence <b>不排批次</b>，缺口滚入下一 cadence —— 库存随需求自然消耗，下轮缺口 ≈ 本轮 + 1 个下单频率窗口的需求，达到阈值后一次性集中下单（对应实际「几套先不下，过一两周再下，下单更集中」）</td></tr>
+              <tr><td>断货防呆</td><td>存在真断货风险（firstStockout ≥ 0 / 到货周前已断货需补）→ <b>强制下单</b>，尾数规则不生效 —— 顺延只用于无断货风险的场景，不会因延后而增加缺货周</td></tr>
+              <tr><td>不启用情形</td><td>配置开关关闭；周均需求 ≤ 0（无需求产品，阈值=0）；应急档（量=到货周安全线，恒 ≥ 阈值）</td></tr>
+              <tr><td>醒目标注</td><td>本周被顺延 → 分析结果表行下灰蓝提示条 + 单品详情头部提示条 + 导出末列「尾数顺延」（本周顺延量）；可直接点击「本周下单量」单元格手动补单</td></tr>
+            </tbody>
+          </table>
+          <div class="algo-note">阈值在「基础数据 → 一(补2)、尾数顺延设定」可配置（开关 + 0.5/1/1.5/2 周需求）。总下单量不因顺延减少，只是把零碎小单合并为集中大单。</div>
+        </div>
+
+        <div class="algo-block">
           <div class="algo-step"><b>核心公式速记</b></div>
           <table class="result-table" style="width:100%;">
             <thead><tr><th style="width:160px;">指标</th><th>公式</th></tr></thead>
@@ -1256,7 +1303,8 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'stockCurrentUser',
   IMPORT_RECORDS: 'stockImportRecords',
   IMPORT_REC_DATA: 'stockImportRec_',   // prefix + id
-  FBA_SHELF_DAYS: 'stockFbaShelfDays'
+  FBA_SHELF_DAYS: 'stockFbaShelfDays',
+  TAIL_DEFER: 'stockTailDefer'          /* v4.8 尾数顺延配置 { enabled, thresholdWeeks } */
 };
 const LOG_MAX = 50;
 const LOG_SHOW = 10;
@@ -1475,6 +1523,9 @@ let results = [];            // [{product, plan, ...}]
 let currentUser = null;      // {name, role}
 let methodConfig = [];       // [{name, pricePerKG, osToFbaDays, domToFbaDays, minBatchQty, note, enabled}]  顺序即优先级；enabled=false 停用（不参与计算）
 let fbaShelfDays = 3;        // FBA上架天数（全局设定），用于计算预计到仓时间
+/* v4.8 尾数顺延全局配置：{ enabled, thresholdWeeks } —— enabled=false 关闭（本周缺口再小也照下）；
+   thresholdWeeks = 缺口不足「N × 周均需求」即视为尾数顺延（默认 1 = 不足 1 周需求） */
+let tailDeferCfg = { enabled: true, thresholdWeeks: 1 };
 
 /* ============================================================
  * 存储
@@ -1521,6 +1572,15 @@ function loadAllState(){
   fbaShelfDays = num(lsGet(STORAGE_KEYS.FBA_SHELF_DAYS, 3)) || 3;
   const fbaInput = $('fbaShelfDaysInput');
   if(fbaInput) fbaInput.value = fbaShelfDays;
+  /* v4.8 加载尾数顺延配置 + 回填设置 UI */
+  const _td = lsGet(STORAGE_KEYS.TAIL_DEFER, null);
+  tailDeferCfg = _td && typeof _td === 'object'
+    ? { enabled: _td.enabled !== false, thresholdWeeks: Math.max(0.25, num(_td.thresholdWeeks) || 1) }
+    : { enabled: true, thresholdWeeks: 1 };
+  const tailDeferToggle = $('tailDeferToggle');
+  if(tailDeferToggle) tailDeferToggle.checked = tailDeferCfg.enabled;
+  const tailDeferTh = $('tailDeferThreshold');
+  if(tailDeferTh) tailDeferTh.value = tailDeferCfg.thresholdWeeks;
 }
 function saveProducts(){ lsSet(STORAGE_KEYS.PRODUCTS, importedProducts); }
 function saveUsers(){ lsSet(STORAGE_KEYS.USERS, currentUsersList()); }
@@ -1556,7 +1616,8 @@ function clearAllData(){
     STORAGE_KEYS.USERS, STORAGE_KEYS.CURRENT_USER,
     STORAGE_KEYS.LOG, STORAGE_KEYS.IMPORT_RECORDS,
     STORAGE_KEYS.METHODS, STORAGE_KEYS.SUPPLY,
-    STORAGE_KEYS.STATE, STORAGE_KEYS.FBA_SHELF_DAYS
+    STORAGE_KEYS.STATE, STORAGE_KEYS.FBA_SHELF_DAYS,
+    STORAGE_KEYS.TAIL_DEFER
   ];
   const keysToRemove = [];
   for(let i = 0; i < localStorage.length; i++){
@@ -1779,6 +1840,22 @@ function onFbaShelfDaysChange(v){
   toast('FBA上架天数已更新为 ' + fbaShelfDays + ' 天');
 }
 
+/* v4.8 尾数顺延配置 */
+function saveTailDeferCfg(){
+  lsSet(STORAGE_KEYS.TAIL_DEFER, tailDeferCfg);
+}
+function onTailDeferToggle(on){
+  tailDeferCfg.enabled = !!on;
+  saveTailDeferCfg();
+  toast(on ? '尾数顺延已启用（缺口不足阈值时自动顺延）' : '尾数顺延已关闭（缺口再小也照常排本周批次）');
+  if(typeof renderMethods === 'function') renderMethods();
+}
+function onTailDeferThresholdChange(v){
+  tailDeferCfg.thresholdWeeks = Math.max(0.25, num(v) || 1);
+  saveTailDeferCfg();
+  toast('尾数阈值已更新为不足 ' + tailDeferCfg.thresholdWeeks + ' 周需求');
+}
+
 /* ============================================================
  * 模式3 计算核心（adapted for 备货）
  * ============================================================ */
@@ -1998,6 +2075,7 @@ function planProduct(p){
       coverageWeeks, maxBatchSize, orderFreqDays, stockoutWeeks,
       sellableWeeks: 0, earliestArrive: '--',
       regFallbackNote: '',
+      tailDeferTotalQty: 0, tailDeferThisWeekQty: 0, tailDeferNote: '',
       isTransit, osBufferDays, isMixed, directRatio
     };
   }
@@ -2096,6 +2174,16 @@ function planProduct(p){
      不用 replenishments.length 当计数——混合模式一轮会 push 两个子批，长度翻倍会错位。 */
   let batchCount = 0;
   let maxIter = 50;
+  /* v4.8 尾数顺延（配置见「基础数据 → 尾数顺延设定」，系统管理页算法说明 ⑧ 段）：
+     - tailThreshold = 阈值 × 周均需求：衔接档缺口不足该值、且推演无断货风险（firstStockout<0）→ 本 cadence 不排，
+       缺口随库存消耗自然累积，下个/下下个 cadence 达到阈值后一次性集中下单（对应实际「几套先不下，过一两周再下」）。
+     - 防呆：存在断货风险（firstStockout>=0 / 更早断货需补）→ 强制下单（应急档不受尾数规则影响）。
+     - avgWeeklyDemand<=0（无需求产品）不启用：threshold=0，行为等同关闭。 */
+  const tailDeferOn = (tailDeferCfg.enabled !== false) && avgWeeklyDemand > 0;
+  const tailThreshold = avgWeeklyDemand * (num(tailDeferCfg.thresholdWeeks) || 1);
+  let tailDeferTotalQty = 0;     /* 整计划期所有顺延缺口合计 */
+  let tailDeferThisWeekQty = 0;  /* cadence0（本周）顺延量：>0 = 本周缺口被顺延未排 */
+  let tailDeferNote = '';        /* cadence0 顺延时可读文案（结果表/详情/导出用） */
   /* 2026-09-02 A2：绝对最快方式 + 从今天下单(subOrderWeek=0)的最早实际到货周。
      作为「不可避免周」的硬边界：到货周 ≥ 该边界的周，本批货能到、缺口可补救，
      不应判为不可避免。口径与批次到货天数公式完全一致（生产 + 运输 + FBA上架）。
@@ -2217,6 +2305,27 @@ function planProduct(p){
          中间薄点周（trough < 半安全线）由 v4.5 衔接槽检测单独拆快件托底，
          不再每个 cadence 都普适加缓冲。 */
       qty = Math.max(0, wAw.weekSafety - (wAw.beginInv - wAw.demand));
+      /* v4.8 尾数顺延：衔接档缺口不足阈值（默认 1 周需求）→ 本轮不排，缺口滚入下一 cadence 累积
+         （下轮缺口 ≈ 本轮 + 消耗 1 个频率窗口的需求 → 达到阈值后一次性集中下单）。
+         安全判定 = 本批到货周 aw 之前（reachFrom..aw-1）无真断货（earlier<0）：顺延后缺口由下一
+         cadence 批次（到货更晚、但仍在断货周之前）接力，不会形成不可救断货。
+         若 aw 前已有真断货（earlier>=0）→ 必须本批尽快排 / 升舱，绝不顺延（断货防呆）。
+         应急档（aw >= firstStockout，qty=安全线）不经此分支，恒强制下单。 */
+      if(qty > 0 && tailDeferOn && qty < tailThreshold){
+        let earlier = -1;
+        for(let t=reachFrom; t<aw && t<weeks; t++){
+          if(weeklyPlan[t].stockout > 0){ earlier = t; break; }
+        }
+        if(earlier < 0){
+          tailDeferTotalQty += qty;
+          if(cadenceOrderWeek === 0){
+            tailDeferThisWeekQty = qty;
+            tailDeferNote = `本周缺口 ${fmt(qty)} 套不足 ${tailDeferCfg.thresholdWeeks} 周需求（周均 ${fmt(Math.round(avgWeeklyDemand))}），已顺延至后续下单周集中下单`;
+          }
+          batchCount++;
+          continue;
+        }
+      }
       if(qty <= 0){
         /* 到货周期末已 ≥ 安全线：只处理「到货周之前、新货可补救范围内已发生真断货」的补足
            （早到多少补多少）。未断货的低安全线周不在此补——货已无法早于它到达，
@@ -2321,6 +2430,7 @@ function planProduct(p){
     totalCost, totalStockout, stockoutWeeks,
     sellableWeeks, earliestArrive,
     regFallbackNote,
+    tailDeferTotalQty, tailDeferThisWeekQty, tailDeferNote,
     isTransit, osBufferDays, isMixed, directRatio
   };
 }
@@ -3515,7 +3625,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="27" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套不足 1 周需求，已顺延至后续下单周集中下单'))}</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -4060,7 +4170,7 @@ function exportResultCSV(){ exportResult('csv'); }
 function exportResultXLSX(){ exportResult('xlsx'); }
 function exportResult(format){
   if(results.length === 0){ alert('暂无结果'); return; }
-  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退'];  /* v4.7 末列=常规运输方式停用/失效回退提示 */
+  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退','尾数顺延'];  /* v4.7 末列=常规方式停用回退提示；v4.8 再末列=本周缺口不足阈值被顺延的量 */
   const rows = [head];
   results.forEach((r, idx) => {
     const p = r.p;
@@ -4103,7 +4213,7 @@ function exportResult(format){
       fbaV, osStockV, divertV, osInTrV, domT, domP, withProdTotal,
       Math.round(r.avgWeeklyDemand * (Math.round((num(p.prodCycleDays)||42)/7) + (num(p.safetyStockWeeks)||2))),
       r.rec, r.actualRec, thisWeekQty, r.sellableWeeks,
-      r.stockoutWeeks, status, r.regFallbackNote || '']);
+      r.stockoutWeeks, status, r.regFallbackNote || '', r.tailDeferThisWeekQty || '']);
   });
   const fname = '备货分析结果_'+fmtDate(new Date());
   if(format === 'xlsx'){
@@ -4460,6 +4570,7 @@ function buildDetailContent(r){
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>
   ${r.regFallbackNote ? `<div class="route-fallback-tip" style="margin:0 0 12px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>` : ''}
+  ${r.tailDeferThisWeekQty > 0 ? `<div class="tail-defer-tip" style="margin:0 0 12px;">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套不足 1 周需求，已顺延至后续下单周集中下单'))}</div>` : ''}
   <div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
     <button class="btn btn-sm btn-confirm week-confirm-bar" data-pcode="${esc(p.materialCode||'')}" onclick="confirmWeekEdits(this)" style="display:none;">✓ 确认更改</button>
