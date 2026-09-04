@@ -346,10 +346,12 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
 .result-table-wrap.pipe-collapsed #resultTable tbody td:nth-child(n+13):nth-child(-n+17),
 .result-table-wrap.pipe-collapsed #resultTable tfoot td:nth-child(n+5):nth-child(-n+9) { display: none; }
 
-/* 调整3：透视表「当前库存」列头折叠按钮 —— 切换 FBA库存/海外仓库存/海外仓在途/挪用库存 4 列明细 */
-.result-table-wrap.persp-collapsed #perspectiveTable thead th:nth-child(n+8):nth-child(-n+11),
-.result-table-wrap.persp-collapsed #perspectiveTable tbody td:nth-child(n+8):nth-child(-n+11),
-.result-table-wrap.persp-collapsed #perspectiveTable tfoot td:nth-child(n+8):nth-child(-n+11) { display: none; }
+/* 调整3：透视表「当前库存」列头折叠按钮 —— 切换 FBA库存/海外仓库存/海外仓在途/挪用库存 4 列明细
+   v4.10 新增「近四周平均销量」列后明细列整体右移一位：thead/tbody 隐藏 9~12 位；
+   tfoot 首格 colspan=3（跨 #/三级/颜色套装），明细合计位于 td 7~10 位 */
+.result-table-wrap.persp-collapsed #perspectiveTable thead th:nth-child(n+9):nth-child(-n+12),
+.result-table-wrap.persp-collapsed #perspectiveTable tbody td:nth-child(n+9):nth-child(-n+12),
+.result-table-wrap.persp-collapsed #perspectiveTable tfoot td:nth-child(n+7):nth-child(-n+10) { display: none; }
 
 /* 透视表料品编码列：可点击链接 + 弹出列表 */
 .persp-code-link { text-decoration: underline; cursor: pointer; margin: 0 1px; white-space: nowrap; }.persp-code-link:hover { opacity: .8; }
@@ -921,7 +923,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
       <div class="icon">🔍</div>
       <div>
         <div class="title">备货透视</div>
-        <div class="subtitle">按"三级 + 颜色套装"逐品展示当前库存、本次备货量、可售时间（月）；点击「库存」列展开四源明细</div>
+        <div class="subtitle">按"三级 + 颜色套装"逐品展示当前库存、本次备货量、多口径可售时间（月：当前库存 / 含在制总数 / 含本周下单量 / 按实际销量）；点击「库存」列展开四源明细</div>
       </div>
     </div>
 
@@ -994,29 +996,31 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
           <div class="value danger" id="pmCriticalCount">0</div>
           <div class="label">🔴 紧急行数</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card" title="整体（筛选后全部组汇总）：当前库存合计 ÷ 月均需求合计">
           <div class="value success" id="pmSellNow">∞</div>
-          <div class="label">可售时间（月）</div>
+          <div class="label">当前库存可售(月)</div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card" title="整体（筛选后全部组汇总）：(含在制总数合计 + 本周下单量合计) ÷ 月均需求合计">
           <div class="value accent" id="pmSellNew">∞</div>
-          <div class="label">含本周下单量可售（月）</div>
+          <div class="label">含本周下单量可售(月)</div>
         </div>
       </div>
 
       <div class="warn-box">
-        状态规则：可售时间 &lt; 1 月 <b>紧急（红，仅当本周需下单）</b> ｜ &lt; 2 月 <b>紧张（橙）</b> ｜ &lt; 3 月 <b>健康（绿）</b> ｜ &lt; 4 月 <b>预呆滞（深绿）</b> ｜ ≥ 4 月 <b>呆滞（蓝）</b> ｜ 无周需求 <b>无需求（灰）</b>。<br>
-        「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。
+        状态规则：按「当前库存可售时间」判定 &lt; 1 月 <b>紧急（红，仅当本周需下单）</b> ｜ &lt; 2 月 <b>紧张（橙）</b> ｜ &lt; 3 月 <b>健康（绿）</b> ｜ &lt; 4 月 <b>预呆滞（深绿）</b> ｜ ≥ 4 月 <b>呆滞（蓝）</b> ｜ 无周需求 <b>无需求（灰）</b>。<br>
+        「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。<br>
+        可售时间（月）四列口径：<b>当前库存可售时间</b> = 当前库存 ÷ 月均需求；<b>含在制总数可售时间</b> = 含在制总数 ÷ 月均需求；<b>含本周下单量可售时间</b> = (含在制总数 + 本周下单量) ÷ 月均需求；<b>含本周下单量实际可售时间</b> = (含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)，分母用近期实际销量月速度（非预测月均）。
       </div>
 
       <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="perspectiveTable" style="min-width:2000px;">
+        <table class="result-table" id="perspectiveTable" style="min-width:2400px;">
           <thead>
             <tr>
               <th style="width:42px;">#</th>
               <th style="width:200px;">三级</th>
               <th style="width:120px;">颜色套装</th>
               <th style="width:80px;">产品数</th>
+              <th style="width:90px;">近四周平均销量</th>
               <th style="width:80px;">周需求</th>
               <th style="width:80px;">月均需求</th>
               <th style="width:140px;">当前库存<button type="button" class="pipe-fold-btn" id="perspFoldBtn" onclick="togglePerspCols()" title="展开/折叠明细列（FBA库存/海外仓库存/海外仓在途/挪用库存）">▾</button></th>
@@ -1029,8 +1033,10 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
               <th style="width:90px;">含在制总数</th>
               <th style="width:90px;">本次备货量</th>
               <th style="width:90px;">本周下单量</th>
-              <th style="width:90px;">可售时间(月)</th>
-              <th style="width:120px;">含本周下单量可售(月)</th>
+              <th style="width:100px;">当前库存可售时间(月)</th>
+              <th style="width:100px;">含在制总数可售时间(月)</th>
+              <th style="width:110px;">含本周下单量可售(月)</th>
+              <th style="width:120px;">含本周下单量实际可售(月)</th>
               <th style="width:90px;">状态</th>
               <th>料品编码</th>
             </tr>
@@ -1240,8 +1246,11 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
             <tbody>
               <tr><td>周需求</td><td>优先取自方案 <code>r.avgWeeklyDemand</code>（与 Page 1 结果表周均需求完全同源）；未生成方案的产品退回 <code>last4WeeksSales</code>（业务侧已确认字段语义=近四周平均周销量）</td></tr>
               <tr><td>月均需求</td><td>以导入时按月预测计算为准：<code>monthlyAvgImport(p)</code>（fcM0~M5 中 &gt;0 的均值、取整）；与 备货清单 / 分析结果明细「月均需求」逐品同源；预测全空 = 0，不使用销量兜底（2026-09-03 用户确认）</td></tr>
-              <tr><td>库存可售时间(月)</td><td>当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图）</td></tr>
-              <tr><td>含本周下单可售时间(月)</td><td>(当前库存 + 本周下单量) ÷ 月均需求（更保守：本周下单入库后视角）</td></tr>
+              <tr><td>近四周平均销量</td><td>近四周平均周销量：与 Page 1 结果表「近四周平均销量」同源（<code>last4WeeksSales</code>，兼容旧字段 <code>actualWeeklySales</code>）；组内逐品求和（v4.10 新增列，供「实际可售时间」分母用）</td></tr>
+              <tr><td>当前库存可售时间(月)</td><td>当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图；v4.10 由「可售时间(月)」更名）</td></tr>
+              <tr><td>含在制总数可售时间(月)</td><td>含在制总数 ÷ 月均需求（v4.10 新增：全部库存+在途/在制 入库后视角）</td></tr>
+              <tr><td>含本周下单量可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ 月均需求（v4.10 起分子从「当前库存」改为「含在制总数」——本周下单入库 + 全部在途/在制 后视角）</td></tr>
+              <tr><td>含本周下单量实际可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)（v4.10 新增：分母用近期实际销量月速度，非预测月均，反映按当前销售速度能卖几个月）</td></tr>
               <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / <code>replenishments.filter(orderWeek===0).amount</code></td></tr>
             </tbody>
           </table>
@@ -4312,7 +4321,7 @@ function exportPerspective(format){
   const fStatus = ($('perspFilterStatus')?.value || '');
   const resultMap = {};
   (results || []).forEach(r => { if(r.p) resultMap[r.p.materialCode] = r; });
-  const headers = ['#','三级','颜色套装','产品数','周需求','月均需求','FBA库存','海外仓库存','海外仓在途','挪用库存','当前库存合计','国内在途','在制未交','含在制总数','本次备货量','本周下单量','库存可售时间(月)','含本周下单量可售时间(月)','状态','料品编码'];
+  const headers = ['#','三级','颜色套装','产品数','近四周平均销量','周需求','月均需求','FBA库存','海外仓库存','海外仓在途','挪用库存','当前库存合计','国内在途','在制未交','含在制总数','本次备货量','本周下单量','当前库存可售时间(月)','含在制总数可售时间(月)','含本周下单量可售(月)','含本周下单量实际可售(月)','状态','料品编码'];
   const rows = [headers];
   const groups = {};
   Object.values(importedProducts).forEach(p => {
@@ -4328,11 +4337,11 @@ function exportPerspective(format){
     const color = (g.color || '').toLowerCase();
     if(fLv3 && !lv3.includes(fLv3)) return;
     if(fColor && !color.includes(fColor)) return;
-    let weeklyDemand=0, monthlyAvg=0, fba=0, osStock=0, osInTransit=0, divert=0, domT=0, domP=0, replenish=0, thisWeekQty=0;
+    let weeklyDemand=0, monthlyAvg=0, last4Sales=0, fba=0, osStock=0, osInTransit=0, divert=0, domT=0, domP=0, replenish=0, thisWeekQty=0;
     let codes = [];
     g.products.forEach(p => {
       const row = computePerspectiveRow(p, resultMap);
-      weeklyDemand += row.weeklyDemand; monthlyAvg += row.monthlyAvg;
+      weeklyDemand += row.weeklyDemand; monthlyAvg += row.monthlyAvg; last4Sales += row.last4Sales;
       fba += row.fba; osStock += row.osStock; osInTransit += row.osInTransit; divert += row.divert;
       domT += row.inboundDomestic; domP += row.inboundProd;
       replenish += row.replenish;
@@ -4341,8 +4350,12 @@ function exportPerspective(format){
     });
     const currentStock = fba + osStock + osInTransit + divert;
     const withProdTotal = currentStock + domT + domP;
+    /* v4.10 可售时间（月）多口径（与页面渲染完全同源） */
     const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
-    const sellThisWeek = monthlyAvg > 0 ? (currentStock + thisWeekQty) / monthlyAvg : ((currentStock + thisWeekQty) > 0 ? 999 : 0);
+    const sellWithProd = monthlyAvg > 0 ? withProdTotal / monthlyAvg : (withProdTotal > 0 ? 999 : 0);
+    const sellThisWeek = monthlyAvg > 0 ? (withProdTotal + thisWeekQty) / monthlyAvg : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
+    const monthlyActualRate = last4Sales > 0 ? (last4Sales / 7 * 30) : 0;
+    const sellActual = monthlyActualRate > 0 ? (withProdTotal + thisWeekQty) / monthlyActualRate : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
     let status;
     /* 调整4：无周需求/无月需求 → 无需求 */
     if(weeklyDemand <= 0 || monthlyAvg <= 0) status = '无需求';
@@ -4353,11 +4366,13 @@ function exportPerspective(format){
     else status = '呆滞';
     if(fStatus && fStatus !== status) return;
     counter++;
-    rows.push([counter, g.lv3, g.color, g.products.length, weeklyDemand, monthlyAvg,
+    rows.push([counter, g.lv3, g.color, g.products.length, last4Sales, weeklyDemand, monthlyAvg,
       fba, osStock, osInTransit, divert, currentStock, domT, domP, withProdTotal,
       replenish, thisWeekQty,
       sellNow >= 999 ? '∞' : sellNow.toFixed(1),
-      (sellThisWeek) >= 999 ? '∞' : (sellThisWeek).toFixed(1),
+      sellWithProd >= 999 ? '∞' : sellWithProd.toFixed(1),
+      sellThisWeek >= 999 ? '∞' : sellThisWeek.toFixed(1),
+      sellActual >= 999 ? '∞' : sellActual.toFixed(1),
       status, codes.join(', ')]);
   });
   if(counter === 0){ alert('暂无透视数据'); return; }
@@ -4835,6 +4850,9 @@ function computePerspectiveRow(p, resultMap){
   const weeklyDemand = r ? num(r.avgWeeklyDemand)
     : (num(p.last4WeeksSales) || num(p.actualWeeklySales) || 0);
   const monthlyAvg = monthlyAvgImport(p);
+  /* v4.10 新增「近四周平均销量」列：与 Page 1 结果表同源 = 近四周平均周销量（last4WeeksSales，
+     兼容旧字段 actualWeeklySales），聚合组内求和展示 */
+  const last4Sales = num(p.last4WeeksSales) || num(p.actualWeeklySales) || 0;
 
   // 四源当前库存
   const fba = num(p.fbaStock);
@@ -4866,10 +4884,12 @@ function computePerspectiveRow(p, resultMap){
   // 本周下单量（orderWeek === 0 的批次合计，反映本周滚动需下单的部分）
   const thisWeekQty = r ? (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0) : 0;
 
-  // 可售时间（月）
+  // v4.10 可售时间（月）多口径（与组聚合/导出同源；状态判定仍用「当前库存可售」）
   const sellNow = monthlyAvg > 0 ? (currentStock / monthlyAvg) : (currentStock > 0 ? 999 : 0);
-  // 含本次下单量可售时间（仅含本周下单量，未含后续补货，更保守）
-  const sellThisWeek = monthlyAvg > 0 ? ((currentStock + thisWeekQty) / monthlyAvg) : ((currentStock + thisWeekQty) > 0 ? 999 : 0);
+  const sellWithProd = monthlyAvg > 0 ? (withProdTotal / monthlyAvg) : (withProdTotal > 0 ? 999 : 0);
+  const sellThisWeek = monthlyAvg > 0 ? ((withProdTotal + thisWeekQty) / monthlyAvg) : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
+  const _monthlyActualRate = last4Sales > 0 ? (last4Sales / 7 * 30) : 0;
+  const sellActual = _monthlyActualRate > 0 ? ((withProdTotal + thisWeekQty) / _monthlyActualRate) : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
 
   // 状态（用当前可售时间来判断）。调整2：调整3 - 透视表不再体现售完即止，状态只看整体库存与需求的关系
   //  调整4：无周需求/无月需求 → 标记为「无需求」
@@ -4883,10 +4903,10 @@ function computePerspectiveRow(p, resultMap){
   else { status = '呆滞'; statusCls = 's-呆滞'; }
 
   return {
-    p, weeklyDemand, monthlyAvg, currentStock,
+    p, weeklyDemand, monthlyAvg, last4Sales, currentStock,
     fba, osStock, osInTransit, divert,
     inboundDomestic, inboundProd, withProdTotal, replenish, thisWeekQty,
-    sellNow, sellThisWeek, status, statusCls
+    sellNow, sellWithProd, sellThisWeek, sellActual, status, statusCls
   };
 }
 
@@ -4895,7 +4915,7 @@ function renderPerspective(){
   if(!tbody) return;
   const methods = currentMethods();
   if(Object.keys(importedProducts).length === 0){
-    tbody.innerHTML = '<tr><td colspan="16" style="color:var(--text-muted);text-align:center;padding:24px;">暂无产品数据，请先在「基础数据」页导入产品。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="23" style="color:var(--text-muted);text-align:center;padding:24px;">暂无产品数据，请先在「基础数据」页导入产品。</td></tr>';
     $('perspectiveTfoot').innerHTML = '';
     ['pmProductCount','pmHealthCount','pmWarnCount','pmCriticalCount','perspectiveCount','pmSellNow','pmSellNew'].forEach(id => { const el = $(id); if(el) el.textContent = '0'; });
     return;
@@ -4920,7 +4940,7 @@ function renderPerspective(){
 
   // 2) 计算每个聚合组的指标
   const aggregated = Object.values(groups).map(g => {
-    let weeklyDemand = 0, monthlyAvg = 0;
+    let weeklyDemand = 0, monthlyAvg = 0, last4Sales = 0;
     let fba=0, osStock=0, osInTransit=0, divert=0;
     let domT=0, domP=0;
     let replenish = 0, thisWeekQty = 0;
@@ -4930,6 +4950,7 @@ function renderPerspective(){
       const row = computePerspectiveRow(p, resultMap);
       weeklyDemand += row.weeklyDemand;
       monthlyAvg += row.monthlyAvg;
+      last4Sales += row.last4Sales;
       fba += row.fba;
       osStock += row.osStock;
       osInTransit += row.osInTransit;
@@ -4943,9 +4964,17 @@ function renderPerspective(){
     });
     const currentStock = fba + osStock + osInTransit + divert;
     const withProdTotal = fba + osStock + osInTransit + divert + domT + domP;
+    /* v4.10 可售时间（月）多口径：
+       sellNow      = 当前库存可售时间 = 当前库存 ÷ 月均需求
+       sellWithProd = 含在制总数可售时间 = 含在制总数 ÷ 月均需求
+       sellThisWeek = 含本周下单量可售 = (含在制总数 + 本周下单量) ÷ 月均需求
+       sellActual   = 含本周下单量实际可售 = (含在制总数 + 本周下单量) ÷ 月实际销量
+                      （月实际销量 = 近四周平均销量 ÷ 7 × 30，用真实近期销量而非预测月均） */
     const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
-    // 含本周下单量可售时间
-    const sellThisWeek = monthlyAvg > 0 ? (currentStock + thisWeekQty) / monthlyAvg : ((currentStock + thisWeekQty) > 0 ? 999 : 0);
+    const sellWithProd = monthlyAvg > 0 ? withProdTotal / monthlyAvg : (withProdTotal > 0 ? 999 : 0);
+    const sellThisWeek = monthlyAvg > 0 ? (withProdTotal + thisWeekQty) / monthlyAvg : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
+    const monthlyActualRate = last4Sales > 0 ? (last4Sales / 7 * 30) : 0;   // 月实际销量速度
+    const sellActual = monthlyActualRate > 0 ? (withProdTotal + thisWeekQty) / monthlyActualRate : ((withProdTotal + thisWeekQty) > 0 ? 999 : 0);
     let status, statusCls;
     /* 调整2：透视表状态只看整体库存情况（三级+颜色套装聚合后），不再体现售完即止
        调整4：无周需求/无月需求 → 无需求 */
@@ -4955,7 +4984,7 @@ function renderPerspective(){
     else if(sellNow < 3){ status = '健康'; statusCls = 's-健康'; }
     else if(sellNow < 4){ status = '预呆滞'; statusCls = 's-预呆滞'; }
     else { status = '呆滞'; statusCls = 's-呆滞'; }
-    return { g, weeklyDemand, monthlyAvg, currentStock, fba, osStock, osInTransit, divert, domT, domP, withProdTotal, replenish, thisWeekQty, sellNow, sellThisWeek, status, statusCls, materialNames, codes };
+    return { g, weeklyDemand, monthlyAvg, last4Sales, currentStock, fba, osStock, osInTransit, divert, domT, domP, withProdTotal, replenish, thisWeekQty, sellNow, sellWithProd, sellThisWeek, sellActual, status, statusCls, materialNames, codes };
   });
 
   // 筛选
@@ -4989,6 +5018,7 @@ function renderPerspective(){
   let totalStockNow = 0, totalReplenish = 0, totalThisWeekQty = 0, totalWithProd = 0;
   let totalFba = 0, totalOsStock = 0, totalOsInTransit = 0, totalDivert = 0;
   let totalDomT = 0, totalDomP = 0, totalMonthly = 0, totalWeeklyDemand = 0, totalProductCount = 0;
+  let totalLast4 = 0;
   let countHealth = 0, countWarn = 0, countCritical = 0, countExcess = 0, countNoDemand = 0;
   filteredAgg.forEach(agg => {
     totalStockNow += agg.currentStock;
@@ -5003,6 +5033,7 @@ function renderPerspective(){
     totalDomP += agg.domP;
     totalMonthly += agg.monthlyAvg;
     totalWeeklyDemand += agg.weeklyDemand;
+    totalLast4 += agg.last4Sales;
     totalProductCount += agg.g.products.length;
     /* 调整2/4：增加「无需求」计数（独立显示，不并入紧急/健康等组） */
     if(agg.status === '健康' || agg.status === '预呆滞') countHealth++;
@@ -5013,8 +5044,12 @@ function renderPerspective(){
   });
   // 整体可售时间（基于汇总库存与汇总月均）
   const overallSellNow = totalMonthly > 0 ? (totalStockNow / totalMonthly) : (totalStockNow > 0 ? 999 : 0);
-  // 含本周下单量可售时间（反映\"本周下单入库后\"的总可售月数）
-  const overallSellNew = totalMonthly > 0 ? ((totalStockNow + totalThisWeekQty) / totalMonthly) : ((totalStockNow + totalThisWeekQty) > 0 ? 999 : 0);
+  const overallSellWithProd = totalMonthly > 0 ? (totalWithProd / totalMonthly) : (totalWithProd > 0 ? 999 : 0);
+  // 含本周下单量可售时间（含在制总数 + 本周下单量 口径）
+  const overallSellNew = totalMonthly > 0 ? ((totalWithProd + totalThisWeekQty) / totalMonthly) : ((totalWithProd + totalThisWeekQty) > 0 ? 999 : 0);
+  // 含本周下单量实际可售时间（按近四周实际销量月速度）
+  const overallMonthlyActual = totalLast4 > 0 ? (totalLast4 / 7 * 30) : 0;
+  const overallSellActual = overallMonthlyActual > 0 ? ((totalWithProd + totalThisWeekQty) / overallMonthlyActual) : ((totalWithProd + totalThisWeekQty) > 0 ? 999 : 0);
   const counter = filteredAgg.length;
 
   // 分页
@@ -5035,6 +5070,7 @@ function renderPerspective(){
       <td>${esc(agg.g.lv3||'--')}</td>
       <td>${esc(agg.g.color||'--')}</td>
       <td class="cell-num">${productCount}</td>
+      <td class="cell-num">${fmt(agg.last4Sales)}</td>
       <td class="cell-num">${fmt(agg.weeklyDemand)}</td>
       <td class="cell-num">${fmt(agg.monthlyAvg)}</td>
       <td class="cell-num cell-plan">${fmt(agg.currentStock)}</td>
@@ -5048,14 +5084,16 @@ function renderPerspective(){
       <td class="cell-num cell-plan">${fmt(agg.replenish)}</td>
       <td class="cell-num cell-plan" style="color:var(--primary);font-weight:600;">${fmt(agg.thisWeekQty)}</td>
       <td class="sell ${sellClass(agg.sellNow)}">${sellFmt(agg.sellNow)}</td>
+      <td class="sell ${sellClass(agg.sellWithProd)}">${sellFmt(agg.sellWithProd)}</td>
       <td class="sell ${sellClass(agg.sellThisWeek)}">${sellFmt(agg.sellThisWeek)}</td>
+      <td class="sell ${sellClass(agg.sellActual)}" title="按近四周实际销量月速度估算：(${fmt(agg.withProdTotal)} + ${fmt(agg.thisWeekQty)}) ÷ (近四周平均销量 ${fmt(agg.last4Sales)} ÷ 7 × 30)">${sellFmt(agg.sellActual)}</td>
       <td><span class="status-pill ${agg.statusCls}">${agg.status}</span></td>
       <td style="font-size:11px;line-height:1.9;">${perspCodeLinks(agg.codes, resultMap)}</td>
     </tr>`;
   }
 
   if(counter === 0){
-    tbody.innerHTML = '<tr><td colspan="21" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="23" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('perspectiveTfoot').innerHTML = '';
     const ppb = $('perspectivePageBar'); if(ppb) ppb.innerHTML = '';
   } else {
@@ -5065,6 +5103,7 @@ function renderPerspective(){
     $('perspectiveTfoot').innerHTML = `<tr style="font-weight:700;">
       <td colspan="3" style="text-align:right;">合计（${counter} 组 / ${totalProductCount} 个产品）</td>
       <td class="cell-num">${totalProductCount}</td>
+      <td class="cell-num">${fmt(totalLast4)}</td>
       <td class="cell-num">${fmt(totalWeeklyDemand)}</td>
       <td class="cell-num">${fmt(totalMonthly)}</td>
       <td class="cell-num cell-plan">${fmt(totalStockNow)}</td>
@@ -5078,7 +5117,9 @@ function renderPerspective(){
       <td class="cell-num cell-plan">${fmt(totalReplenish)}</td>
       <td class="cell-num cell-plan" style="color:var(--primary);font-weight:600;">${fmt(totalThisWeekQty)}</td>
       <td class="sell ${sellClass2(overallSellNow)}">${sellFmt2(overallSellNow)}</td>
+      <td class="sell ${sellClass2(overallSellWithProd)}">${sellFmt2(overallSellWithProd)}</td>
       <td class="sell ${sellClass2(overallSellNew)}">${sellFmt2(overallSellNew)}</td>
+      <td class="sell ${sellClass2(overallSellActual)}" title="按近四周实际销量月速度估算：合计(含在制+本周下单量) ÷ (近四周平均销量合计 ÷ 7 × 30)">${sellFmt2(overallSellActual)}</td>
       <td colspan="2"></td>
     </tr>`;
     const ppb = $('perspectivePageBar'); if(ppb) ppb.innerHTML = paginationBar(counter, curPage, 'perspective');
