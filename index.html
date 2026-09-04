@@ -3907,17 +3907,19 @@ function onWeekDetailEdit(td){
     /* select 不需要设 textContent */
     if(td.tagName !== 'SELECT') td.textContent = raw;
   }
-  /* 联动更新同行「预计到仓时间」列 */
-  const row = td.closest('tr');
-  if(row){
-    const cells = row.querySelectorAll('td');
-    /* 预计到仓时间 = 周次计划表最后一列（index 12） */
-    const estCell = cells[cells.length - 1];
-    if(estCell) estCell.textContent = calcEstFbaArrival(rp);
+  /* 运输方式/到货日变了：必须重算 rp.orderDate + rp.arriveWeek + 重跑 simulate，
+     否则 extraArrivals 还按旧 arriveWeek 累加，到货周（行的"到货"列）不跟着新预计到仓日走 */
+  if(field === 'arriveDate' || field === 'method'){
+    const weeks = (r.weeklyPlan && r.weeklyPlan.length) || 13;
+    recalcBatchTiming(rp, r.p, weeks);
+    updateWeeklyPlanFromReplenishments(r);
   }
-  /* 同步刷新主表 / 备货下单表的相关视图 */
+  /* 联动刷新弹窗/行内展开的周次计划表与各主视图（不再 hack 单列 cell.textContent） */
+  refreshCurrentDetail(pcode);
   renderResultTable();
   renderOrderTable();
+  if(typeof renderMetricCards === 'function') renderMetricCards();
+  if(typeof renderPerspective === 'function') renderPerspective();
 }
 
 /* 本周下单量 pending 模式：编辑后标记为待确认，需点击「确认更改」按钮才生效 */
@@ -4096,23 +4098,32 @@ function onBatchFieldEdit(td, bidx, field){
 }
 
 /* 根据 rp.arriveDate / rp.method / rp.isTransit 重算 rp.orderDate + rp.arriveWeek
-   用于 onBatchFieldEdit 编辑到货日/运输方式后同步到货周 */
+   用于 onBatchFieldEdit / onWeekDetailEdit 编辑到货日/运输方式后同步到货周
+   公式与 planProduct 的 arriveWeekOf 同源：
+     arriveWeek = floor(((arriveDate - today) + domM + (isTransit?osM:0) + fbaShelfDays) / 7)
+   注：arriveDate 在产品语境中为「需求出货日期」（生产完成出运日），到货日 = arriveDate + domM + osM + fbaShelf */
 function recalcBatchTiming(rp, p, weeks){
-  if(!rp || !p || !rp.arriveDate) return;
+  if(!rp || !p) return;
   const prodDays = num(p.prodCycleDays) || 0;
   const isTransit = !!rp.isTransit;
   const m = rp.method || {};
-  const osDays = isTransit ? (num(m.osToFbaDays) || 0) : 0;
-  /* orderDate = arriveDate - 生产周期天数 */
-  const od = addDays(rp.arriveDate, -prodDays);
-  if(od) rp.orderDate = od;
-  /* arriveWeek = floor(((arriveDate - today) + osDays + fbaShelf) / 7) */
+  /* 运输时效（与 planProduct.arriveWeekOf 口径一致：domToFbaDays 主段 + 中转 osToFbaDays 副段） */
+  const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) || 0;
+  const osM = isTransit ? (num(m.osToFbaDays) || 0) : 0;
+  /* 1) 同步 orderDate = arriveDate - 生产周期天数 */
+  if(rp.arriveDate){
+    const od = addDays(rp.arriveDate, -prodDays);
+    if(od) rp.orderDate = od;
+  } else {
+    return;   // 缺到达出货日无法算 arriveWeek
+  }
+  /* 2) 算 arriveWeek：与 planProduct 同源（v4.11 修复漏 domM 的 bug） */
   const today = new Date(); today.setHours(0,0,0,0);
   const ad = new Date(rp.arriveDate);
   if(isNaN(ad.getTime())) return;
   ad.setHours(0,0,0,0);
   const daysFromToday = Math.round((ad - today) / 86400000);
-  const totalDays = daysFromToday + osDays + num(fbaShelfDays);
+  const totalDays = daysFromToday + domM + osM + num(fbaShelfDays);
   rp.arriveWeek = Math.min(weeks - 1, Math.max(0, Math.floor(totalDays / 7)));
 }
 
