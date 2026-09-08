@@ -5430,11 +5430,12 @@ function openDetailBuild(r, p, methods){
       const orderW = rp.orderWeek;
       const arriveW = rp.arriveWeek;
       const isOW0 = orderW === 0;
-      /* 推断来源：orderWeek=0 且 cadence 数 0 阶段（主循环尚未结束）→ ensureThisWeekBatch 或 split */
+      /* 推断来源：orderWeek=0 且 cadence 数 0 阶段（主循环尚未结束）→ ensureThisWeekBatch 或 split
+         v4.13 升级后衔接槽 split 不再固定 fastestSub（可能 dom=35），用 orderWeek=0 + 方式≠regM 识别 */
       const isCadence = orderW > 0; /* cadenceOrderWeek >= 1 必然来自主循环 cadence */
-      /* orderWeek=0 时细分：awFast = arriveWeekOf(快船22) = 9 (W10) → 这条 954 快船22 极可能是 v4.5 split */
+      const regMName = (r.regM && r.regM.name) || (p.regularMethod || '');
       const methodName = rp.method ? rp.method.name : '?';
-      const isFast = methodName === '快船22' || methodName === '快船27' || (rp.method && num(rp.method.domToFbaDays) <= 27);
+      const isAutoSplit = isOW0 && methodName !== regMName;  /* 本周下单 + 方式 ≠ regM → 衔接槽 split */
       return `<tr style="font-size:11px;">
         <td style="padding:2px 6px;">${idx}</td>
         <td style="padding:2px 6px;">${isOW0 ? '本周(today)' : 'W' + (orderW + 1)}</td>
@@ -5442,21 +5443,21 @@ function openDetailBuild(r, p, methods){
         <td style="padding:2px 6px;">${esc(methodName)}${rp.method && rp.method.domToFbaDays != null ? ` <span style="color:var(--text-muted);font-weight:400;">(dom=${rp.method.domToFbaDays})</span>` : ''}</td>
         <td style="padding:2px 6px;">${rp.amount}</td>
         <td style="padding:2px 6px;">${rp.arriveDate || '—'}</td>
-        <td style="padding:2px 6px;color:${isOW0 ? (isFast ? '#9333ea' : '#0ea5e9') : '#16a34a'};">${
+        <td style="padding:2px 6px;color:${isOW0 ? (isAutoSplit ? '#9333ea' : '#0ea5e9') : '#16a34a'};">${
           isCadence ? '主循环 cadence' :
-          (isFast ? '⚠ 可能 v4.5 衔接槽 split' : 'ensureThisWeekBatch/用户编辑')
+          (isAutoSplit ? '⚠ 可能 v4.5 衔接槽 split' : 'ensureThisWeekBatch/用户编辑')
         }</td>
       </tr>`;
     }).join('');
-    const fasts = r.replenishments.filter(rp => rp.method && num(rp.method.domToFbaDays) <= 27 && rp.orderWeek === 0);
-    const fastNote = fasts.length > 0
-      ? `发现 <b style="color:#9333ea;">${fasts.length}</b> 条 orderWeek=0 + 快车方式 (dom≤27) 批次 → 极可能是 v4.5 衔接槽自动拆分（或你手动编辑新增）。`
-      : `本产品本周（orderWeek=0）没有快车方式批次，所有 orderWeek=0 批次都用常规/慢车。`;
+    const splits = r.replenishments.filter(rp => rp.orderWeek === 0 && rp.method && (r.regM ? rp.method.name !== r.regM.name : true));
+    const fastNote = splits.length > 0
+      ? `发现 <b style="color:#9333ea;">${splits.length}</b> 条 orderWeek=0 + 方式≠regM 批次 → 极可能是 v4.5 衔接槽自动拆分（v4.13 起按阶梯选方式，已不再固定 fastest）或 ensureThisWeekBatch 用户编辑。`
+      : `本产品本周（orderWeek=0）所有批次都用 regM 或主循环方式，无衔接槽 split。`;
     html += `<details style="margin:0 0 14px;padding:8px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:12px;">
       <summary style="cursor:pointer;font-weight:600;color:#92400e;">📦 ALL BATCHES（${r.replenishments.length} 条 replenishments 全清单）</summary>
       <div style="margin-top:8px;color:#92400e;font-size:11px;">
         ${fastNote}<br>
-        <b>来源判断</b>：orderWeek &gt; 0 = 主循环 cadence；orderWeek = 0 + 快车方式 = v4.5 衔接槽（自动拆快件托底）或 ensureThisWeekBatch（用户编辑）。
+        <b>来源判断</b>：orderWeek &gt; 0 = 主循环 cadence；orderWeek = 0 + 方式 ≠ regM = v4.5 衔接槽 split（v4.13 起按阶梯选方式，已不再固定 fastestSub）；orderWeek = 0 + 方式 = regM = ensureThisWeekBatch 主批或用户编辑。
       </div>
       <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#fde68a;">
