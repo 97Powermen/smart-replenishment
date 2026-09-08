@@ -332,6 +332,9 @@ tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dash
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
 .tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
 tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #b9cdea !important; padding-top:3px !important; padding-bottom:3px !important; color:#2d5a8e; }
+/* v4.17 提前释放订单（预放单）提示条：紫/绿系，与灰蓝尾数顺延、橙运输回退区分 */
+.release-early-tip { background:#f0f7f0; border:1px solid #9fd0a0; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#1f5e22; }
+tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashed #9fd0a0 !important; padding-top:3px !important; padding-bottom:3px !important; color:#1f5e22; }
 
 /* Expandable inventory cell */
 .stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: all .15s; }
@@ -508,6 +511,27 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
       <div class="cfg-control">
         <input type="number" min="0" id="fbaShelfDaysInput" value="3" onchange="onFbaShelfDaysChange(this.value)">
         <div class="hint">默认 3 天</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1.55: 提前释放订单周数（预放单 v4.17） -->
+  <div class="card" id="sec-release-orders">
+    <div class="card-header">
+      <div class="icon">🎯</div>
+      <h2>提前释放订单（预放单）</h2>
+    </div>
+    <div class="warn-box">长假/节假日（如国庆）常需要<b>提前放单</b>：本周把未来 1~2 周该下的订单批次也一并下出去（PO 提前下发），各批次的<b>需求出货日期 / 预计到仓时间保持原计划不变</b> —— 不是把两三周的量合并成一单集中出货，只是下单动作提前。本周下单量、备货下单表会同步包含这些提前释放的批次。</div>
+    <div class="cfg-row">
+      <div class="cfg-label">释放订单周数</div>
+      <div class="cfg-control">
+        <select id="releaseOrderWeeksInput" onchange="onReleaseOrderWeeksChange(this.value)">
+          <option value="1">1 周（默认：本周只放当周订单）</option>
+          <option value="2">2 周（本周连同下一周的订单一起放）</option>
+          <option value="3">3 周（本周连同未来两周的订单一起放）</option>
+          <option value="4">4 周（最长：一次性放一个月量的单）</option>
+        </select>
+        <div class="hint">节假日或停摆期临时调大，放完长假后改回 1 周即可。<b>实现方式</b>：把未来 N-1 周该放的补货批次提前到「本周下单量」——不改各批到货节奏、不合并数量、不集中出货。所有产品统一生效（含单独配置了下单频率的产品，按各自排程周合并）。改配置后需重新点「🚀 生成备货方案」。</div>
       </div>
     </div>
   </div>
@@ -1227,6 +1251,22 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
         </div>
 
         <div class="algo-block">
+          <div class="algo-step"><b>⑨ 提前释放订单（预放单 2026-09-08 v4.17）</b></div>
+          <table class="result-table" style="width:100%;">
+            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
+            <tbody>
+              <tr><td>配置位置</td><td>「基础数据 → 提前释放订单（预放单）」下拉：1/2/3/4 周（默认 1 = 关闭，本周只放当周批）</td></tr>
+              <tr><td>业务场景</td><td>长假/节假日（国庆）前<b>提前放单</b>：本周把未来 N-1 周该下的订单批次 PO 一并下出去 —— <b>不是</b>把两三周的量合并成一单集中出货，各批次的<b>需求出货日期 / 预计到仓时间保持原计划不变</b>，只是下单动作提前</td></tr>
+              <tr><td>实现口径</td><td>算法排程不变（各 cadence 批次的量/方式/到货周均不动）；凡「本周下单量 / 本周需下单批次」的统计、合计、编辑、导出口径从 <code>orderWeek===0</code> 放宽为 <code>orderWeek &lt; 释放周数</code> —— 即本次放单窗口内全部批次（含未来提前释放批）</td></tr>
+              <tr><td>联动视图</td><td>分析结果表「本周下单量」列 / 备货下单表（Page 3）/ 备货下单表导出 / 透视表与指标卡「含本周下单量可售」/ 单品详情周次计划「本周下单量」列 —— 全部按放单窗口汇总</td></tr>
+              <tr><td>醒目标注</td><td>释放周数 &gt; 1 且产品存在提前释放批 → 分析结果表行下绿色提示条「🎯 预放单（释放 N 周）：本周连同未来 X 批一起放」</td></tr>
+              <tr><td>编辑兼容</td><td>手动改「本周下单量」时分配到窗口内全部批次（按到货周/比例分摊，逻辑与原 orderWeek===0 一致）；改配置后需重新生成方案生效</td></tr>
+            </tbody>
+          </table>
+          <div class="algo-note">放完长假恢复每周放单：把释放周数改回 1 并重新生成即可。长按「一次性放一个月量的单」可用 4 周。</div>
+        </div>
+
+        <div class="algo-block">
           <div class="algo-step"><b>核心公式速记</b></div>
           <table class="result-table" style="width:100%;">
             <thead><tr><th style="width:160px;">指标</th><th>公式</th></tr></thead>
@@ -1253,7 +1293,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
               <tr><td>含在制总数可售时间(月)</td><td>含在制总数 ÷ 月均需求（v4.10 新增：全部库存+在途/在制 入库后视角）</td></tr>
               <tr><td>含本周下单量可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ 月均需求（v4.10 起分子从「当前库存」改为「含在制总数」——本周下单入库 + 全部在途/在制 后视角）</td></tr>
               <tr><td>含本周下单量实际可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)（v4.10 新增：分母用近期实际销量月速度，非预测月均，反映按当前销售速度能卖几个月）</td></tr>
-              <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / <code>replenishments.filter(orderWeek===0).amount</code></td></tr>
+              <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / 本周下单量 = orderWeek &lt; 释放周数 的批次合计（v4.17 预放单后含未来提前释放批）</td></tr>
             </tbody>
           </table>
         </div>
@@ -1333,7 +1373,8 @@ const STORAGE_KEYS = {
   IMPORT_RECORDS: 'stockImportRecords',
   IMPORT_REC_DATA: 'stockImportRec_',   // prefix + id
   FBA_SHELF_DAYS: 'stockFbaShelfDays',
-  TAIL_DEFER: 'stockTailDefer'          /* v4.8+ 尾数顺延配置 { enabled, thresholdWeeks, absQty } */
+  TAIL_DEFER: 'stockTailDefer',          /* v4.8+ 尾数顺延配置 { enabled, thresholdWeeks, absQty } */
+  RELEASE_WEEKS: 'stockReleaseWeeks'     /* v4.17 提前释放订单周数（预放单）：默认 1 = 本周只放当周批；2/3 = 本周连同未来 N-1 周该放的批一起放（PO 提前下，出货/到货节奏不变） */
 };
 const LOG_MAX = 50;
 const LOG_SHOW = 10;
@@ -1558,6 +1599,17 @@ let fbaShelfDays = 3;        // FBA上架天数（全局设定），用于计算
    absQty = 判定条件②：缺口不足「绝对数量阈值」套视为尾数（默认 30；0 = 不启用该门槛）。
    两个条件为【且】关系：缺口 < N×周均需求 且 缺口 < absQty（absQty>0 时）才顺延。 */
 let tailDeferCfg = { enabled: true, thresholdWeeks: 1, absQty: 30 };
+/* v4.17 提前释放订单周数（预放单）：默认 1 = 现状（本周只放 orderWeek=0 的批次）。
+   >1（如 2/3）时，节假日/长假前把未来 N-1 周该放的订单批次也在本周一次性放出去
+   （PO 提前下发，各批的需求出货日期/到货周不变 —— 不是把两三周的量合并成一单集中出货）。
+   实现：凡涉及「本周下单量」的统计/编辑口径从 orderWeek===0 放宽为 orderWeek < releaseOrderWeeks。 */
+let releaseOrderWeeks = 1;
+/* v4.17 helper：某批次(orderWeek)是否属于「本次放单窗口」（本周要放出去的单） */
+function isRelOrder(ow){
+  const rw = Math.max(1, Math.min(4, num(releaseOrderWeeks) || 1));
+  return typeof ow === 'number' && ow >= 0 && ow < rw;
+}
+function relWeeks(){ return Math.max(1, Math.min(4, num(releaseOrderWeeks) || 1)); }
 
 /* ============================================================
  * 存储
@@ -1624,6 +1676,10 @@ function loadAllState(){
   if(tailDeferTh) tailDeferTh.value = tailDeferCfg.thresholdWeeks;
   const tailDeferAbs = $('tailDeferAbsQty');
   if(tailDeferAbs) tailDeferAbs.value = tailDeferCfg.absQty;
+  /* v4.17 加载提前释放订单周数（预放单）配置 */
+  releaseOrderWeeks = Math.max(1, Math.min(4, num(lsGet(STORAGE_KEYS.RELEASE_WEEKS, 1)) || 1));
+  const relInput = $('releaseOrderWeeksInput');
+  if(relInput) relInput.value = releaseOrderWeeks;
 }
 function saveProducts(){ lsSet(STORAGE_KEYS.PRODUCTS, importedProducts); }
 function saveUsers(){ lsSet(STORAGE_KEYS.USERS, currentUsersList()); }
@@ -1931,6 +1987,13 @@ function onTailDeferAbsQtyChange(v){
   toast(tailDeferCfg.absQty > 0
     ? '绝对数量阈值已更新为 ' + tailDeferCfg.absQty + ' 套（缺口低于该值 且 低于周均倍数阈值才顺延）'
     : '绝对数量阈值已关闭（仅按周均倍数阈值判定）');
+}
+
+/* v4.17 提前释放订单周数（预放单）：改配置后仅存配置，提示用户重新生成方案生效 */
+function onReleaseOrderWeeksChange(v){
+  releaseOrderWeeks = Math.max(1, Math.min(4, parseInt(v, 10) || 1));
+  lsSet(STORAGE_KEYS.RELEASE_WEEKS, releaseOrderWeeks);
+  toast('释放订单周数已更新为 ' + releaseOrderWeeks + ' 周（预放单 ' + (releaseOrderWeeks > 1 ? '开启' : '关闭') + '），请点击「🚀 生成备货方案」后生效');
 }
 
 /* ============================================================
@@ -3649,7 +3712,7 @@ function renderMetricCards(){
   $('mProductCount').textContent = results.length;
   $('mTotalRec').textContent = fmt(results.reduce((a,r)=>a+r.rec, 0));
   $('mTotalActual').textContent = fmt(results.reduce((a,r)=>a+r.actualRec, 0));
-  const totalThisWeek = results.reduce((a,r)=>a + (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s,rp)=>s+num(rp.amount), 0), 0);
+  const totalThisWeek = results.reduce((a,r)=>a + (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s,rp)=>s+num(rp.amount), 0), 0);
   $('mTotalThisWeek').textContent = fmt(totalThisWeek);
   $('mTotalGap').textContent = fmt(results.reduce((a,r)=>a+(r.stockoutWeeks>0?r.weeklyPlan.reduce((s,w)=>s+w.stockout,0):0), 0));
   const totalRec = results.reduce((a,r)=>a+r.rec, 0);
@@ -3682,7 +3745,7 @@ function renderResultTable(){
   /* 排序（在筛选之后、分页之前） */
   const rSort = ($('resultSortBy')?.value || 'default');
   if(rSort && rSort !== 'default'){
-    const thisWeekOf = rr => (rr.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekOf = rr => (rr.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     const cmp = {
       lv3: (a, b) => String(a.r.p.categoryLevel3||'').localeCompare(String(b.r.p.categoryLevel3||''), 'zh'),
       codeAsc: (a, b) => String(a.r.p.materialCode||'').localeCompare(String(b.r.p.materialCode||''), 'zh'),
@@ -3713,8 +3776,11 @@ function renderResultTable(){
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
     totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalAvgDemand += num(r.avgWeeklyDemand);
-    /* 本周下单量：orderWeek === 0 的批次合计 */
-    const thisWeekQty = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    /* 本周下单量：本次放单窗口（orderWeek < 释放周数）的批次合计 —— v4.17 预放单后含未来 N-1 周的提前释放批 */
+    const thisWeekQty = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
+    /* v4.17 预放单提示：仅当释放周数 >1 且存在「提前释放的未来批」（orderWeek>0 且在窗口内）时显示 */
+    const relList = (r.replenishments || []).filter(rp => rp.orderWeek > 0 && isRelOrder(rp.orderWeek));
+    const relQty = relList.reduce((s, rp) => s + num(rp.amount), 0);
     totalThisWeekRec += thisWeekQty;
     const currentStock = num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
     const inbound = pipelineTotal(p);
@@ -3796,7 +3862,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="27" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="27" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="27" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -3865,8 +3931,8 @@ function onResultThisWeekEdit(td){
   const pcode = td.dataset.pcode;
   const r = _findResultByCode(pcode);
   if(!r){ td.textContent = orig > 0 ? fmt(orig) : '—'; return; }
-  /* 把值分配到 r.replenishments 中 orderWeek === 0 的批次 */
-  const thisWeekList = (r.replenishments || []).filter(rp => rp.orderWeek === 0);
+  /* 把值分配到 r.replenishments 中本次放单窗口（orderWeek < 释放周数）的批次 —— v4.17 预放单 */
+  const thisWeekList = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek));
   if(thisWeekList.length === 0){
     /* 原算法认为不需要本周下单量，但用户改了一个正数：找到最早 replenishment（按 arriveDate）切出一份 */
     const sorted = (r.replenishments || []).slice().sort((a,b) => String(a.arriveDate).localeCompare(String(b.arriveDate)));
@@ -3913,7 +3979,7 @@ function setThisWeekQtyTotal(r, w, newVal){
   if(!r || !Array.isArray(r.replenishments)) return [];
   /* 该周无本周下单批次且输入正数 → 自动新增一批本周下单（本周出货），
      否则 ensureThisWeekBatch 原样返回会导致"改了不生效、刷新跳回原值" */
-  let rps = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
+  let rps = r.replenishments.filter(x => x.arriveWeek === w && isRelOrder(x.orderWeek));
   if(rps.length === 0){
     if(newVal <= 0) return [];
     rps = ensureThisWeekBatch(r, w, newVal);
@@ -3958,7 +4024,7 @@ function setThisWeekQtyTotal(r, w, newVal){
    返回：该周 orderWeek=0 批次数组（新批次或原有批次） */
 function ensureThisWeekBatch(r, w, newVal){
   if(!r || !Array.isArray(r.replenishments)) return [];
-  const rps = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
+  const rps = r.replenishments.filter(x => x.arriveWeek === w && isRelOrder(x.orderWeek));
   if(rps.length > 0 || newVal <= 0) return rps;
   const p = r.p || {};
   /* v4.12 新增本周批次默认方式的候选池 = 按产品区域过滤（与 planProduct 同源） */
@@ -3993,14 +4059,14 @@ function onWeekDetailEdit(td){
   /* v4.12 方式匹配池 = 按产品区域过滤（与周次计划下拉同源，所选值必在池内） */
   const methods = methodsForProduct(r.p);
   /* 优先找本周下单（orderWeek=0）批次；无则 fallback 该到货周任意批次 */
-  const rps0 = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
+  const rps0 = r.replenishments.filter(x => x.arriveWeek === w && isRelOrder(x.orderWeek));
   const rp = rps0[0] || r.replenishments.find(x => x.arriveWeek === w);
   if(!rp){ return; }
   /* 兼容 input/select（.value）和 contenteditable（.textContent） */
   const raw = String((td.value !== undefined && td.value !== '') ? td.value : (td.textContent || '')).trim();
   if(field === 'thisWeekQty'){
     const v = parseInt(raw.replace(/[^\d-]/g, ''), 10);
-    if(isNaN(v) || v < 0){ td.textContent = rp.orderWeek === 0 ? fmt(rp.amount) : '--'; return; }
+    if(isNaN(v) || v < 0){ td.textContent = isRelOrder(rp.orderWeek) ? fmt(rp.amount) : '--'; return; }
     /* 已有本周批次 → 按比例分摊；无本周批次且输入正数 → 自动新增一批（setThisWeekQtyTotal 内部处理） */
     const rps = setThisWeekQtyTotal(r, w, v);
     /* 重跑 simulate，让后续期末可售/缺货等列自动刷新 */
@@ -4281,7 +4347,7 @@ function onBatchQtyEdit(td, bidx){
 function clearThisWeekOrder(origIdx){
   const r = results[origIdx];
   if(!r || !Array.isArray(r.replenishments)) return;
-  const cleared = r.replenishments.filter(rp => rp.orderWeek === 0);
+  const cleared = r.replenishments.filter(rp => isRelOrder(rp.orderWeek));
   if(cleared.length === 0){ toast('该产品本周无下单批次'); return; }
   cleared.forEach(rp => { rp.amount = 0; });
   /* 重跑 simulate 重算 weeklyPlan（endingInv 等同步） */
@@ -4300,8 +4366,8 @@ function renderOrderTable(){
   results.forEach(r => {
     if(r.noStock || r.replenishments.length === 0) return;
     r.replenishments.forEach(rp => {
-      /* 仅保留本周需下单的批次（orderWeek === 0） */
-      if(rp.orderWeek === 0){
+      /* 仅保留本次放单窗口内的批次（orderWeek < 释放周数，v4.17 预放单后含提前释放的未来批） */
+      if(isRelOrder(rp.orderWeek)){
         allOrders.push({ p: r.p, rp, arriveDate: rp.arriveDate });
       }
     });
@@ -4373,7 +4439,7 @@ function exportResult(format){
     }
     const fbaV = num(p.fbaStock), osStockV = num(p.osStock), divertV = num(p.divertStock), osInTrV = num(p.osInTransit);
     const withProdTotal = fbaV + osStockV + divertV + osInTrV + domT + domP;
-    const thisWeekQty = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekQty = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     let status;
     /* 优先级：售完即止 > 无需求 > 紧急/紧张/健康/预呆滞/呆滞
        调整3：sellNow < 1 显示紧急的前提是「本周需要下单」(thisWeekQty>0)
@@ -4415,8 +4481,8 @@ function exportOrderCSV(){ exportOrder('csv'); }
 function exportOrderXLSX(){ exportOrder('xlsx'); }
 function exportOrder(format){
   const allOrders = [];
-  results.forEach(r => { if(!r.noStock) r.replenishments.forEach(rp => { if(rp.orderWeek === 0) allOrders.push({p: r.p, rp, r}); }); });
-  if(allOrders.length === 0){ alert('本周无需下单的批次'); return; }
+  results.forEach(r => { if(!r.noStock) r.replenishments.forEach(rp => { if(isRelOrder(rp.orderWeek)) allOrders.push({p: r.p, rp, r}); }); });
+  if(allOrders.length === 0){ alert('本周无需下单的批次（含预放单）'); return; }
   const head = ['三级','料品编码','存货名称','规格型号','数量(套)','需求出货日期','运输方式','站点','区域','目的仓库','备注'];
   const rows = [head];
   allOrders.forEach(g => {
@@ -4595,7 +4661,7 @@ function renderDetailTable(){
   /* 排序（在筛选之后、分页之前） */
   const fSort = ($('detailSortBy')?.value || 'default');
   if(fSort && fSort !== 'default'){
-    const thisWeekOf = rr => (rr.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekOf = rr => (rr.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     const cmp = {
       lv3: (a, b) => String(a.r.p.categoryLevel3||'').localeCompare(String(b.r.p.categoryLevel3||''), 'zh'),
       codeAsc: (a, b) => String(a.r.p.materialCode||'').localeCompare(String(b.r.p.materialCode||''), 'zh'),
@@ -4636,7 +4702,7 @@ function renderDetailTable(){
     tMonthAvg += monthAvg;
     tWithProd += fbaV + osV + divertV + osInV + domT + domP;
     tRec += num(r.actualRec);
-    tThisWeek += (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    tThisWeek += (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     tStockout += num(r.stockoutWeeks);
   });
 
@@ -4678,7 +4744,7 @@ function renderDetailTable(){
     }
     const withProdTotal = fbaV + osV + divertV + osInV + domT + domP;
     /* 本周下单量 */
-    const thisWeekQty = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekQty = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     /* 备货建议 */
     const sellNowMonths = monthSell > 0 ? ((fbaV + osV + divertV + osInV) / monthSell) : (fbaV + osV + divertV + osInV > 0 ? 999 : 0);
     let advice, adviceCls;
@@ -4781,12 +4847,12 @@ function buildDetailContent(r){
        这里用 filter + sum 行内显示该周次所有批次总和，与合计 totalRec 保持一致 */
     const rpList = r.replenishments.filter(x => x.arriveWeek === i);
     const totalAtWeek = rpList.reduce((s, rp) => s + num(rp.amount), 0);
-    const thisWeekAtWeek = rpList.filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekAtWeek = rpList.filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     const firstRp = rpList[0] || null;
     /* 调整4：日期/方式列改用"本周下单批次"的最新一个（而非任意第一个）——
        用户在"无本周下单"行新增批次后，shipDate/estArrival 应展示新批次的，
        否则会显示原未来批次的日期，与新批次对不上 */
-    const orderWeek0List = rpList.filter(rp => rp.orderWeek === 0);
+    const orderWeek0List = rpList.filter(rp => isRelOrder(rp.orderWeek));
     const displayRp = orderWeek0List.length > 0 ? orderWeek0List[orderWeek0List.length - 1] : firstRp;
     const dateMethodEditable = orderWeek0List.length > 0;
     const rec = rpList.length > 0 ? fmt(totalAtWeek) : '--';
@@ -4794,7 +4860,7 @@ function buildDetailContent(r){
     const shipDate = displayRp ? esc(displayRp.arriveDate) : '--';
     const estArrival = displayRp ? esc(calcEstFbaArrival(displayRp)) : '--';
     const cls = w.stockout > 0 ? 'cell-danger' : (w.endingInv < w.weekSafety ? 'cell-warn' : 'cell-ok');
-    /* 本周下单量：该周次所有 orderWeek===0 批次之和 */
+    /* 本周下单量：该周次所有属于本次放单窗口（orderWeek < 释放周数）的批次之和（v4.17） */
     const thisWeekQty = thisWeekAtWeek > 0 ? fmt(thisWeekAtWeek) : '--';
     sumArrival += w.arrival;
     sumDemand += w.demand;
@@ -4818,7 +4884,7 @@ function buildDetailContent(r){
   /* 调整3：周次计划合计行（与「本品下单批次」合计同源：基于 r.replenishments） */
   const lastPlan = r.weeklyPlan.length > 0 ? r.weeklyPlan[r.weeklyPlan.length - 1] : null;
   const totalRec = (r.replenishments || []).reduce((s, rp) => s + num(rp.amount), 0);
-  const totalThisWeek = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+  const totalThisWeek = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
   const totalBatchCount = (r.replenishments || []).length;
   const totalBatchNote = totalBatchCount > 0 ? `（共 ${totalBatchCount} 批）` : '';
   h += `<tr style="font-weight:700;background:var(--bg-soft);" title="合计 = 全部 ${totalBatchCount} 个补货批次之和（行内仅显示每周次到货量，滚动查看所有批次）">
@@ -5009,8 +5075,8 @@ function computePerspectiveRow(p, resultMap){
 
   // 本次备货（来自 results，否则为 0）
   const replenish = r ? r.actualRec : 0;
-  // 本周下单量（orderWeek === 0 的批次合计，反映本周滚动需下单的部分）
-  const thisWeekQty = r ? (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0) : 0;
+  // 本周下单量（本次放单窗口 orderWeek < 释放周数 的批次合计，v4.17 预放单含未来提前释放批）
+  const thisWeekQty = r ? (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0) : 0;
 
   // v4.10 可售时间（月）多口径（与组聚合/导出同源；状态判定仍用「当前库存可售」）
   const sellNow = monthlyAvg > 0 ? (currentStock / monthlyAvg) : (currentStock > 0 ? 999 : 0);
@@ -5276,10 +5342,10 @@ function togglePerspCols(){
 /* 透视表料品编码列：单个/多个编码均可点击跳转详情（openDetailByKey）；
    超过 MAX_SHOWN 个时显示 +N 按钮，点击行内展开剩余编码 */
 const PERSP_CODE_MAX_SHOWN = 3;
-/* 编码分色：本周有下单（orderWeek===0 批次存在）→ 红；否则灰 */
+/* 编码分色：本周有下单（本次放单窗口内批次存在）→ 红；否则灰（v4.17 预放单） */
 function _perspCodeHasOrder(code, resultMap){
   const r = resultMap ? resultMap[code] : null;
-  return !!(r && Array.isArray(r.replenishments) && r.replenishments.some(rp => rp.orderWeek === 0));
+  return !!(r && Array.isArray(r.replenishments) && r.replenishments.some(rp => isRelOrder(rp.orderWeek)));
 }
 function perspCodeLinks(codes, resultMap){
   const arr = Array.isArray(codes) ? codes.filter(Boolean) : [];
@@ -5598,12 +5664,12 @@ function openDetailBuild(r, p, methods){
        用 filter + sum 行内显示该周次所有批次总和，与合计 totalRec 保持一致 */
     const rpList = r.replenishments.filter(x => x.arriveWeek === i);
     const totalAtWeek = rpList.reduce((s, rp) => s + num(rp.amount), 0);
-    const thisWeekAtWeek = rpList.filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+    const thisWeekAtWeek = rpList.filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     const firstRp = rpList[0] || null;
     /* 调整4：日期/方式列改用"本周下单批次"的最新一个（而非任意第一个）——
        用户在"无本周下单"行新增批次后，shipDate/estArrival 应展示新批次的，
        否则会显示原未来批次的日期，与新批次对不上 */
-    const orderWeek0List = rpList.filter(rp => rp.orderWeek === 0);
+    const orderWeek0List = rpList.filter(rp => isRelOrder(rp.orderWeek));
     const displayRp = orderWeek0List.length > 0 ? orderWeek0List[orderWeek0List.length - 1] : firstRp;
     const dateMethodEditable = orderWeek0List.length > 0;
     const rec = rpList.length > 0 ? fmt(totalAtWeek) : '--';
@@ -5635,7 +5701,7 @@ function openDetailBuild(r, p, methods){
   /* 调整3：周次计划合计行 */
   const lastPlan = r.weeklyPlan.length > 0 ? r.weeklyPlan[r.weeklyPlan.length - 1] : null;
   const totalRec = (r.replenishments || []).reduce((s, rp) => s + num(rp.amount), 0);
-  const totalThisWeek = (r.replenishments || []).filter(rp => rp.orderWeek === 0).reduce((s, rp) => s + num(rp.amount), 0);
+  const totalThisWeek = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
   html += `<tr style="font-weight:700;background:var(--bg-soft);">
     <td>--</td>
     <td>合计</td>
