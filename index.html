@@ -2019,23 +2019,31 @@ function computeInitialStock(p){
   return num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
 }
 
-// 在途/在制 -> 每周到货数组（仅含「未来到货」，不含已存在的初始库存——避免与期初可售重复）
+/* v4.16 修复 buildPipelineArrivals：预估到仓时间落在 W0（本周/已过期）
+   的票据不再被静默丢弃，全部归入 arr[0]（W1）。理由：预计到仓时间只是预估，
+   实际到仓可能延期几天到 1 周内，把它丢出会让 planProduct 当缺口补货 →
+   建议下单虚高。如原本 week==0 表示「本周已逾期未到」，必须保留到 W1。
+   调整：对原有 w>0 的票据保持原来索引规则不动（避免老数据位移），
+   仅对新增的 w<=0 情况补兜底到 arr[0]。*/
 function buildPipelineArrivals(p, weeks){
   const arr = new Array(weeks).fill(0);
-  // 海外仓在途到仓 (osInTransit) 在 osInTransitWeeks 周到达
+  // 海外仓在途到仓 (osInTransit) 在 osInTransitWeeks 周到达；w<=0 兜底到 arr[0]
   const osTransit = num(p.osInTransit), osTransitW = num(p.osInTransitWeeks);
-  if(osTransit > 0 && osTransitW > 0 && osTransitW < weeks) arr[osTransitW] += osTransit;
-  // 国内在途到仓 (domInTransit) 在 domInTransitWeeks 周到达
+  if(osTransit > 0 && osTransitW >= 0 && osTransitW < weeks) arr[osTransitW > 0 ? osTransitW : 0] += osTransit;
+  // 国内在途到仓 (domInTransit)；w<=0 兜底
   const domT = num(p.domInTransit), domTW = num(p.domInTransitWeeks);
-  if(domT > 0 && domTW > 0 && domTW < weeks) arr[domTW] += domT;
-  // 在制未交到仓 (domInProd) 在 domInProdWeeks 周到达
+  if(domT > 0 && domTW >= 0 && domTW < weeks) arr[domTW > 0 ? domTW : 0] += domT;
+  // 在制未交到仓 (domInProd)；w<=0 兜底
   const domP = num(p.domInProd), domPW = num(p.domInProdWeeks);
-  if(domP > 0 && domPW > 0 && domPW < weeks) arr[domPW] += domP;
+  if(domP > 0 && domPW >= 0 && domPW < weeks) arr[domPW > 0 ? domPW : 0] += domP;
   // 多票在途/在制（来自「📦 导入在途/在制」按钮）：每票按各自到货周数累加
+  /* v4.16 关键改动：把 `w > 0 && w < weeks` 改为 `w >= 0 && w < weeks`，
+     对 w<=0 的票据（已过期/本周）归入 arr[0]（W1），承认延期可能。
+     w>0 路径保持原 `arr[w]` 不动，避免和老数据对不上。*/
   if(Array.isArray(p.pipelineTickets)){
     p.pipelineTickets.forEach(t => {
       const q = num(t && t.qty), w = num(t && t.week);
-      if(q > 0 && w > 0 && w < weeks) arr[w] += q;
+      if(q > 0 && w >= 0 && w < weeks) arr[w > 0 ? w : 0] += q;
     });
   }
   return arr;
@@ -5477,19 +5485,20 @@ function openDetailBuild(r, p, methods){
       </table>
     </details>`;
   }
-  /* v4.15 临时诊断面板：列出产品所有在途/在制数据明细（单字段 + pipelineTickets），
-     标注每条是否进入 buildPipelineArrivals（"窗口内"= w>0 && w<weeks → 进到货基线；
-     "窗口外"= w≥weeks 或 w≤0 → 被 buildPipelineArrivals 静默丢弃，仍计入 pipelineTotal/列显示），
-     帮用户定位"导入 N 套但周次计划只到 M 套"的 246 套去向。 */
+  /* v4.16 诊断面板：列出产品所有在途/在制数据明细（单字段 + pipelineTickets），
+     标注每条是否进入 buildPipelineArrivals。
+     口径变化：v4.16 起「窗口内」= week < weeks（包含 w<=0 也会归入 W1 因为延期兜底）；
+     仅 "窗口外"= w>=weeks 才算超期丢弃。诊断保留以便后续再有差额时快速定位。 */
   if(Array.isArray(p.pipelineTickets) || num(p.domInTransit) || num(p.domInProd) || num(p.osInTransit)){
     const rows = [];
     /* 单字段 */
     const osT = num(p.osInTransit), osTW = num(p.osInTransitWeeks);
     const dT = num(p.domInTransit), dTW = num(p.domInTransitWeeks);
     const dP = num(p.domInProd), dPW = num(p.domInProdWeeks);
+    /* v4.16 改：w<=0 也算窗口内（兜底归 W1）*/
     const _appendSingle = (type, qty, week) => {
       if(qty <= 0) return;
-      const inWindow = week > 0 && week < r.weeks;
+      const inWindow = week < r.weeks;
       rows.push({ type, qty, week, source: '基础数据单字段', arriveDate: '—', inWindow, isSingle: true });
     };
     _appendSingle('osInTransit', osT, osTW);
@@ -5500,7 +5509,7 @@ function openDetailBuild(r, p, methods){
       p.pipelineTickets.forEach((t, i) => {
         if(!t || num(t.qty) <= 0) return;
         const w = num(t.week);
-        const inWindow = w > 0 && w < r.weeks;
+        const inWindow = w < r.weeks;  // v4.16: w<=0 也算窗口内
         rows.push({
           type: t.type, qty: num(t.qty), week: w,
           source: t.source || '手填',
@@ -5516,8 +5525,16 @@ function openDetailBuild(r, p, methods){
     const TYPE_LABEL = { domInTransit:'国内在途', domInProd:'在制未交', osInTransit:'海外仓在途' };
     const rowHtml = rows.map((x, idx) => {
       const tagColor = x.inWindow ? '#16a34a' : '#dc2626';
-      const tagText = x.inWindow ? '✅ 窗口内' : '❌ 窗口外丢弃';
-      const wnDisp = x.week === 0 ? 'W0(本周/已过期)' : (x.week >= r.weeks ? `W${x.week}(≥${r.weeks})` : `W${x.week+1}`);
+      /* v4.16 改：w<=0 票据已变窗口内（兜底归 W1），不再叫"丢弃"。过期的标 "→W1 兜底"。*/
+      let tagText;
+      if (x.inWindow) {
+        tagText = x.week <= 0 ? '✅ →W1 (延期兜底)' : '✅ 窗口内';
+      } else {
+        tagText = '❌ 窗口外(超期)';
+      }
+      const wnDisp = x.week === 0
+        ? 'W0(本周/已过期) →W1'
+        : (x.week < 0 ? `W${x.week}(远早) →W1` : (x.week >= r.weeks ? `W${x.week}(≥${r.weeks})` : `W${x.week}`));
       const typeLabel = TYPE_LABEL[x.type] || x.type;
       return `<tr style="font-size:11px;${x.inWindow ? '' : 'background:#fee2e2;'}">
         <td style="padding:2px 6px;">${idx+1}</td>
@@ -5532,9 +5549,9 @@ function openDetailBuild(r, p, methods){
     html += `<details style="margin:0 0 14px;padding:8px 12px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:6px;font-size:12px;">
       <summary style="cursor:pointer;font-weight:600;color:#5b21b6;">📋 在途/在制明细（共 ${rows.length} 条，合计 ${totalQty} 套；窗口内 ${inWindowQty}、窗口外 ${outOfWindowQty}）</summary>
       <div style="margin-top:8px;color:#5b21b3;font-size:11px;">
-        <b>判读口径</b>：<span style="color:#16a34a;font-weight:600;">窗口内（w&gt;0 且 w&lt;${r.weeks}）= 进 pipelineArrivals → 进库存到货基线，会出现在周次计划「到货」列</span>；
-        <span style="color:#dc2626;font-weight:600;">窗口外（w&lt;=0 或 w&gt;=${r.weeks}）= 被 buildPipelineArrivals line 2030/2032/2033/2038 静默丢弃 → 不进到货基线，planProduct 把它当缺口补救 → 建议下单数虚高</span>。<br>
-        <b>差异原因排查</b>：导入时预计入库时间是否填了？填了空时根据 line 2850-2855 默认 = 今天 + leadDays → week 可能为 0（被丢）；transportDays/leadDays 字段若不对应"周"也会错。<br>
+        <b>判读口径（v4.16 修订）</b>：<span style="color:#16a34a;font-weight:600;">窗口内 = week &lt; ${r.weeks}（含 w&lt;=0 兜底归 W1）→ 进 pipelineArrivals</span>；
+        <span style="color:#dc2626;font-weight:600;">仅 w &gt;= ${r.weeks} 才算超期丢弃</span>。<br>
+        <b>v4.16 修复</b>：预计到仓时间在本周之前（如 9/6 vs 今天 9/9）票据不再被丢弃，统一归入 W1（arr[0]）——理由是预估到仓时间只是预估，可能延期几天到一周内，丢出会让 planProduct 当缺口补货 → 建议下单虚高。<br>
         <b>合计差异</b>：<span style="font-weight:600;">列显示（产品表格）= ${totalQty}</span>（全量，无过滤）；
         <span style="font-weight:600;color:#16a34a;">进入周次计划到货 = ${inWindowQty}</span>（过滤后）。
       </div>
