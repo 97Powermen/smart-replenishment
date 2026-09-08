@@ -2391,7 +2391,8 @@ function planProduct(p){
     /* regM=null 的极端兜底分支实际不可达（awReg=weeks 且无断货已被上方 break 拦截；
        有断货走 firstStockout 分支）——v4.7 移除原 fastestOverall() 无定义死代码 */
     const aw = subMethod ? Math.min(weeks - 1, Math.max(0, arriveWeekOf(subMethod))) : -1;
-    /* v4.13 调试：把本轮选方式决策明细留档 */
+    /* v4.13 调试：本轮选方式决策明细留档（注意：splitFastQty/awFast 在更下方计算，
+       此处仅记选方式阶段；批次拆分另记到 ALL BATCHES 区块，避免循环依赖） */
     cadenceDebug.push({
       cad: batchCount,
       cadenceOrderWeek,
@@ -2482,14 +2483,15 @@ function planProduct(p){
     const awFast = Math.min(weeks - 1, Math.max(0, arriveWeekOf(fastestSub)));
     const hasFaster = !!fastestSub && fastestSub !== subMethod && awFast < aw;
     let splitFastQty = 0;
+    let troughT = -1, halfTarget = null;  /* v4.13 调试：声明在块外，供诊断面板引用 */
     if(hasFaster && qty > 0){
       /* 衔接槽 = [awFast, aw) 内期末最低周（快件到货之后、本批到货之前的薄点） */
-      let troughT = -1, troughEnd = Infinity;
+      let troughEnd = Infinity;
       for(let t = Math.max(cadenceOrderWeek + 1, awFast); t < aw && t < weeks; t++){
         if(weeklyPlan[t].endingInv < troughEnd){ troughEnd = weeklyPlan[t].endingInv; troughT = t; }
       }
       if(troughT >= 0){
-        const halfTarget = weeklyPlan[troughT].weekSafety / 2;   /* 半安全线 ≈ 1 周需求 */
+        halfTarget = weeklyPlan[troughT].weekSafety / 2;   /* 半安全线 ≈ 1 周需求 */
         if(troughEnd < halfTarget){
           splitFastQty = Math.min(qty, Math.max(cartonSize, Math.ceil((halfTarget - troughEnd) / cartonSize) * cartonSize));
         }
@@ -2501,6 +2503,17 @@ function planProduct(p){
       if(restQty > 0) placeBatch(cadenceOrderWeek, subMethod, restQty); /* 其余按本批方式到 aw */
     } else {
       placeBatch(cadenceOrderWeek, subMethod, qty);
+    }
+    /* v4.13 调试：把刚才 push 的同 cad 记录补全 split/qty 信息（push 时 split 还没算） */
+    if(cadenceDebug.length > 0){
+      const lastIdx = cadenceDebug.length - 1;
+      if(cadenceDebug[lastIdx].cad === batchCount){
+        cadenceDebug[lastIdx].qty = qty;
+        cadenceDebug[lastIdx].splitFastQty = splitFastQty;
+        cadenceDebug[lastIdx].splitFastMethod = (splitFastQty > 0 && fastestSub) ? fastestSub.name : null;
+        cadenceDebug[lastIdx].splitTroughT = troughT;
+        cadenceDebug[lastIdx].splitHalfTarget = (typeof halfTarget === 'number') ? halfTarget : null;
+      }
     }
     /* 无论本批是否落实都推进 cadence（防死循环：下单周单调递增，必然收敛） */
     batchCount++;
@@ -5336,7 +5349,7 @@ function openDetailBuild(r, p, methods){
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>`;
   if(r.regFallbackNote) html += `<div class="route-fallback-tip" style="margin:0 0 14px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>`;
-  /* v4.13 临时调试面板：显示每个 cadence 的选方式决策明细（firstStockout / awReg / subMethod），
+  /* v4.13 临时调试面板：显示每个 cadence 的选方式决策明细（firstStockout / awReg / subMethod / qty / split），
      默认折叠。定位「升舱直接选最快」问题时用，定位完移除。 */
   if(Array.isArray(r.cadenceDebug) && r.cadenceDebug.length > 0){
     const debugRows = r.cadenceDebug.map(d => {
@@ -5344,6 +5357,12 @@ function openDetailBuild(r, p, methods){
       const awRegDisp = d.awReg === '∞' ? '∞' : ('W' + (Number(d.awReg) + 1));
       const awDisp = d.aw < 0 ? '-' : ('W' + (d.aw + 1));
       const fallbackTag = d.regFallbackNote ? `<span style="color:#d97706;font-size:10px;">[回退]</span>` : '';
+      const splitTag = (d.splitFastQty && d.splitFastQty > 0)
+        ? ` <span style="color:#9333ea;font-size:10px;">[快托 ${d.splitFastQty} 走 ${esc(d.splitFastMethod||'?')}]</span>`
+        : '';
+      const troughTag = (d.splitTroughT != null && d.splitTroughT >= 0)
+        ? ` <span style="color:var(--text-muted);font-size:10px;">(槽=W${d.splitTroughT+1}, 期末=${d.splitHalfTarget != null ? Math.round((d.splitHalfTarget || 0)*2) : '?'}→半 ${d.splitHalfTarget != null ? Math.round(d.splitHalfTarget) : '?'})</span>`
+        : '';
       return `<tr style="font-size:11px;">
         <td style="padding:2px 6px;">${d.cad}</td>
         <td style="padding:2px 6px;">W${(d.cadenceOrderWeek ?? 0) + 1}</td>
@@ -5352,13 +5371,16 @@ function openDetailBuild(r, p, methods){
         <td style="padding:2px 6px;">${d.regMName === 'NULL' ? '—' : esc(d.regMName + (fallbackTag?'/R':'') + ' (aw=' + awRegDisp + ')')}</td>
         <td style="padding:2px 6px;color:${d.subMethodName === d.regMName ? '#16a34a':'#0ea5e9'};font-weight:600;">${esc(d.subMethodName)}${d.subMethodDom != null ? ` <span style="color:var(--text-muted);font-weight:400;">(dom=${d.subMethodDom})</span>` : ''}</td>
         <td style="padding:2px 6px;">${awDisp}</td>
+        <td style="padding:2px 6px;">${d.qty != null ? d.qty : '—'}</td>
+        <td style="padding:2px 6px;">${splitTag}${troughTag}</td>
       </tr>`;
     }).join('');
     html += `<details style="margin:0 0 14px;padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
       <summary style="cursor:pointer;font-weight:600;color:#475569;">🛠 v4.13 升舱决策追踪（${r.cadenceDebug.length} 个 cadence）</summary>
       <div style="margin-top:8px;color:#64748b;font-size:11px;">
-        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw。<br>
-        <b>着色规则</b>：<span style="color:#16a34a;">●</span>=与 regM 同（无升舱）<span style="color:#0ea5e9;margin-left:8px;">●</span>=与 regM 不同（升舱）<span style="color:#dc2626;margin-left:8px;">●</span>=有断货<span style="color:#16a34a;margin-left:8px;">●</span>=无断货
+        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw / 数量 qty / 快件分流（v4.5 衔接槽）。<br>
+        <b>着色规则</b>：<span style="color:#16a34a;">●</span>=与 regM 同（无升舱）<span style="color:#0ea5e9;margin-left:8px;">●</span>=与 regM 不同（升舱）<span style="color:#dc2626;margin-left:8px;">●</span>=有断货<span style="color:#16a34a;margin-left:8px;">●</span>=无断货<br>
+        <b>快件分流（v4.5 衔接槽）</b>：<span style="color:#9333ea;">[快托 N 走 X]</span> 表示本批被拆出 N 套走最快方式提前托底薄点周，剩余按本批方式。这是「选快船22」的真实来源（不是升舱！）。
       </div>
       <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#e2e8f0;">
@@ -5369,8 +5391,61 @@ function openDetailBuild(r, p, methods){
           <th style="padding:4px 6px;text-align:left;">regM (含回退标记)</th>
           <th style="padding:4px 6px;text-align:left;">选中 subMethod</th>
           <th style="padding:4px 6px;text-align:left;">aw</th>
+          <th style="padding:4px 6px;text-align:left;">qty</th>
+          <th style="padding:4px 6px;text-align:left;">split 衔接槽</th>
         </tr></thead>
         <tbody>${debugRows}</tbody>
+      </table>
+    </details>`;
+  }
+  /* v4.13 临时调试面板：列出 r.replenishments 全部批次的真实来源（cadence N / ensureThisWeekBatch / split）。
+     关键是确认 "选了快船22" 的那条批次到底是从哪条代码路径来的。 */
+  if(Array.isArray(r.replenishments) && r.replenishments.length > 0){
+    /* 用 orderWeek + arriveWeek 推断批次来源：orderWeek=0 且 aw∈reachFrom..aw_reg 范围 → ensureThisWeekBatch / split。
+       为精确起见，按 arriveWeek/amount/method 排序后逐行展示。 */
+    const batchRows = r.replenishments.map((rp, idx) => {
+      const orderW = rp.orderWeek;
+      const arriveW = rp.arriveWeek;
+      const isOW0 = orderW === 0;
+      /* 推断来源：orderWeek=0 且 cadence 数 0 阶段（主循环尚未结束）→ ensureThisWeekBatch 或 split */
+      const isCadence = orderW > 0; /* cadenceOrderWeek >= 1 必然来自主循环 cadence */
+      /* orderWeek=0 时细分：awFast = arriveWeekOf(快船22) = 9 (W10) → 这条 954 快船22 极可能是 v4.5 split */
+      const methodName = rp.method ? rp.method.name : '?';
+      const isFast = methodName === '快船22' || methodName === '快船27' || (rp.method && num(rp.method.domToFbaDays) <= 27);
+      return `<tr style="font-size:11px;">
+        <td style="padding:2px 6px;">${idx}</td>
+        <td style="padding:2px 6px;">${isOW0 ? '本周(today)' : 'W' + (orderW + 1)}</td>
+        <td style="padding:2px 6px;">W${(arriveW ?? 0) + 1}</td>
+        <td style="padding:2px 6px;">${esc(methodName)}${rp.method && rp.method.domToFbaDays != null ? ` <span style="color:var(--text-muted);font-weight:400;">(dom=${rp.method.domToFbaDays})</span>` : ''}</td>
+        <td style="padding:2px 6px;">${rp.amount}</td>
+        <td style="padding:2px 6px;">${rp.arriveDate || '—'}</td>
+        <td style="padding:2px 6px;color:${isOW0 ? (isFast ? '#9333ea' : '#0ea5e9') : '#16a34a'};">${
+          isCadence ? '主循环 cadence' :
+          (isFast ? '⚠ 可能 v4.5 衔接槽 split' : 'ensureThisWeekBatch/用户编辑')
+        }</td>
+      </tr>`;
+    }).join('');
+    const fasts = r.replenishments.filter(rp => rp.method && num(rp.method.domToFbaDays) <= 27 && rp.orderWeek === 0);
+    const fastNote = fasts.length > 0
+      ? `发现 <b style="color:#9333ea;">${fasts.length}</b> 条 orderWeek=0 + 快车方式 (dom≤27) 批次 → 极可能是 v4.5 衔接槽自动拆分（或你手动编辑新增）。`
+      : `本产品本周（orderWeek=0）没有快车方式批次，所有 orderWeek=0 批次都用常规/慢车。`;
+    html += `<details style="margin:0 0 14px;padding:8px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:12px;">
+      <summary style="cursor:pointer;font-weight:600;color:#92400e;">📦 ALL BATCHES（${r.replenishments.length} 条 replenishments 全清单）</summary>
+      <div style="margin-top:8px;color:#92400e;font-size:11px;">
+        ${fastNote}<br>
+        <b>来源判断</b>：orderWeek &gt; 0 = 主循环 cadence；orderWeek = 0 + 快车方式 = v4.5 衔接槽（自动拆快件托底）或 ensureThisWeekBatch（用户编辑）。
+      </div>
+      <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#fde68a;">
+          <th style="padding:4px 6px;text-align:left;">idx</th>
+          <th style="padding:4px 6px;text-align:left;">下单周</th>
+          <th style="padding:4px 6px;text-align:left;">arriveWeek</th>
+          <th style="padding:4px 6px;text-align:left;">方式</th>
+          <th style="padding:4px 6px;text-align:left;">qty</th>
+          <th style="padding:4px 6px;text-align:left;">arriveDate</th>
+          <th style="padding:4px 6px;text-align:left;">推断来源</th>
+        </tr></thead>
+        <tbody>${batchRows}</tbody>
       </table>
     </details>`;
   }
