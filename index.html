@@ -2155,7 +2155,9 @@ function planProduct(p){
       sellableWeeks: 0, earliestArrive: '--',
       regFallbackNote: '',
       tailDeferTotalQty: 0, tailDeferThisWeekQty: 0, tailDeferNote: '',
-      isTransit, osBufferDays, isMixed, directRatio
+      isTransit, osBufferDays, isMixed, directRatio,
+      reachFromGlobal: 0,
+      cadenceDebug: []
     };
   }
 
@@ -2274,6 +2276,8 @@ function planProduct(p){
   let tailDeferTotalQty = 0;     /* 整计划期所有顺延缺口合计 */
   let tailDeferThisWeekQty = 0;  /* cadence0（本周）顺延量：>0 = 本周缺口被顺延未排 */
   let tailDeferNote = '';        /* cadence0 顺延时可读文案（结果表/详情/导出用） */
+  /* v4.13 诊断：每 cadence 选方式决策明细，详情面板展开可看（临时调试用） */
+  const cadenceDebug = [];
   /* 2026-09-02 A2：绝对最快方式 + 从今天下单(subOrderWeek=0)的最早实际到货周。
      作为「不可避免周」的硬边界：到货周 ≥ 该边界的周，本批货能到、缺口可补救，
      不应判为不可避免。口径与批次到货天数公式完全一致（生产 + 运输 + FBA上架）。
@@ -2387,6 +2391,19 @@ function planProduct(p){
     /* regM=null 的极端兜底分支实际不可达（awReg=weeks 且无断货已被上方 break 拦截；
        有断货走 firstStockout 分支）——v4.7 移除原 fastestOverall() 无定义死代码 */
     const aw = subMethod ? Math.min(weeks - 1, Math.max(0, arriveWeekOf(subMethod))) : -1;
+    /* v4.13 调试：把本轮选方式决策明细留档 */
+    cadenceDebug.push({
+      cad: batchCount,
+      cadenceOrderWeek,
+      reachFrom: reachFromGlobal,
+      firstStockout,
+      awReg: regM ? awReg : '∞',
+      regMName: regM ? regM.name : 'NULL',
+      regFallbackNote: regFallbackNote || '',
+      subMethodName: subMethod ? subMethod.name : 'NULL',
+      subMethodDom: subMethod ? (subMethod.domToFbaDays != null ? subMethod.domToFbaDays : subMethod.transportDays) : null,
+      aw
+    });
     if(aw < 0 || aw >= weeks){ if(firstStockout >= 0){ batchCount++; continue; } break; }
 
     /* 2) 下单量（用户三规则核心 v4.4）：
@@ -2536,7 +2553,8 @@ function planProduct(p){
     regFallbackNote,
     tailDeferTotalQty, tailDeferThisWeekQty, tailDeferNote,
     isTransit, osBufferDays, isMixed, directRatio,
-    reachFromGlobal  /* v4.13 暴露给探针/调试：cadence 0 fastestSub 最早到货周，所有 cadence 扫 firstStockout 的下限 */
+    reachFromGlobal,        /* v4.13 暴露给探针/调试：cadence 0 fastestSub 最早到货周，所有 cadence 扫 firstStockout 的下限 */
+    cadenceDebug            /* v4.13 调试面板数据：每个 cadence 的 firstStockout/awReg/subMethod/aw */
   };
 }
 
@@ -5318,6 +5336,44 @@ function openDetailBuild(r, p, methods){
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>`;
   if(r.regFallbackNote) html += `<div class="route-fallback-tip" style="margin:0 0 14px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>`;
+  /* v4.13 临时调试面板：显示每个 cadence 的选方式决策明细（firstStockout / awReg / subMethod），
+     默认折叠。定位「升舱直接选最快」问题时用，定位完移除。 */
+  if(Array.isArray(r.cadenceDebug) && r.cadenceDebug.length > 0){
+    const debugRows = r.cadenceDebug.map(d => {
+      const firstST = d.firstStockout < 0 ? '无断货' : ('W' + (d.firstStockout + 1));
+      const awRegDisp = d.awReg === '∞' ? '∞' : ('W' + (Number(d.awReg) + 1));
+      const awDisp = d.aw < 0 ? '-' : ('W' + (d.aw + 1));
+      const fallbackTag = d.regFallbackNote ? `<span style="color:#d97706;font-size:10px;">[回退]</span>` : '';
+      return `<tr style="font-size:11px;">
+        <td style="padding:2px 6px;">${d.cad}</td>
+        <td style="padding:2px 6px;">W${(d.cadenceOrderWeek ?? 0) + 1}</td>
+        <td style="padding:2px 6px;">W${(d.reachFrom ?? 0) + 1}</td>
+        <td style="padding:2px 6px;color:${d.firstStockout < 0 ? '#16a34a':'#dc2626'};font-weight:600;">${firstST}</td>
+        <td style="padding:2px 6px;">${d.regMName === 'NULL' ? '—' : esc(d.regMName + (fallbackTag?'/R':'') + ' (aw=' + awRegDisp + ')')}</td>
+        <td style="padding:2px 6px;color:${d.subMethodName === d.regMName ? '#16a34a':'#0ea5e9'};font-weight:600;">${esc(d.subMethodName)}${d.subMethodDom != null ? ` <span style="color:var(--text-muted);font-weight:400;">(dom=${d.subMethodDom})</span>` : ''}</td>
+        <td style="padding:2px 6px;">${awDisp}</td>
+      </tr>`;
+    }).join('');
+    html += `<details style="margin:0 0 14px;padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
+      <summary style="cursor:pointer;font-weight:600;color:#475569;">🛠 v4.13 升舱决策追踪（${r.cadenceDebug.length} 个 cadence）</summary>
+      <div style="margin-top:8px;color:#64748b;font-size:11px;">
+        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw。<br>
+        <b>着色规则</b>：<span style="color:#16a34a;">●</span>=与 regM 同（无升舱）<span style="color:#0ea5e9;margin-left:8px;">●</span>=与 regM 不同（升舱）<span style="color:#dc2626;margin-left:8px;">●</span>=有断货<span style="color:#16a34a;margin-left:8px;">●</span>=无断货
+      </div>
+      <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#e2e8f0;">
+          <th style="padding:4px 6px;text-align:left;">cad</th>
+          <th style="padding:4px 6px;text-align:left;">下单周</th>
+          <th style="padding:4px 6px;text-align:left;">reachFrom</th>
+          <th style="padding:4px 6px;text-align:left;">firstStockout</th>
+          <th style="padding:4px 6px;text-align:left;">regM (含回退标记)</th>
+          <th style="padding:4px 6px;text-align:left;">选中 subMethod</th>
+          <th style="padding:4px 6px;text-align:left;">aw</th>
+        </tr></thead>
+        <tbody>${debugRows}</tbody>
+      </table>
+    </details>`;
+  }
   // 周次计划表
   html += `<div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
