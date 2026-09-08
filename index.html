@@ -2165,7 +2165,8 @@ function planProduct(p){
       tailDeferTotalQty: 0, tailDeferThisWeekQty: 0, tailDeferNote: '',
       isTransit, osBufferDays, isMixed, directRatio,
       reachFromGlobal: 0,
-      cadenceDebug: []
+      cadenceDebug: [],
+      regM: null             /* v4.16 单品详情头部展示用：noStock 时常规运输仍按用户原填 */
     };
   }
 
@@ -2600,7 +2601,8 @@ function planProduct(p){
     tailDeferTotalQty, tailDeferThisWeekQty, tailDeferNote,
     isTransit, osBufferDays, isMixed, directRatio,
     reachFromGlobal,        /* v4.13 暴露给探针/调试：cadence 0 fastestSub 最早到货周，所有 cadence 扫 firstStockout 的下限 */
-    cadenceDebug            /* v4.13 调试面板数据：每个 cadence 的 firstStockout/awReg/subMethod/aw */
+    cadenceDebug,            /* v4.13 调试面板数据：每个 cadence 的 firstStockout/awReg/subMethod/aw */
+    regM,                    /* v4.16 单品详情头部展示「常规运输」：resolveRegularMethod 解析出的 method 对象（含 name/dom），null=未配置 */
   };
 }
 
@@ -5378,9 +5380,14 @@ function openDetailBuild(r, p, methods){
     <div><b>下单频率：</b>${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天（默认）'}</div>
     <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}</div>
     <div><b>安全库存：</b>${fmt(r.safetyStock)}</div>
+    <div><b>常规运输：</b>${r.regM ? `<span style="color:#16a34a;font-weight:600;">${esc(r.regM.name)}</span><span style="color:var(--text-muted);font-size:11px;margin-left:6px;">(dom=${r.regM.domToFbaDays != null ? r.regM.domToFbaDays : (r.regM.transportDays || '?')})</span>${r.regFallbackNote ? `<span style="color:#d97706;font-size:11px;margin-left:6px;">[回退]</span>` : ''}` : (p.regularMethod ? `${esc(p.regularMethod)} <span style="color:var(--danger);font-size:11px;">(未在启用池)</span>` : '<span style="color:var(--text-muted);">--</span>')}</div>
     <div><b>单箱数量：</b>${fmt(p.casesPerUnit)||DEFAULT_CARTON}</div>
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>`;
+  /* v4.16 说明：单品详情头部新增「常规运输」字段（位于第 3 行第 1 列最显著位置）
+     - r.regM 存在（resolveRegularMethod 命中启用池）→ 显示 name + dom + 回退标记
+     - r.regM 为空但 p.regularMethod 非空（被启用池过滤）→ 显示 name + 红色"未在启用池"
+     - 都没填 → --。配合 planProduct 暴露 r.regM/r.regMName 字段（line 2604/2169） */
   if(r.regFallbackNote) html += `<div class="route-fallback-tip" style="margin:0 0 14px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>`;
   /* v4.13 临时调试面板：显示每个 cadence 的选方式决策明细（firstStockout / awReg / subMethod / qty / split），
      默认折叠。定位「升舱直接选最快」问题时用，定位完移除。 */
