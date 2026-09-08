@@ -1203,6 +1203,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
             常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量（v4.6 朴素公式，不含普适半安全线缓冲），
             常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br>
+            <b>升舱按阶梯选方式（v4.13 替代 v4.11 "最早到货"策略）</b>：当 regM 救不回断货周 → 在「严格比常规快（dom &lt; regM.dom）」的启用池中按 <b>(dom 降序, pricePerKG 升序, 数组索引 升序)</b> 选方式——常规 55 → 先试 35 → 救不回再 27 → 救不回再 22，避免一动就快船22（运费高）。同 dom 时按单价升序（如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg）。无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。<br>
             断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
             快慢分流衔接槽：衔接档下到货周 aw 前若出现低于半安全线的薄点周，把缺口拆给最快方式（提前到货托底）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<br>
             按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
@@ -2356,14 +2357,27 @@ function planProduct(p){
     if(regM && awReg < weeks && (firstStockout < 0 || awReg <= firstStockout)){
       subMethod = regM;
     } else if(firstStockout >= 0){
-      let best = null, bestAw = Infinity;
-      for(const m of methods){
+      /* v4.13 升舱按阶梯选"最便宜的能救回"的方式（替代 v4.11 按"最早到货"的策略）：
+         候选 = 启用池中 dom 严格 < regM.dom（严格比常规快）的方式。
+         主键 = dom 降序（最小程度升舱：常规 55 → 先 35 → 救不回再 27 → 救不回再 22），
+         同 dom 时按 pricePerKG 升序（同档选最便宜，如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg），
+         再同价时按数组索引升序（稳定 tie-break）。
+         无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。
+         业务诉求：避免一动就快船22（运费高），优先用"最便宜又能衔接上"的慢一档。 */
+      let best = null, bestDom = -1, bestPrice = Infinity, bestIdx = Infinity;
+      for(let i=0; i<methods.length; i++){
+        const m = methods[i];
+        if(!regM) break;
+        const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays);
+        const regDom = num(regM.domToFbaDays != null ? regM.domToFbaDays : regM.transportDays);
+        if(domM >= regDom) continue;   // 严格比常规快（同档/更慢留给 regM 自身衔接分支处理）
         const a = arriveWeekOf(m);
         if(a >= weeks) continue;
-        if(a > firstStockout) continue;
-        const domM = num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays);
-        if(a < bestAw || (a === bestAw && best && domM < num(best.domToFbaDays != null ? best.domToFbaDays : best.transportDays))){
-          best = m; bestAw = a;
+        if(a > firstStockout) continue; // 到货周 > 首断货周救不回
+        const price = num(m.pricePerKG) || 0;
+        if(domM > bestDom ||
+           (domM === bestDom && (price < bestPrice || (price === bestPrice && i < bestIdx)))){
+          best = m; bestDom = domM; bestPrice = price; bestIdx = i;
         }
       }
       subMethod = best || fastestSub;
@@ -2521,7 +2535,8 @@ function planProduct(p){
     sellableWeeks, earliestArrive,
     regFallbackNote,
     tailDeferTotalQty, tailDeferThisWeekQty, tailDeferNote,
-    isTransit, osBufferDays, isMixed, directRatio
+    isTransit, osBufferDays, isMixed, directRatio,
+    reachFromGlobal  /* v4.13 暴露给探针/调试：cadence 0 fastestSub 最早到货周，所有 cadence 扫 firstStockout 的下限 */
   };
 }
 
