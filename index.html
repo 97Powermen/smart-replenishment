@@ -2229,7 +2229,8 @@ function planProduct(p){
       isTransit, osBufferDays, isMixed, directRatio,
       reachFromGlobal: 0,
       cadenceDebug: [],
-      regM: null             /* v4.16 单品详情头部展示用：noStock 时常规运输仍按用户原填 */
+      regM: null,            /* v4.16 单品详情头部展示用：noStock 时常规运输仍按用户原填 */
+      recByWeek: new Array(weeks).fill(0)   /* v4.19 noStock 无批次 → 快照全 0 */
     };
   }
 
@@ -2642,6 +2643,12 @@ function planProduct(p){
   const totalCost = replenishments.reduce((a,b)=>a+b.cost, 0);
   const totalStockout = finalSim.plan.reduce((a,w)=>a+w.stockout, 0);
   const stockoutWeeks = finalSim.plan.filter(w => w.stockout > 0).length;
+  /* v4.19 建议下单量快照：每个到货周算法的原始建议量（不随用户手动编辑 amount 变化）。
+     用户在「周次计划」把「本周下单量」改 0 时，只是"本周不放这批"，算法建议量仍应原样展示。 */
+  const recByWeek = new Array(weeks).fill(0);
+  replenishments.forEach(rp => {
+    if(typeof rp.arriveWeek === 'number' && rp.arriveWeek >= 0 && rp.arriveWeek < weeks) recByWeek[rp.arriveWeek] += num(rp.amount);
+  });
 
   // 库存可售周数 = 所有可用库存 + 计划补货 / 周均需求
   const onHandNow = num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
@@ -2658,6 +2665,7 @@ function planProduct(p){
     replenishments,
     rec: totalRec,
     actualRec: totalRec,
+    recByWeek,             /* v4.19 每到货周算法建议量快照（周次计划「建议下单」列数据源，编辑 amount 不变） */
     totalCost, totalStockout, stockoutWeeks,
     sellableWeeks, earliestArrive,
     regFallbackNote,
@@ -4864,7 +4872,7 @@ function buildDetailContent(r){
     const orderWeek0List = rpList.filter(rp => isRelOrder(rp.orderWeek));
     const displayRp = orderWeek0List.length > 0 ? orderWeek0List[orderWeek0List.length - 1] : firstRp;
     const dateMethodEditable = orderWeek0List.length > 0;
-    const rec = rpList.length > 0 ? fmt(totalAtWeek) : '--';
+    const rec = rpList.length > 0 ? fmt((r.recByWeek && typeof r.recByWeek[i] === 'number') ? r.recByWeek[i] : totalAtWeek) : '--';
     const method = displayRp ? esc(displayRp.method.name) : '--';
     const shipDate = displayRp ? esc(displayRp.arriveDate) : '--';
     const estArrival = displayRp ? esc(calcEstFbaArrival(displayRp)) : '--';
@@ -4905,7 +4913,7 @@ function buildDetailContent(r){
     <td class="cell-num">${lastPlan ? fmt(lastPlan.endingInv) : '--'}</td>
     <td>--</td>
     <td class="cell-num">${sumStockout>0?fmt(sumStockout.toFixed(0)):'--'}</td>
-    <td class="cell-num cell-plan">${fmt(totalRec)}</td>
+    <td class="cell-num cell-plan">${fmt(num(r.rec) > 0 ? r.rec : totalRec)}</td>
     <td class="cell-num cell-plan">${fmt(totalThisWeek)}</td>
     <td colspan="3"></td>
   </tr>`;
@@ -5681,7 +5689,7 @@ function openDetailBuild(r, p, methods){
     const orderWeek0List = rpList.filter(rp => isRelOrder(rp.orderWeek));
     const displayRp = orderWeek0List.length > 0 ? orderWeek0List[orderWeek0List.length - 1] : firstRp;
     const dateMethodEditable = orderWeek0List.length > 0;
-    const rec = rpList.length > 0 ? fmt(totalAtWeek) : '--';
+    const rec = rpList.length > 0 ? fmt((r.recByWeek && typeof r.recByWeek[i] === 'number') ? r.recByWeek[i] : totalAtWeek) : '--';
     const method = displayRp ? esc(displayRp.method.name) : '--';
     const shipDate = displayRp ? esc(displayRp.arriveDate) : '--';
     const estArrival = displayRp ? esc(calcEstFbaArrival(displayRp)) : '--';
@@ -5720,7 +5728,7 @@ function openDetailBuild(r, p, methods){
     <td class="cell-num">${lastPlan ? fmt(lastPlan.endingInv) : '--'}</td>
     <td>--</td>
     <td class="cell-num">${sumStockout>0?fmt(sumStockout.toFixed(0)):'--'}</td>
-    <td class="cell-num cell-plan">${fmt(totalRec)}</td>
+    <td class="cell-num cell-plan">${fmt(num(r.rec) > 0 ? r.rec : totalRec)}</td>
     <td class="cell-num cell-plan">${fmt(totalThisWeek)}</td>
     <td colspan="3"></td>
   </tr>`;
