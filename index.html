@@ -1205,7 +1205,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
             常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br>
             <b>升舱按阶梯选方式（v4.13 替代 v4.11 "最早到货"策略）</b>：当 regM 救不回断货周 → 在「严格比常规快（dom &lt; regM.dom）」的启用池中按 <b>(dom 降序, pricePerKG 升序, 数组索引 升序)</b> 选方式——常规 55 → 先试 35 → 救不回再 27 → 救不回再 22，避免一动就快船22（运费高）。同 dom 时按单价升序（如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg）。无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。<br>
             断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
-            快慢分流衔接槽：衔接档下到货周 aw 前若出现低于半安全线的薄点周，把缺口拆给最快方式（提前到货托底）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<br>
+            快慢分流衔接槽：衔接档下到货周 aw 前若出现低于半安全线的薄点周，把缺口拆给「最便宜能救回的」方式（v4.13 起按阶梯选：到货周升序→dom 降序→price 升序，与升舱阶梯同源）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<b>注意</b>：v4.13 之前衔接槽直接选 fastestSub（最快方式），现已升级到阶梯选——若仍有 ⚠ fastest 提示说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档）。
             按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
             循环终止：无缺口 / 下单周 ≥ 计划期 / 常规到不了计划期且无断货需救 / 达最大迭代数。
           </div>
@@ -2484,6 +2484,7 @@ function planProduct(p){
     const hasFaster = !!fastestSub && fastestSub !== subMethod && awFast < aw;
     let splitFastQty = 0;
     let troughT = -1, halfTarget = null;  /* v4.13 调试：声明在块外，供诊断面板引用 */
+    let splitSub = null;                  /* v4.13：同 splitSub，块外声明，供诊断面板引用 */
     if(hasFaster && qty > 0){
       /* 衔接槽 = [awFast, aw) 内期末最低周（快件到货之后、本批到货之前的薄点） */
       let troughEnd = Infinity;
@@ -2498,7 +2499,25 @@ function planProduct(p){
       }
     }
     if(splitFastQty > 0){
-      placeBatch(cadenceOrderWeek, fastestSub, splitFastQty);           /* 快件提前到货托底 */
+      /* v4.13：衔接槽快件也按阶梯选最便宜的能救回的方式（与 v4.13 升舱阶梯同源）
+         候选：到货周 ≤ troughT（能在槽位当周到货托底）且 >= cadenceOrderWeek+1
+         排序：(1) dom 降序（最便宜的优先） (2) pricePerKG 升序（同 dom 按单价）
+         兜底：无可救回 → fastestSub（"⚠ fastest"标签） */
+      if(methods && methods.length > 0 && troughT >= 0){
+        const reachable = methods.map(m => ({ m, aw: arriveWeekOf(m) }))
+          .filter(x => x.aw >= cadenceOrderWeek + 1 && x.aw <= troughT && x.aw < weeks);
+        if(reachable.length > 0){
+          reachable.sort((a, b) => {
+            const aDom = num(a.m.domToFbaDays != null ? a.m.domToFbaDays : a.m.transportDays);
+            const bDom = num(b.m.domToFbaDays != null ? b.m.domToFbaDays : b.m.transportDays);
+            if(aDom !== bDom) return bDom - aDom;     /* dom 越大越便宜（同到货周区间内） */
+            return num(a.m.pricePerKG) - num(b.m.pricePerKG);
+          });
+          splitSub = reachable[0].m;
+        }
+      }
+      if(!splitSub) splitSub = fastestSub;   /* 兜底：troughT=-1 或 reachable 为空时仍用 fastest */
+      placeBatch(cadenceOrderWeek, splitSub, splitFastQty);            /* 快件按阶梯选最便宜的提前到货托底 */
       const restQty = qty - splitFastQty;
       if(restQty > 0) placeBatch(cadenceOrderWeek, subMethod, restQty); /* 其余按本批方式到 aw */
     } else {
@@ -2510,7 +2529,9 @@ function planProduct(p){
       if(cadenceDebug[lastIdx].cad === batchCount){
         cadenceDebug[lastIdx].qty = qty;
         cadenceDebug[lastIdx].splitFastQty = splitFastQty;
-        cadenceDebug[lastIdx].splitFastMethod = (splitFastQty > 0 && fastestSub) ? fastestSub.name : null;
+        /* v4.13：split 用的是阶梯选后的 splitSub，不再是 fastestSub */
+        cadenceDebug[lastIdx].splitFastMethod = (splitFastQty > 0 && splitSub) ? splitSub.name : null;
+        cadenceDebug[lastIdx].splitFastIsFastest = (splitFastQty > 0 && fastestSub && splitSub && splitSub.name === fastestSub.name);
         cadenceDebug[lastIdx].splitTroughT = troughT;
         cadenceDebug[lastIdx].splitHalfTarget = (typeof halfTarget === 'number') ? halfTarget : null;
       }
@@ -5358,7 +5379,9 @@ function openDetailBuild(r, p, methods){
       const awDisp = d.aw < 0 ? '-' : ('W' + (d.aw + 1));
       const fallbackTag = d.regFallbackNote ? `<span style="color:#d97706;font-size:10px;">[回退]</span>` : '';
       const splitTag = (d.splitFastQty && d.splitFastQty > 0)
-        ? ` <span style="color:#9333ea;font-size:10px;">[快托 ${d.splitFastQty} 走 ${esc(d.splitFastMethod||'?')}]</span>`
+        ? (d.splitFastIsFastest
+            ? ` <span style="color:#dc2626;font-size:10px;font-weight:600;">[快托 ${d.splitFastQty} 走 ${esc(d.splitFastMethod||'?')} ⚠ fastest]</span>`
+            : ` <span style="color:#9333ea;font-size:10px;">[快托 ${d.splitFastQty} 走 ${esc(d.splitFastMethod||'?')}]</span>`)
         : '';
       const troughTag = (d.splitTroughT != null && d.splitTroughT >= 0)
         ? ` <span style="color:var(--text-muted);font-size:10px;">(槽=W${d.splitTroughT+1}, 期末=${d.splitHalfTarget != null ? Math.round((d.splitHalfTarget || 0)*2) : '?'}→半 ${d.splitHalfTarget != null ? Math.round(d.splitHalfTarget) : '?'})</span>`
@@ -5378,9 +5401,9 @@ function openDetailBuild(r, p, methods){
     html += `<details style="margin:0 0 14px;padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
       <summary style="cursor:pointer;font-weight:600;color:#475569;">🛠 v4.13 升舱决策追踪（${r.cadenceDebug.length} 个 cadence）</summary>
       <div style="margin-top:8px;color:#64748b;font-size:11px;">
-        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw / 数量 qty / 快件分流（v4.5 衔接槽）。<br>
+        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw / 数量 qty / 快件分流（v4.5 衔接槽，v4.13 起也按阶梯选）。<br>
         <b>着色规则</b>：<span style="color:#16a34a;">●</span>=与 regM 同（无升舱）<span style="color:#0ea5e9;margin-left:8px;">●</span>=与 regM 不同（升舱）<span style="color:#dc2626;margin-left:8px;">●</span>=有断货<span style="color:#16a34a;margin-left:8px;">●</span>=无断货<br>
-        <b>快件分流（v4.5 衔接槽）</b>：<span style="color:#9333ea;">[快托 N 走 X]</span> 表示本批被拆出 N 套走最快方式提前托底薄点周，剩余按本批方式。这是「选快船22」的真实来源（不是升舱！）。
+        <b>快件分流（v4.5 衔接槽，v4.13 起按阶梯选）</b>：<span style="color:#9333ea;">[快托 N 走 X]</span> 表示本批被拆出 N 套走「最便宜能救回的」方式（升舱阶梯同源：到货周升序→dom 降序→price 升序）提前托底薄点周，剩余按本批方式。带 <span style="color:#dc2626;font-weight:600;">⚠ fastest</span> 说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档可救）。这是「选快船22」的真实来源（不是主循环升舱！）。
       </div>
       <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#e2e8f0;">
