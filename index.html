@@ -5477,6 +5477,82 @@ function openDetailBuild(r, p, methods){
       </table>
     </details>`;
   }
+  /* v4.15 临时诊断面板：列出产品所有在途/在制数据明细（单字段 + pipelineTickets），
+     标注每条是否进入 buildPipelineArrivals（"窗口内"= w>0 && w<weeks → 进到货基线；
+     "窗口外"= w≥weeks 或 w≤0 → 被 buildPipelineArrivals 静默丢弃，仍计入 pipelineTotal/列显示），
+     帮用户定位"导入 N 套但周次计划只到 M 套"的 246 套去向。 */
+  if(Array.isArray(p.pipelineTickets) || num(p.domInTransit) || num(p.domInProd) || num(p.osInTransit)){
+    const rows = [];
+    /* 单字段 */
+    const osT = num(p.osInTransit), osTW = num(p.osInTransitWeeks);
+    const dT = num(p.domInTransit), dTW = num(p.domInTransitWeeks);
+    const dP = num(p.domInProd), dPW = num(p.domInProdWeeks);
+    const _appendSingle = (type, qty, week) => {
+      if(qty <= 0) return;
+      const inWindow = week > 0 && week < r.weeks;
+      rows.push({ type, qty, week, source: '基础数据单字段', arriveDate: '—', inWindow, isSingle: true });
+    };
+    _appendSingle('osInTransit', osT, osTW);
+    _appendSingle('domInTransit', dT, dTW);
+    _appendSingle('domInProd', dP, dPW);
+    /* 多票 */
+    if(Array.isArray(p.pipelineTickets)){
+      p.pipelineTickets.forEach((t, i) => {
+        if(!t || num(t.qty) <= 0) return;
+        const w = num(t.week);
+        const inWindow = w > 0 && w < r.weeks;
+        rows.push({
+          type: t.type, qty: num(t.qty), week: w,
+          source: t.source || '手填',
+          arriveDate: t.arriveDate || '—',
+          arrivalFrom: t.arrivalFrom || '',
+          inWindow, isSingle: false, idx: i
+        });
+      });
+    }
+    const totalQty = rows.reduce((s, x) => s + x.qty, 0);
+    const inWindowQty = rows.filter(x => x.inWindow).reduce((s, x) => s + x.qty, 0);
+    const outOfWindowQty = totalQty - inWindowQty;
+    const TYPE_LABEL = { domInTransit:'国内在途', domInProd:'在制未交', osInTransit:'海外仓在途' };
+    const rowHtml = rows.map((x, idx) => {
+      const tagColor = x.inWindow ? '#16a34a' : '#dc2626';
+      const tagText = x.inWindow ? '✅ 窗口内' : '❌ 窗口外丢弃';
+      const wnDisp = x.week === 0 ? 'W0(本周/已过期)' : (x.week >= r.weeks ? `W${x.week}(≥${r.weeks})` : `W${x.week+1}`);
+      const typeLabel = TYPE_LABEL[x.type] || x.type;
+      return `<tr style="font-size:11px;${x.inWindow ? '' : 'background:#fee2e2;'}">
+        <td style="padding:2px 6px;">${idx+1}</td>
+        <td style="padding:2px 6px;">${typeLabel}</td>
+        <td style="padding:2px 6px;font-weight:600;">${x.qty}</td>
+        <td style="padding:2px 6px;color:${tagColor};font-weight:600;">${wnDisp}</td>
+        <td style="padding:2px 6px;">${x.arriveDate}</td>
+        <td style="padding:2px 6px;">${x.isSingle ? '单字段（基础数据导入）' : (x.source === 'pipeline-import' ? '导入在途/在制' : '手填')}</td>
+        <td style="padding:2px 6px;color:${tagColor};">${tagText}</td>
+      </tr>`;
+    }).join('');
+    html += `<details style="margin:0 0 14px;padding:8px 12px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:6px;font-size:12px;">
+      <summary style="cursor:pointer;font-weight:600;color:#5b21b6;">📋 在途/在制明细（共 ${rows.length} 条，合计 ${totalQty} 套；窗口内 ${inWindowQty}、窗口外 ${outOfWindowQty}）</summary>
+      <div style="margin-top:8px;color:#5b21b3;font-size:11px;">
+        <b>判读口径</b>：<span style="color:#16a34a;font-weight:600;">窗口内（w&gt;0 且 w&lt;${r.weeks}）= 进 pipelineArrivals → 进库存到货基线，会出现在周次计划「到货」列</span>；
+        <span style="color:#dc2626;font-weight:600;">窗口外（w&lt;=0 或 w&gt;=${r.weeks}）= 被 buildPipelineArrivals line 2030/2032/2033/2038 静默丢弃 → 不进到货基线，planProduct 把它当缺口补救 → 建议下单数虚高</span>。<br>
+        <b>差异原因排查</b>：导入时预计入库时间是否填了？填了空时根据 line 2850-2855 默认 = 今天 + leadDays → week 可能为 0（被丢）；transportDays/leadDays 字段若不对应"周"也会错。<br>
+        <b>合计差异</b>：<span style="font-weight:600;">列显示（产品表格）= ${totalQty}</span>（全量，无过滤）；
+        <span style="font-weight:600;color:#16a34a;">进入周次计划到货 = ${inWindowQty}</span>（过滤后）。
+      </div>
+      <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#ddd6fe;">
+          <th style="padding:4px 6px;text-align:left;">#</th>
+          <th style="padding:4px 6px;text-align:left;">类型</th>
+          <th style="padding:4px 6px;text-align:left;">数量</th>
+          <th style="padding:4px 6px;text-align:left;">到货周数</th>
+          <th style="padding:4px 6px;text-align:left;">预计到仓</th>
+          <th style="padding:4px 6px;text-align:left;">来源</th>
+          <th style="padding:4px 6px;text-align:left;">是否进 pipeline</th>
+        </tr></thead>
+        <tbody>${rowHtml}</tbody>
+      </table>
+    </details>`;
+  }
+
   // 周次计划表
   html += `<div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
