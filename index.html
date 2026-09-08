@@ -1188,7 +1188,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
               <tr><td>应急档（到货周 ≥ 首断货周）</td><td><b>qty = 到货周安全线</b>（规则 2：不加当周需求——断货周需求已丢失，补不回已丢销量；最大即安全线，此后批次接力慢慢衔接）</td></tr>
               <tr><td>衔接档（到货早于任何断货）</td><td>反推 <b>qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3，<b>2026-09-03 v4.6 去普适 safetyStock/2 缓冲</b>——之前会让每个 cadence 期末都超安全线、16 周累积过量）</td></tr>
               <tr><td>到货周已 ≥ 安全线</td><td>查 reachFromGlobal..到货周 之间是否仍有真断货：无 → 本 cadence <b>空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线（v4.6 同步去 +safetyStock/2）</td></tr>
-              <tr><td>快慢分流衔接槽（v4.5 保留）</td><td>本批到货周 aw 之前若存在期末 &lt; 该周半安全线（≈1 周需求）的薄点周 → 把缺口拆给最快方式提前到货托底，剩余仍走本批方式到 aw（同一 cadence 下单周、两种运输方式，对应实际「调约一周需求走快运衔接」）</td></tr>
+              <tr><td>快慢分流衔接槽（v4.5 → v4.13 阶梯 / v4.14 托底线收紧）</td><td>本批到货周 aw 之前若存在期末 &lt; 该周「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」的薄点周 → 把缺口拆给最便宜能救回的快运方式提前到货托底（v4.13 起按 dom 降序阶梯选，非 fastestSub），剩余仍走本批方式到 aw（同一 cadence 下单周、两种运输方式）。v4.14 托底线由安全线 1/2 收紧为 1/4（原 1/2 在 safetyWeeks=4 时达 2 周需求，偏敏感）</td></tr>
               <tr><td>取整/上限</td><td>按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆（≈2×安全线口径）</td></tr>
             </tbody>
           </table>
@@ -1205,7 +1205,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
             常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br>
             <b>升舱按阶梯选方式（v4.13 替代 v4.11 "最早到货"策略）</b>：当 regM 救不回断货周 → 在「严格比常规快（dom &lt; regM.dom）」的启用池中按 <b>(dom 降序, pricePerKG 升序, 数组索引 升序)</b> 选方式——常规 55 → 先试 35 → 救不回再 27 → 救不回再 22，避免一动就快船22（运费高）。同 dom 时按单价升序（如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg）。无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。<br>
             断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
-            快慢分流衔接槽：衔接档下到货周 aw 前若出现低于半安全线的薄点周，把缺口拆给「最便宜能救回的」方式（v4.13 起按阶梯选：到货周升序→dom 降序→price 升序，与升舱阶梯同源）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<b>注意</b>：v4.13 之前衔接槽直接选 fastestSub（最快方式），现已升级到阶梯选——若仍有 ⚠ fastest 提示说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档）。
+            快慢分流衔接槽：衔接档下到货周 aw 前若出现期末低于「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」（v4.14 收紧，原 v4.5~v4.13 为 1/2）的薄点周，把缺口拆给「最便宜能救回的」方式（v4.13 起按阶梯选：dom 降序→price 升序，与升舱阶梯同源）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<b>注意</b>：v4.13 之前衔接槽直接选 fastestSub（最快方式），现已升级到阶梯选——若仍有 ⚠ fastest 提示说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档）。
             按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
             循环终止：无缺口 / 下单周 ≥ 计划期 / 常规到不了计划期且无断货需救 / 达最大迭代数。
           </div>
@@ -2423,7 +2423,7 @@ function planProduct(p){
       /* 2026-09-03 v4.6：衔接档回归朴素公式——aw 期末刚好回安全线即可，
          不再加普适 safetyStock/2 缓冲（之前会让每个 cadence 期末都超出安全线，
          叠加 16 周累积后 W12-W16 期末远超安全线 ~50%）。
-         中间薄点周（trough < 半安全线）由 v4.5 衔接槽检测单独拆快件托底，
+         中间薄点周（trough < 托底线=安全线/4，v4.14 收紧）由 v4.5 衔接槽检测单独拆快件托底，
          不再每个 cadence 都普适加缓冲。 */
       qty = Math.max(0, wAw.weekSafety - (wAw.beginInv - wAw.demand));
       /* v4.8+ 尾数顺延：双阈值且关系（qty < 周均倍数线 且 qty < 绝对数量阈值，条件②可关闭）
@@ -2470,12 +2470,13 @@ function planProduct(p){
     if(qty <= 0){ batchCount++; continue; }
 
     /* 4) placeBatch：moq/按箱/直发-海外仓子批拆分/push/extraArrivals/超期丢弃 全在内部处理 */
-    /* 2026-09-03 v4.5 快慢分流（方案B，替代 f3eecd2 的 50/50 应急拆分）：
+    /* 2026-09-03 v4.5 快慢分流（方案B，替代 f3eecd2 的 50/50 应急拆分）→ v4.13 阶梯选方式 / v4.14 托底线收紧：
        - 本批到货周 aw 之前若存在「衔接槽」——最快方式到货周(awFast)之后、本批到货之前，
-         某周期末低于该周半安全线（≈1 周需求，几乎断货）——说明整批压到最后才到太薄。
-         此时把缺口拆给最快方式提前到货托底：快件量 = 把槽底托到 ≥ 半安全线（按箱取整、封顶本批 qty），
+         某周期末低于「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」（v4.14 收紧，原 v4.5~v4.13 为安全线 1/2
+         = 需求×safetyWeeks÷2，safetyWeeks=4 时达 2 周需求偏敏感）——说明整批压到最后才到太薄。
+         此时把缺口拆给快运提前到货托底：快件量 = 把槽底托到 ≥ 托底线（按箱取整、封顶本批 qty），
          剩余量仍走本批方式（常规普船35 / 升舱方式）在 aw 到货——同一 cadence 下单周、两种运输方式，
-         对应实际备货「调一周需求量走快运衔接，其余正常走普船」。
+         对应实际备货「调约一周需求量走快运衔接，其余正常走普船」。
        - 断货应急（aw >= firstStockout）时 subMethod 必已是最快能救方式：没有再快的可拆 → 单批整走，
          量 = 到货周安全线（规则 2），不再出现「半批快件补不够 + 半批慢船拖到断货后」的脱节。
        - 总量约束：qty 已在上一步被 safetyCeiling（max(maxBatchSize, 2×安全库存)）钳制，
@@ -2483,16 +2484,17 @@ function planProduct(p){
     const awFast = Math.min(weeks - 1, Math.max(0, arriveWeekOf(fastestSub)));
     const hasFaster = !!fastestSub && fastestSub !== subMethod && awFast < aw;
     let splitFastQty = 0;
-    let troughT = -1, halfTarget = null;  /* v4.13 调试：声明在块外，供诊断面板引用 */
+    let troughT = -1, troughEnd = Infinity, halfTarget = null;  /* 块外声明，供诊断面板引用 */
     let splitSub = null;                  /* v4.13：同 splitSub，块外声明，供诊断面板引用 */
     if(hasFaster && qty > 0){
       /* 衔接槽 = [awFast, aw) 内期末最低周（快件到货之后、本批到货之前的薄点） */
-      let troughEnd = Infinity;
       for(let t = Math.max(cadenceOrderWeek + 1, awFast); t < aw && t < weeks; t++){
         if(weeklyPlan[t].endingInv < troughEnd){ troughEnd = weeklyPlan[t].endingInv; troughT = t; }
       }
       if(troughT >= 0){
-        halfTarget = weeklyPlan[troughT].weekSafety / 2;   /* 半安全线 ≈ 1 周需求 */
+        /* v4.14：托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4（用户口径，收紧自 v4.13 的 1/2）
+           safetyWeeks=4 → 1 周需求；safetyWeeks=2 → 0.5 周需求——比"半安全线"更贴近断货才托底 */
+        halfTarget = weeklyPlan[troughT].weekSafety / 4;
         if(troughEnd < halfTarget){
           splitFastQty = Math.min(qty, Math.max(cartonSize, Math.ceil((halfTarget - troughEnd) / cartonSize) * cartonSize));
         }
@@ -2533,7 +2535,9 @@ function planProduct(p){
         cadenceDebug[lastIdx].splitFastMethod = (splitFastQty > 0 && splitSub) ? splitSub.name : null;
         cadenceDebug[lastIdx].splitFastIsFastest = (splitFastQty > 0 && fastestSub && splitSub && splitSub.name === fastestSub.name);
         cadenceDebug[lastIdx].splitTroughT = troughT;
+        cadenceDebug[lastIdx].splitTroughEnd = (troughT >= 0 && isFinite(troughEnd)) ? troughEnd : null;
         cadenceDebug[lastIdx].splitHalfTarget = (typeof halfTarget === 'number') ? halfTarget : null;
+        cadenceDebug[lastIdx].splitHalfTargetDenom = 4;  /* v4.14：托底线 = 安全线 ÷ 4 */
       }
     }
     /* 无论本批是否落实都推进 cadence（防死循环：下单周单调递增，必然收敛） */
@@ -5384,7 +5388,7 @@ function openDetailBuild(r, p, methods){
             : ` <span style="color:#9333ea;font-size:10px;">[快托 ${d.splitFastQty} 走 ${esc(d.splitFastMethod||'?')}]</span>`)
         : '';
       const troughTag = (d.splitTroughT != null && d.splitTroughT >= 0)
-        ? ` <span style="color:var(--text-muted);font-size:10px;">(槽=W${d.splitTroughT+1}, 期末=${d.splitHalfTarget != null ? Math.round((d.splitHalfTarget || 0)*2) : '?'}→半 ${d.splitHalfTarget != null ? Math.round(d.splitHalfTarget) : '?'})</span>`
+        ? ` <span style="color:var(--text-muted);font-size:10px;">(槽=W${d.splitTroughT+1}, 期末=${d.splitTroughEnd != null ? Math.round(d.splitTroughEnd) : '?'}, 托底线=${d.splitHalfTarget != null ? Math.round(d.splitHalfTarget) : '?'}=安全线/4)</span>`
         : '';
       return `<tr style="font-size:11px;">
         <td style="padding:2px 6px;">${d.cad}</td>
@@ -5399,11 +5403,11 @@ function openDetailBuild(r, p, methods){
       </tr>`;
     }).join('');
     html += `<details style="margin:0 0 14px;padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
-      <summary style="cursor:pointer;font-weight:600;color:#475569;">🛠 v4.13 升舱决策追踪（${r.cadenceDebug.length} 个 cadence）</summary>
+      <summary style="cursor:pointer;font-weight:600;color:#475569;">🛠 v4.13/v4.14 升舱与衔接槽决策追踪（${r.cadenceDebug.length} 个 cadence）</summary>
       <div style="margin-top:8px;color:#64748b;font-size:11px;">
-        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw / 数量 qty / 快件分流（v4.5 衔接槽，v4.13 起也按阶梯选）。<br>
+        每 cadence 选方式的关键决策：reachFrom（理论最早能补救周）/ firstStockout（首个真断货周）/ 常规 regM / 实际选中 subMethod / 到货周 aw / 数量 qty / 快件分流（v4.5 衔接槽，v4.13 起也按阶梯选、v4.14 托底线收紧为安全线1/4）。<br>
         <b>着色规则</b>：<span style="color:#16a34a;">●</span>=与 regM 同（无升舱）<span style="color:#0ea5e9;margin-left:8px;">●</span>=与 regM 不同（升舱）<span style="color:#dc2626;margin-left:8px;">●</span>=有断货<span style="color:#16a34a;margin-left:8px;">●</span>=无断货<br>
-        <b>快件分流（v4.5 衔接槽，v4.13 起按阶梯选）</b>：<span style="color:#9333ea;">[快托 N 走 X]</span> 表示本批被拆出 N 套走「最便宜能救回的」方式（升舱阶梯同源：到货周升序→dom 降序→price 升序）提前托底薄点周，剩余按本批方式。带 <span style="color:#dc2626;font-weight:600;">⚠ fastest</span> 说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档可救）。这是「选快船22」的真实来源（不是主循环升舱！）。
+        <b>快件分流（v4.5 衔接槽，v4.13 起按阶梯选、v4.14 托底线=安全线/4）</b>：<span style="color:#9333ea;">[快托 N 走 X]</span> 表示本批被拆出 N 套走「最便宜能救回的」方式（升舱阶梯同源：dom 降序→price 升序）提前托底薄点周（槽位期末 &lt; 安全线/4 才触发），剩余按本批方式。带 <span style="color:#dc2626;font-weight:600;">⚠ fastest</span> 说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档可救）。这是「选快船22」的历史来源（已修，非主循环升舱）。
       </div>
       <table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#e2e8f0;">
