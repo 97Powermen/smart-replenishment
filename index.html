@@ -4329,6 +4329,14 @@ function onBatchQtyEdit(td, bidx){
   if(isNaN(v) || v < 0){ td.textContent = fmt(rp.amount); return; }
   if(v === rp.amount) return;
   rp.amount = v;
+  /* v4.18 fix: qty=0 视为「该批次不再下单」——不再进入备货下单表（renderOrderTable/exportOrder 已加 num(rp.amount)>0 过滤）
+     与 clearThisWeekOrder 按钮语义严格对齐。给用户明确提示，避免误以为"修改未生效"。 */
+  const qtyZero = v === 0;
+  if(qtyZero){
+    toast(`${pcode} 批次 ${bidx+1} 数量归 0，已从备货下单表移除（生产仍按原计划保留可编辑；如需恢复请重新生成方案）`);
+  } else {
+    toast(`${pcode} 批次 ${bidx+1} 数量已更新：${fmt(rp.amount)} 套`);
+  }
   /* 重跑 simulate 重算 weeklyPlan（arrival/endingInv/stockout） */
   updateWeeklyPlanFromReplenishments(r);
   /* 刷新关联视图 */
@@ -4338,7 +4346,6 @@ function onBatchQtyEdit(td, bidx){
   if(typeof renderPerspective === 'function') renderPerspective();
   /* 同步刷新当前详情（弹窗/行内展开），让周次计划表/批次表看到新值 */
   refreshCurrentDetail(pcode);
-  toast(`${pcode} 批次数量已更新：${fmt(rp.amount)} 套`);
 }
 
 /* 逐品周次计划表：「清除本周备货」按钮
@@ -4366,8 +4373,10 @@ function renderOrderTable(){
   results.forEach(r => {
     if(r.noStock || r.replenishments.length === 0) return;
     r.replenishments.forEach(rp => {
-      /* 仅保留本次放单窗口内的批次（orderWeek < 释放周数，v4.17 预放单后含提前释放的未来批） */
-      if(isRelOrder(rp.orderWeek)){
+      /* v4.18 fix: 仅保留本次放单窗口内（orderWeek < 释放周数）且数量 > 0 的批次
+         v4.17 预放单后含提前释放的未来批；增 num(rp.amount)>0 过滤，
+         与 clearThisWeekOrder 按钮语义严格对齐（qty=0 = 该批次不再下单） */
+      if(isRelOrder(rp.orderWeek) && num(rp.amount) > 0){
         allOrders.push({ p: r.p, rp, arriveDate: rp.arriveDate });
       }
     });
@@ -4481,7 +4490,7 @@ function exportOrderCSV(){ exportOrder('csv'); }
 function exportOrderXLSX(){ exportOrder('xlsx'); }
 function exportOrder(format){
   const allOrders = [];
-  results.forEach(r => { if(!r.noStock) r.replenishments.forEach(rp => { if(isRelOrder(rp.orderWeek)) allOrders.push({p: r.p, rp, r}); }); });
+  results.forEach(r => { if(!r.noStock) r.replenishments.forEach(rp => { if(isRelOrder(rp.orderWeek) && num(rp.amount) > 0) allOrders.push({p: r.p, rp, r}); }); });
   if(allOrders.length === 0){ alert('本周无需下单的批次（含预放单）'); return; }
   const head = ['三级','料品编码','存货名称','规格型号','数量(套)','需求出货日期','运输方式','站点','区域','目的仓库','备注'];
   const rows = [head];
