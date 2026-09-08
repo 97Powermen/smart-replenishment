@@ -828,15 +828,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
           <label style="font-size:12px;color:var(--text-muted);">运输方式</label>
           <select id="detailFilterMethod" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:120px;" onchange="pageState.detail=1;renderDetailTable()">
             <option value="">全部</option>
-            <option value="普船55">普船55</option>
-            <option value="普船35">普船35</option>
-            <option value="卡航35">卡航35</option>
-            <option value="快船27">快船27</option>
-            <option value="快船22">快船22</option>
-            <option value="空运15">空运15</option>
-            <option value="快递10">快递10</option>
-            <option value="快递7">快递7</option>
-            <option value="快递5">快递5</option>
+            <!-- v4.16 起运输方式选项由 renderDetailFilterMethod() 从 methodConfig 动态渲染（与「基础数据 → 运输方式管理」表同源），不再硬编码 -->
           </select>
         </div>
         <div class="form-group" style="margin:0;">
@@ -1648,6 +1640,8 @@ function loadAllState(){
   methodConfig = migrateMethods(lsGet(STORAGE_KEYS.METHODS, DEFAULT_METHODS.slice()));
   // 持久化一次，把旧字段彻底替换
   lsSet(STORAGE_KEYS.METHODS, methodConfig);
+  /* v4.16 加载完 methodConfig 立刻同步「逐品周次计划 → 运输方式筛选」下拉，避免切换 Tab 时尚未渲染 */
+  renderDetailFilterMethod();
   const users = lsGet(STORAGE_KEYS.USERS, DEFAULT_USERS.slice());
   lsSet(STORAGE_KEYS.USERS, users);
   const saved = lsGet(STORAGE_KEYS.CURRENT_USER, 'admin');
@@ -1929,6 +1923,32 @@ function renderMethods(){
       </td>
     </tr>`;
   }).join('');
+  /* v4.16 同步刷新「逐品周次计划 → 运输方式筛选」下拉：永远与运输方式管理表 methodConfig 同源 */
+  renderDetailFilterMethod();
+}
+/* v4.16 「逐品周次计划」运输方式筛选下拉 = methodConfig 动态渲染（顺序即优先级）
+   保留当前选中值（即使该方式在 methodConfig 里被删/改名也注入一个 option，避免静默清空筛选条件） */
+function renderDetailFilterMethod(){
+  const sel = $('detailFilterMethod');
+  if(!sel) return;
+  const prev = sel.value;
+  const pool = (Array.isArray(methodConfig) && methodConfig.length) ? methodConfig : DEFAULT_METHODS.slice();
+  const optSet = new Set();
+  const optionsHtml = pool.map(m => {
+    const on = m.enabled !== false;
+    const val = m.name;
+    optSet.add(val);
+    return `<option value="${esc(val)}"${on ? '' : ' style="color:var(--text-muted);"'} data-state="${on ? 'on' : 'off'}">${esc(m.name)}${on ? '' : ' (已停用)'}</option>`;
+  }).join('');
+  sel.innerHTML = `<option value="">全部</option>` + optionsHtml;
+  /* 恢复选中值；若该方式已被删除/改名，注入临时 option 保证"当前筛选条件不丢" */
+  if(prev && !optSet.has(prev)){
+    const tmp = document.createElement('option');
+    tmp.value = prev; tmp.textContent = prev + ' (配置中已不存在)';
+    tmp.style.color = 'var(--danger)';
+    sel.appendChild(tmp);
+  }
+  if(prev) sel.value = prev;
 }
 /* 启用/停用开关：只改数据并保存，行内同步视觉（不整体重绘，避免打断同页其它编辑） */
 function toggleMethodEnabled(idx, checked){
@@ -1950,6 +1970,8 @@ function toggleMethodEnabled(idx, checked){
       st.style.color = checked ? 'var(--success)' : 'var(--text-muted)';
     }
   }
+  /* v4.16 联动「逐品周次计划」运输方式筛选下拉：停用要标"已停用" */
+  renderDetailFilterMethod();
 }
 function delMethod(idx){
   if(!confirm('确认删除「'+methodConfig[idx].name+'」？')) return;
