@@ -475,13 +475,14 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
         <button class="btn btn-sm btn-outline" onclick="addMethodRow()">＋ 新增方式</button>
       </div>
     </div>
-    <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b>「是否启用」开关</b>：停用的方式<b>不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。</div>
+    <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b>「是否启用」开关</b>：停用的方式<b>不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。🌍 <b>区域限制（v4.12）</b>：「区域」列标注线路适用区域（可填 美国/加拿大 等多值，用 / 分隔；空 = 通用）。产品备货只在<b>区域匹配</b>的线路中选择（精确相等 + 通用通配，如美国产品只能选区域=美国或通用的线路），跨区线路（如 美转加30）不会被选为常规/升舱方式。</div>
     <div class="result-table-wrap is-resizable">
-      <table class="result-table" id="methodTable" style="min-width:1170px;table-layout:fixed;">
+      <table class="result-table" id="methodTable" style="min-width:1300px;table-layout:fixed;">
         <thead>
           <tr>
             <th style="width:130px;text-align:center;">优先级</th>
             <th style="width:140px;">运输方式</th>
+            <th style="width:110px;">区域</th>
             <th style="width:120px;">单位运费(¥/KG)</th>
             <th style="width:130px;">海外仓到FBA时效(天)</th>
             <th style="width:130px;">国内到FBA时效(天)</th>
@@ -1196,7 +1197,7 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
         <div class="algo-block">
           <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
           <div style="padding:6px 10px;font-size:13px;">
-            <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<br>
+            <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<b>区域限制（v4.12）</b>：候选池再按产品<b>「区域」</b>过滤——方式区域须与产品区域<b>精确相等</b>（支持 / 分隔多值），或方式标「通用/不限/空」；产品无区域则不限制。区域不匹配的线路（如美国产品对「美转加30」）不会进入常规方式解析、升舱候选、最快应急及任何批次下拉，杜绝跨区误选。<br>
             <b>常规方式停用自动回退（2026-09-03 v4.7）</b>：产品导入的「常规运输方式」若在管理中已被停用/改名 → 不再静默漏补（旧逻辑：库存中等无断货时 regM 匹配失败直接结束排单、期末库存跌破安全线；有断货时被迫连后续批次全走最快方式、运费高）。现自动就近回退到已启用池中的方式衔接：同档（时效相同，如 普船35→卡航35）→ 次慢档 → 最快档 → 最慢兜底；方案仍保持「常规滚动衔接 + 断货才升舱」语义，回退结果在 分析结果表（行下橙色提示条）/ 单品详情 / 导出（末列「运输方式回退」）醒目提示。<br>
             下单周 <b>cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br>
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
@@ -1375,15 +1376,15 @@ const DEFAULT_USERS = [
 // 默认运输方式（按优先级排序，越前越便宜；单价为 KG/¥）
 // enabled=false 表示停用：不参与备货计算（无需删除，随时可重新开启）
 const DEFAULT_METHODS = [
-  { name: '普船55', pricePerKG: 7.56,  osToFbaDays: 14, domToFbaDays: 55, minBatchQty: 50, note: '', enabled: true },
-  { name: '普船35', pricePerKG: 5.87,  osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
-  { name: '卡航35', pricePerKG: 4.5,   osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
-  { name: '快船27', pricePerKG: 6.93,  osToFbaDays: 14, domToFbaDays: 27, minBatchQty: 50, note: '', enabled: true },
-  { name: '快船22', pricePerKG: 10.31, osToFbaDays: 14, domToFbaDays: 22, minBatchQty: 50, note: '', enabled: true },
-  { name: '空运15', pricePerKG: 60,    osToFbaDays: 14, domToFbaDays: 15, minBatchQty: 20, note: '', enabled: true },
-  { name: '快递10', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 10, minBatchQty: 10, note: '', enabled: true },
-  { name: '快递7',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 7,  minBatchQty: 10, note: '', enabled: true },
-  { name: '快递5',  pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 5,  minBatchQty: 10, note: '', enabled: true }
+  { name: '普船55', region: '通用', pricePerKG: 7.56,  osToFbaDays: 14, domToFbaDays: 55, minBatchQty: 50, note: '', enabled: true },
+  { name: '普船35', region: '通用', pricePerKG: 5.87,  osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
+  { name: '卡航35', region: '通用', pricePerKG: 4.5,   osToFbaDays: 14, domToFbaDays: 35, minBatchQty: 50, note: '', enabled: true },
+  { name: '快船27', region: '通用', pricePerKG: 6.93,  osToFbaDays: 14, domToFbaDays: 27, minBatchQty: 50, note: '', enabled: true },
+  { name: '快船22', region: '通用', pricePerKG: 10.31, osToFbaDays: 14, domToFbaDays: 22, minBatchQty: 50, note: '', enabled: true },
+  { name: '空运15', region: '通用', pricePerKG: 60,    osToFbaDays: 14, domToFbaDays: 15, minBatchQty: 20, note: '', enabled: true },
+  { name: '快递10', region: '通用', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 10, minBatchQty: 10, note: '', enabled: true },
+  { name: '快递7',  region: '通用', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 7,  minBatchQty: 10, note: '', enabled: true },
+  { name: '快递5',  region: '通用', pricePerKG: 70,    osToFbaDays: 14, domToFbaDays: 5,  minBatchQty: 10, note: '', enabled: true }
 ];
 
 // 导入模板字段（按三级、料品编码、名称、规格、月预测、库存、计划周期等）
@@ -1581,6 +1582,8 @@ function migrateMethods(arr){
       domToFbaDays: num(m.domToFbaDays != null ? m.domToFbaDays : m.transportDays) || 0,
       minBatchQty: Math.max(1, num(m.minBatchQty) || 1),
       note: m.note || '',
+      /* v4.12 区域限制：老配置无 region 字段 → 默认「通用」（不限制），由用户在运输方式管理里自行标注 */
+      region: (m.region && String(m.region).trim()) || '通用',
       /* 是否启用：老配置无该字段时默认启用（undefined/null → true） */
       enabled: m.enabled !== false
     };
@@ -1756,6 +1759,30 @@ function currentMethods(){
   const active = methodConfig.filter(m => m.enabled !== false);
   return (active.length > 0 ? active : methodConfig).map(m => ({ ...m }));
 }
+/* v4.12 运输方式「区域」限制 ================
+   用户口径（2026-09-08）：区域匹配 = 精确相等 + 通用通配。
+   - 产品的「区域」（p.region，来自导入模板「区域」列）为空 → 不限制（任何方式可用）；
+   - 方式的 region 为空 / 通用 / 不限 / ALL / * → 对所有区域可用；
+   - 方式的 region 支持用 /、\、,、|、空格 分隔多值（如「美国/加拿大」）→ 任一相等即匹配；
+   - 其余情况需方式 region 拆分后某一项与产品区域完全相等（忽略大小写）。
+   作用点：planProduct 候选池（常规解析/升舱/最快应急）+ 各处批次下拉 + 手动编辑回写匹配，
+   保证产品只会用到「本区域可用」的运输线路，杜绝跨区线路（如美国产品误用 美转加30）被算法选中。 */
+function methodRegionOK(m, p){
+  if(!m || !p) return true;
+  const pr = String(p.region || '').trim();
+  if(!pr) return true;
+  const mr = String(m.region || '').trim();
+  if(!mr || /^(通用|不限|全部|ALL|\*)$/i.test(mr)) return true;
+  const prLower = pr.toLowerCase();
+  return String(mr).split(/[/、,，;|；\s]+/).map(s => s.trim()).filter(Boolean)
+    .some(s => s.toLowerCase() === prLower);
+}
+/* 取某产品的候选运输方式池：启用池 ∩ 区域匹配；若一个都不匹配（可能产品区域写法特殊）→ 回退全启用池，避免无方式可选 */
+function methodsForProduct(p){
+  const all = currentMethods();
+  const fit = all.filter(m => methodRegionOK(m, p));
+  return fit.length > 0 ? fit : all;
+}
 /* 常规运输方式解析 + 停用/失效回退（2026-09-03 v4.7）
    产品导入的「常规运输方式」（如普船35）可能在运输方式管理中被停用/改名，
    导致 planProduct 中 regM 匹配失败：库存中等无断货时 break 漏补、真断货时被迫全走最快方式（运费高）。
@@ -1807,6 +1834,7 @@ function addMethodRow(){
   const n = methodConfig.length + 1;
   methodConfig.push({
     name: '新方式' + n,
+    region: '通用',
     pricePerKG: 20,
     osToFbaDays: 0,
     domToFbaDays: 14,
@@ -1823,6 +1851,7 @@ function renderMethods(){
     <tr class="${on ? '' : 'method-disabled'}" id="method-row-${idx}">
       <td style="text-align:center;font-weight:700;color:var(--primary);font-size:14px;">${idx+1}</td>
       <td><input class="cell-input name-input" value="${esc(m.name)}" placeholder="如 普船35" onchange="methodConfig[${idx}].name=this.value;saveMethods()"></td>
+      <td><input class="cell-input" value="${esc(m.region || '通用')}" placeholder="通用/美国/加拿大" title="线路适用区域：可填 美国/加拿大 等多值（用 / 分隔）；留空或填「通用」= 所有区域可用" onchange="methodConfig[${idx}].region=(this.value||'').trim();saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" step="0.1" value="${m.pricePerKG}" placeholder="0.0" onchange="methodConfig[${idx}].pricePerKG=Number(this.value)||0;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" value="${m.osToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].osToFbaDays=Number(this.value)||0;saveMethods()"></td>
       <td><input class="cell-input num-input" type="number" min="0" value="${m.domToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].domToFbaDays=Number(this.value)||0;saveMethods()"></td>
@@ -2072,7 +2101,9 @@ function planProduct(p){
   // 前置期（周）：由产品级生产周期推导；未填写生产周期时视为即时到货(0)
   const leadTimeWeeks = prodCycleDays > 0 ? Math.max(1, Math.round(prodCycleDays / 7)) : 0;
   const cartonSize = Math.max(1, num(p.casesPerUnit) || DEFAULT_CARTON);
-  const methods = currentMethods();
+  /* v4.12 区域候选池：候选 = 启用池 ∩ 区域匹配（常规方式解析 / 升舱 / 最快应急 同源）；
+     产品区域一个都不匹配时回退全启用池，避免无方式可选 */
+  const methods = methodsForProduct(p);
   /* 发货模式：直发 / 中转（默认直发）。中转 = 国内→海外仓→FBA，总前置 = domToFbaDays + osToFbaDays。
      混合模式（直发比例 0<x<100）：每个批次拆两个子批——直发子批（早到）+ 海外仓子批（晚到） */
   const isTransit = isTransitShip(p);
@@ -3848,8 +3879,9 @@ function ensureThisWeekBatch(r, w, newVal){
   if(!r || !Array.isArray(r.replenishments)) return [];
   const rps = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
   if(rps.length > 0 || newVal <= 0) return rps;
-  const methods = currentMethods();
   const p = r.p || {};
+  /* v4.12 新增本周批次默认方式的候选池 = 按产品区域过滤（与 planProduct 同源） */
+  const methods = methodsForProduct(p);
   /* v4.7：与 planProduct 同口径——常规方式在启用池未命中时自动就近回退（同档→更慢→更快→最慢），
      回退提示记入 r.regFallbackNote（首回退优先保留），供结果表/详情/导出醒目提示 */
   const _rr = resolveRegularMethod(p, methods);
@@ -3872,12 +3904,13 @@ function ensureThisWeekBatch(r, w, newVal){
 }
 
 function onWeekDetailEdit(td){
-  const methods = currentMethods();
   const field = td.dataset.editField;
   const pcode = td.dataset.pcode;
   const w = parseInt(td.dataset.w, 10);
   const r = _findResultByCode(pcode);
   if(!r || !r.replenishments){ return; }
+  /* v4.12 方式匹配池 = 按产品区域过滤（与周次计划下拉同源，所选值必在池内） */
+  const methods = methodsForProduct(r.p);
   /* 优先找本周下单（orderWeek=0）批次；无则 fallback 该到货周任意批次 */
   const rps0 = r.replenishments.filter(x => x.arriveWeek === w && x.orderWeek === 0);
   const rp = rps0[0] || r.replenishments.find(x => x.arriveWeek === w);
@@ -4074,7 +4107,8 @@ function onBatchFieldEdit(td, bidx, field){
   if(field === 'arriveDate'){
     rp.arriveDate = raw;
   } else if(field === 'method'){
-    const methods = currentMethods();
+    /* v4.12 方式匹配池 = 按产品区域过滤（与批次表下拉同源，所选值必在池内） */
+    const methods = methodsForProduct(r.p);
     const matched = methods.find(m => m.name === raw);
     if(matched) rp.method = { ...matched };
     else if(raw) rp.method = { ...(rp.method || {}), name: raw };
@@ -4625,7 +4659,8 @@ function renderDetailTable(){
 // 懒加载：点击时才生成周次计划表 + 批次表
 function buildDetailContent(r){
   const p = r.p;
-  const methods = currentMethods();
+  /* v4.12 周次计划方式下拉 = 按产品区域过滤 */
+  const methods = methodsForProduct(r.p);
   const tier = p.priorityTier || '99';
   /* 调整1：规格型号与编码名称同款字体颜色，置于标题旁以空格拼接 */
   const specBadgeHtml = p.specCode ? `<span class="detail-spec-badge">${esc(p.specCode)}</span>` : '';
@@ -4695,7 +4730,7 @@ function buildDetailContent(r){
       <td class="cell-num cell-plan">${rec}</td>
       <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onWeekDetailPending(this)" data-edit-field="thisWeekQty" data-pcode="${esc(p.materialCode||'')}" data-w="${i}" data-orig-val="${thisWeekQty}" style="font-weight:600;color:var(--primary);cursor:text;" title="点击可直接修改本周下单量；若该周无本周批次，输入数量将自动新增一批本周下单">${thisWeekQty}</td>
       <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<input type="date" value="${shipDate}" class="cell-date-input" data-edit-field="arriveDate" data-pcode="${esc(p.materialCode||'')}" data-w="${i}" style="width:96px;" />`:shipDate}</td>
-      <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<select class="cell-method-select" style="width:90px;" data-edit-field="method" data-pcode="${esc(p.materialCode||'')}" data-w="${i}"><option value="">--</option>${methods.map(m=>`<option value="${esc(m.name)}" ${displayRp && displayRp.method && displayRp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`:method}</td>
+      <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<select class="cell-method-select" style="width:136px;" data-edit-field="method" data-pcode="${esc(p.materialCode||'')}" data-w="${i}"><option value="">--</option>${(displayRp && displayRp.method && displayRp.method.name && !methods.some(_m=>_m.name===displayRp.method.name)) ? `<option value="${esc(displayRp.method.name)}" selected>${esc(displayRp.method.name)}</option>` : ''}${methods.map(m=>`<option value="${esc(m.name)}" ${displayRp && displayRp.method && displayRp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`:method}</td>
       <td class="cell-num" style="color:var(--text-secondary);">${estArrival}</td>
     </tr>`;
   });
@@ -4732,7 +4767,8 @@ function buildDetailContent(r){
           <th style="width:70px;">站点</th><th style="width:70px;">区域</th><th style="width:95px;">目的仓库</th><th style="width:130px;">备注</th><th style="width:90px;">状态</th>
         </tr></thead><tbody>`;
     /* 单品下单方法列表（用于运输方式下拉） */
-    const batchMethods = currentMethods();
+    /* v4.12 本品下单批次方式下拉 = 按产品区域过滤 */
+    const batchMethods = methodsForProduct(r.p);
     r.replenishments.forEach((rp, bidx) => {
       totQty += rp.amount;
       const status = batchStatusOf(r, rp);
@@ -4745,7 +4781,7 @@ function buildDetailContent(r){
         <td>${esc(p.specCode||'--')}</td>
         <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="cursor:text;" title="点击可直接修改该批数量，联动周次计划 / 备货下单表">${fmt(rp.amount)}</td>
         <td><input type="date" value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
-        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
+        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
         <td class="cell-num">${esc(p.site||'--')}</td>
         <td class="cell-num">${esc(p.region||'--')}</td>
         <td><input type="text" value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
@@ -5227,7 +5263,8 @@ function exportPerspectiveCSV(){
 function openDetail(idx){
   const r = results[idx]; if(!r) return;
   const p = r.p;
-  const methods = currentMethods();
+  /* v4.12 弹窗方式池 = 按产品区域过滤（周次计划 + 批次下拉共用） */
+  const methods = methodsForProduct(p);
   $('detailTitle').textContent = `单品详情 - ${p.materialCode||''} ${p.materialName||''}`;
   try{
     openDetailBuild(r, p, methods);
@@ -5277,7 +5314,7 @@ function openDetailBuild(r, p, methods){
         <tr>
           <th style="width:36px;">周</th><th style="width:148px;">日期范围</th><th style="width:58px;">期初可售</th><th style="width:58px;">到货</th><th style="width:58px;">周需求</th>
           <th style="width:58px;">期末可售</th><th style="width:58px;">安全线</th><th style="width:48px;">缺货</th><th style="width:64px;">建议下单</th>
-          <th style="width:76px;">本周下单量</th><th style="width:100px;">需求出货日期</th><th style="width:92px;">运输方式</th><th style="width:96px;">预计到仓时间</th>
+          <th style="width:76px;">本周下单量</th><th style="width:100px;">需求出货日期</th><th style="width:140px;">运输方式</th><th style="width:96px;">预计到仓时间</th>
         </tr>
       </thead><tbody>`;
   /* 合计计算（与「本品下单批次」合计同源：基于 r.replenishments 求和） */
@@ -5317,7 +5354,7 @@ function openDetailBuild(r, p, methods){
       <td class="cell-num cell-plan">${rec}</td>
       <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onWeekDetailPending(this)" data-edit-field="thisWeekQty" data-pcode="${esc(p.materialCode||'')}" data-w="${i}" data-orig-val="${thisWeekQty}" style="font-weight:600;color:var(--primary);cursor:text;" title="点击可直接修改本周下单量；若该周无本周批次，输入数量将自动新增一批本周下单">${thisWeekQty}</td>
       <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<input type="date" value="${shipDate}" class="cell-date-input" data-edit-field="arriveDate" data-pcode="${esc(p.materialCode||'')}" data-w="${i}" style="width:96px;" />`:shipDate}</td>
-      <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<select class="cell-method-select" style="width:90px;" data-edit-field="method" data-pcode="${esc(p.materialCode||'')}" data-w="${i}"><option value="">--</option>${methods.map(m=>`<option value="${esc(m.name)}" ${displayRp && displayRp.method && displayRp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`:method}</td>
+      <td class="cell-note" ${dateMethodEditable?`onchange="onWeekDetailEdit(event.target)"`:''} style="cursor:${dateMethodEditable?'pointer':'default'};text-align:center;">${dateMethodEditable?`<select class="cell-method-select" style="width:136px;" data-edit-field="method" data-pcode="${esc(p.materialCode||'')}" data-w="${i}"><option value="">--</option>${(displayRp && displayRp.method && displayRp.method.name && !methods.some(_m=>_m.name===displayRp.method.name)) ? `<option value="${esc(displayRp.method.name)}" selected>${esc(displayRp.method.name)}</option>` : ''}${methods.map(m=>`<option value="${esc(m.name)}" ${displayRp && displayRp.method && displayRp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select>`:method}</td>
       <td class="cell-num" style="color:var(--text-secondary);">${estArrival}</td>
     </tr>`;
   });
@@ -5354,7 +5391,8 @@ function openDetailBuild(r, p, methods){
       </thead><tbody>`;
     let totQty=0;
     /* 单品下单方法列表（用于运输方式下拉） */
-    const batchMethods = currentMethods();
+    /* v4.12 本品下单批次方式下拉 = 按产品区域过滤 */
+    const batchMethods = methodsForProduct(r.p);
     r.replenishments.forEach((rp, bidx) => {
       totQty += rp.amount;
       const status = batchStatusOf(r, rp);
@@ -5367,7 +5405,7 @@ function openDetailBuild(r, p, methods){
         <td>${esc(p.specCode||'--')}</td>
         <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="cursor:text;" title="点击可直接修改该批数量，联动周次计划 / 备货下单表">${fmt(rp.amount)}</td>
         <td><input type="date" value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
-        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
+        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
         <td class="cell-num">${esc(p.site||'--')}</td>
         <td class="cell-num">${esc(p.region||'--')}</td>
         <td><input type="text" value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
