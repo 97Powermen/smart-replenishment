@@ -598,7 +598,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
         <input type="checkbox" id="pipelineOverwriteMode" />
         <span style="font-size:12px;color:var(--text-secondary);">覆盖模式</span>
       </label>
-      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的在制在制数据（pipelineTickets + 单字段）" style="color:var(--danger);">🧹 清空在制在制</button>
+      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的国内在途/在制数据（pipelineTickets + 单字段 domInTransit/domInProd；海外仓在途 osInTransit 随库存资料导入，不属于采购在制在途，不在此清空范围）" style="color:var(--danger);">🧹 清空在制在途</button>
       <span id="pipelineImportStatus" class="pipeline-status" style="display:none;"></span>
       <span id="pipelineDataSummary" class="pipeline-summary" style="display:none;"></span>
       <div class="divider-v"></div>
@@ -773,6 +773,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
               <th>下单频率</th>
               <th>最新周销量</th>
               <th>近四周平均销量</th>
+              <th>近30天销量</th>
               <th>周均需求</th>
               <th>FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）">▾</button></th>
               <th>海外仓库存</th>
@@ -829,6 +830,29 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
           <select id="detailFilterMethod" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:120px;" onchange="pageState.detail=1;renderDetailTable()">
             <option value="">全部</option>
             <!-- v4.16 起运输方式选项由 renderDetailFilterMethod() 从 methodConfig 动态渲染（与「基础数据 → 运输方式管理」表同源），不再硬编码 -->
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;color:var(--text-muted);">销售状态</label>
+          <select id="detailFilterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;" onchange="pageState.detail=1;renderDetailTable()">
+            <option value="">全部</option>
+            <option value="售完即止">售完即止</option>
+            <option value="正常销售">正常销售</option>
+            <option value="新品新上">新品新上</option>
+            <option value="销呆滞">销呆滞</option>
+            <option value="销呆滞不备货">销呆滞不备货</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;color:var(--text-muted);">备货建议</label>
+          <select id="detailFilterAdvice" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:140px;" onchange="pageState.detail=1;renderDetailTable()">
+            <option value="">全部</option>
+            <option value="缺货·紧急补货">缺货·紧急补货</option>
+            <option value="销量低迷·谨慎备货">销量低迷·谨慎备货</option>
+            <option value="正常·建议备货">正常·建议备货</option>
+            <option value="库存充足·慎备货">库存充足·慎备货</option>
+            <option value="无需求·不备货">无需求·不备货</option>
+            <option value="售完即止·不备货">售完即止·不备货</option>
           </select>
         </div>
         <div class="form-group" style="margin:0;">
@@ -1038,6 +1062,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
               <th style="width:120px;">颜色套装</th>
               <th style="width:80px;">产品数</th>
               <th style="width:90px;">近四周平均销量</th>
+              <th style="width:90px;">近30天销量</th>
               <th style="width:80px;">周需求</th>
               <th style="width:80px;">月均需求</th>
               <th style="width:140px;">当前库存<button type="button" class="pipe-fold-btn" id="perspFoldBtn" onclick="togglePerspCols()" title="展开/折叠明细列（FBA库存/海外仓库存/海外仓在途/挪用库存）">▾</button></th>
@@ -1347,6 +1372,17 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div style="margin-top:14px;text-align:right;">
       <button class="btn btn-primary" onclick="addUser()">添加</button>
     </div>
+  </div>
+</div>
+
+<!-- v4.20 增：眼睛按钮弹出的在途/在制票据清单 modal -->
+<div class="modal-mask" id="pipelineModal" onclick="if(event.target===this)closePipelineModal()">
+  <div class="modal-content" style="max-width:760px;">
+    <h3>
+      <span id="pipelineModalTitle">在途/在制票据清单</span>
+      <span class="close" onclick="closePipelineModal()">×</span>
+    </h3>
+    <div id="pipelineModalBody"></div>
   </div>
 </div>
 
@@ -1765,6 +1801,18 @@ function onUserChange(){
 }
 function openUserModal(){ $('userModal').classList.add('show'); $('newUserName').value=''; $('newUserRole').value='录入'; $('newUserName').focus(); }
 function closeUserModal(){ $('userModal').classList.remove('show'); }
+/* v4.20 增：通用 modal 弹出（用于眼睛按钮查看在制在途清单） */
+function showModal(title, bodyHtml, opts){
+  const t = $('pipelineModalTitle'); if(t) t.textContent = title;
+  const b = $('pipelineModalBody'); if(b) b.innerHTML = bodyHtml;
+  const m = $('pipelineModal');
+  if(opts && opts.maxWidth){
+    const c = m.querySelector('.modal-content');
+    if(c) c.style.maxWidth = (opts.maxWidth + 'px');
+  }
+  m.classList.add('show');
+}
+function closePipelineModal(){ $('pipelineModal').classList.remove('show'); }
 function addUser(){
   const name = $('newUserName').value.trim();
   const role = $('newUserRole').value;
@@ -3078,10 +3126,11 @@ function updatePipelineDataSummary(){
     return q > 0 ? `<span class="chip">${TYPE_LABEL[k]}：${fmt(q)}</span>` : '';
   }).filter(Boolean).join('');
   el.style.display = 'inline-flex';
-  el.innerHTML = `<span>📊 当前在制在制：${matched} 个产品 / 共 ${fmt(total)}</span>${chips}<span class="close" onclick="clearAllPipelineData()" title="一键清空所有在制在制数据" style="cursor:pointer;opacity:.6;font-weight:400;padding:0 4px;">🧹</span>`;
+  el.innerHTML = `<span>📊 当前在制在途：${matched} 个产品 / 共 ${fmt(total)}</span>${chips}<span class="close" onclick="viewPipelineTickets()" title="查看所有产品已导入的在制在途清单（按产品分组合计，可单条删除）" style="cursor:pointer;opacity:.7;font-weight:400;padding:0 4px;font-size:14px;">👁</span>`;
 }
 
-/* 2026-09-02 增：一键清空所有产品的在制在制数据（pipelineTickets 全部 + 单字段 6 个）。
+/* 2026-09-02 增：一键清空所有产品的国内在途/在制数据（pipelineTickets 全部 + 单字段 domInTransit/domInProd）。
+   v4.20 修订：排除海外仓在途 osInTransit/osInTransitWeeks —— 海外仓在途一般随库存资料一起导入，不属于采购在制在途。
    解决问题：测试两种场景（导入 vs 不导入）时，旧数据残留导致 planProduct 两次结果一样——
    用户以为"不导入"=空，实际 pipelineTickets 仍有上次导入的数据。*/
 function clearAllPipelineData(){
@@ -3092,18 +3141,137 @@ function clearAllPipelineData(){
       prodCount++;
       p.pipelineTickets = [];
     }
-    /* 单字段也清（基础数据导入的 domInProd 等） */
-    if(num(p.domInProd) || num(p.domInProdWeeks) || num(p.domInTransit) || num(p.domInTransitWeeks) || num(p.osInTransit) || num(p.osInTransitWeeks)){
+    /* 单字段只清国内在途/在制未交（采购相关）；海外仓在途 osInTransit 随库存资料导入，不在此清 */
+    if(num(p.domInProd) || num(p.domInProdWeeks) || num(p.domInTransit) || num(p.domInTransitWeeks)){
       p.domInProd = 0; p.domInProdWeeks = 0;
       p.domInTransit = 0; p.domInTransitWeeks = 0;
-      p.osInTransit = 0; p.osInTransitWeeks = 0;
     }
   });
   saveProducts();
   renderProductList();
   renderPerspective();
   updatePipelineDataSummary();
-  toast(`已清空 ${prodCount} 个产品的 ${ticketCount} 条在制在制数据`);
+  toast(`已清空 ${prodCount} 个产品的 ${ticketCount} 条国内在途/在制数据（海外仓在途 osInTransit 已保留）`);
+}
+
+/* v4.20 增：眼睛按钮 → 弹窗查看所有产品的在制在途/在制清单
+   数据源：所有 importedProducts 的 pipelineTickets 数组（多票导入 + 手填数据全汇总）
+   功能：按产品分组展示，每行可单条删除（更新 importedProducts + 重新汇总 + 重渲染）
+   单字段 domInTransit/domInProd/osInTransit 单独一行展示（行内可清 0） */
+function viewPipelineTickets(){
+  const TYPE_LABEL = { domInTransit:'国内在途', domInProd:'在制未交', osInTransit:'海外仓在途' };
+  const items = [];  /* { pcode, pname, type, qty, week, source, arriveDate, idx(单条) } */
+  Object.values(importedProducts).forEach(p => {
+    const pcode = p.materialCode || '';
+    const pname = p.materialName || '';
+    /* 多票 pipelineTickets */
+    if(Array.isArray(p.pipelineTickets)){
+      p.pipelineTickets.forEach((t, idx) => {
+        if(!t || num(t.qty) <= 0) return;
+        items.push({
+          pcode, pname,
+          type: t.type, qty: num(t.qty), week: num(t.week),
+          source: t.source || '手填',
+          arriveDate: t.arriveDate || '—',
+          singleField: false, idx, ref: p
+        });
+      });
+    }
+    /* 单字段 */
+    const singleList = [
+      { type:'osInTransit', qty: p.osInTransit, week: p.osInTransitWeeks, source: '基础数据导入' },
+      { type:'domInTransit', qty: p.domInTransit, week: p.domInTransitWeeks, source: '基础数据导入' },
+      { type:'domInProd', qty: p.domInProd, week: p.domInProdWeeks, source: '基础数据导入' },
+    ];
+    singleList.forEach(s => {
+      if(num(s.qty) > 0){
+        items.push({ pcode, pname, type: s.type, qty: num(s.qty), week: num(s.week), source: s.source, arriveDate: '—', singleField: true, ref: p });
+      }
+    });
+  });
+  if(items.length === 0){ alert('暂无在途/在制数据。请先通过「📦 导入在途/在制」按钮或基础数据页填写'); return; }
+  /* 按料品编码 + type 分组合计 */
+  const groups = {};
+  items.forEach(it => {
+    const k = it.pcode + '||' + it.type;
+    if(!groups[k]) groups[k] = { pcode: it.pcode, pname: it.pname, type: it.type, totalQty: 0, rows: [] };
+    groups[k].totalQty += it.qty;
+    groups[k].rows.push(it);
+  });
+  const groupArr = Object.values(groups).sort((a, b) => a.pcode.localeCompare(b.pcode) || a.type.localeCompare(b.type));
+  /* 弹窗 */
+  const trs = groupArr.map((g, gi) => {
+    const rowsHtml = g.rows.map((r, ri) => {
+      const isSingle = r.singleField;
+      const delBtn = !isSingle
+        ? `<button class="btn btn-sm btn-outline" style="color:var(--danger);padding:1px 6px;" onclick="deletePipelineTicket('${esc(r.pcode)}', ${r.idx})" title="删除这条在途/在制票据">✕</button>`
+        : `<button class="btn btn-sm btn-outline" style="color:var(--danger);padding:1px 6px;" onclick="clearSinglePipelineField('${esc(r.pcode)}','${r.type}')" title="清 0 该单字段（注意：基础数据页重新导入会覆盖此改动）">✕</button>`;
+      return `<tr style="font-size:12px;background:${ri%2===0?'#fafbfc':'#fff'};">
+        <td style="padding:3px 6px;color:var(--text-muted);">${ri+1}</td>
+        <td style="padding:3px 6px;">${esc(r.source)}</td>
+        <td style="padding:3px 6px;text-align:right;font-weight:600;">${fmt(r.qty)}</td>
+        <td style="padding:3px 6px;">${r.week > 0 ? 'W' + (r.week+1) : 'W0(本周/已过期)'}</td>
+        <td style="padding:3px 6px;color:var(--text-muted);">${esc(r.arriveDate)}</td>
+        <td style="padding:3px 6px;text-align:center;">${delBtn}</td>
+      </tr>`;
+    }).join('');
+    const typeLabel = TYPE_LABEL[g.type] || g.type;
+    const typeColor = g.type === 'osInTransit' ? 'var(--info)' : g.type === 'domInTransit' ? 'var(--primary)' : 'var(--warning)';
+    return `<tr style="background:#f3f6fa;">
+      <td colspan="6" style="padding:6px 8px;">
+        <b>${esc(g.pcode)}</b> <span style="color:var(--text-muted);font-size:11px;">${esc(g.pname)}</span>
+        <span class="chip" style="background:${typeColor};color:#fff;margin-left:6px;">${typeLabel}</span>
+        <span style="margin-left:6px;font-weight:600;">合计 ${fmt(g.totalQty)} 套（${g.rows.length} 条）</span>
+      </td>
+    </tr>${rowsHtml}`;
+  }).join('');
+  const html = `<div style="max-height:70vh;overflow:auto;border:1px solid var(--border);border-radius:6px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--bg-soft);">
+          <th style="width:36px;padding:6px;">#</th>
+          <th style="padding:6px;text-align:left;">来源</th>
+          <th style="width:80px;padding:6px;text-align:right;">数量(套)</th>
+          <th style="width:120px;padding:6px;text-align:left;">到货周</th>
+          <th style="width:120px;padding:6px;text-align:left;">预计到仓</th>
+          <th style="width:60px;padding:6px;">操作</th>
+        </tr>
+      </thead>
+      <tbody>${trs}</tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+    💡 <b>共 ${groupArr.length} 个分组 / ${items.length} 条票据</b>。删除单条会立即保存到 localStorage 并刷新汇总；点「🔄 一键清空在制在途」可批量清除国内在途/在制（海外仓在途除外）。
+  </div>`;
+  showModal('👁 在途/在制票据清单', html, { maxWidth: 720 });
+}
+/* 删除单条 pipelineTickets（多票导入/手填） */
+function deletePipelineTicket(pcode, idx){
+  if(!confirm(`确认删除「${pcode}」第 ${idx+1} 条在途/在制票据？`)) return;
+  const p = importedProducts[pcode];
+  if(!p || !Array.isArray(p.pipelineTickets)) return;
+  p.pipelineTickets.splice(idx, 1);
+  saveProducts();
+  renderProductList();
+  renderPerspective();
+  updatePipelineDataSummary();
+  toast(`已删除「${pcode}」第 ${idx+1} 条票据`);
+  viewPipelineTickets();  // 刷新弹窗
+}
+/* 清 0 单字段（osInTransit/domInTransit/domInProd） */
+function clearSinglePipelineField(pcode, type){
+  if(!confirm(`确认清 0「${pcode}」的「${({osInTransit:'海外仓在途', domInTransit:'国内在途', domInProd:'在制未交'})[type]||type}」单字段？`)) return;
+  const p = importedProducts[pcode];
+  if(!p) return;
+  if(type === 'osInTransit'){ p.osInTransit = 0; p.osInTransitWeeks = 0; }
+  else if(type === 'domInTransit'){ p.domInTransit = 0; p.domInTransitWeeks = 0; }
+  else if(type === 'domInProd'){ p.domInProd = 0; p.domInProdWeeks = 0; }
+  saveProducts();
+  renderProductList();
+  renderPerspective();
+  updatePipelineDataSummary();
+  toast(`已清 0「${pcode}」的「${type}」字段`);
+  viewPipelineTickets();
 }
 
 function exportProductList(){
@@ -3753,7 +3921,7 @@ function renderMetricCards(){
 
 function renderResultTable(){
   if(results.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="27" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     return;
@@ -3788,7 +3956,7 @@ function renderResultTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="27" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     return;
@@ -3799,13 +3967,13 @@ function renderResultTable(){
   let html = '';
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
-  let totalCurSales=0, totalLast4=0, totalAvgDemand=0;  // 2026-09-03 合计行补 最新周销量/近四周平均销量(周均)/周均需求
+  let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0;  // 2026-09-09 增 totalLast30：近30天销量合计（last4WeeksSales÷7×30 之累计）
   filtered.forEach((item, idx) => {
     const r = item.r;
     const p = r.p;
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
-    totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalAvgDemand += num(r.avgWeeklyDemand);
+    totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalLast30 += Math.round(num(p.last4WeeksSales) / 7 * 30); totalAvgDemand += num(r.avgWeeklyDemand);
     /* 本周下单量：本次放单窗口（orderWeek < 释放周数）的批次合计 —— v4.17 预放单后含未来 N-1 周的提前释放批 */
     const thisWeekQty = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     /* v4.17 预放单提示：仅当释放周数 >1 且存在「提前释放的未来批」（orderWeek>0 且在窗口内）时显示 */
@@ -3876,6 +4044,7 @@ function renderResultTable(){
       <td class="cell-num">${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天'}</td>
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
       <td class="cell-num">${fmt(p.last4WeeksSales)}</td>
+      <td class="cell-num" title="近四周平均销量 ÷ 7 × 30（按近期实际销售速度折算的月销量）">${fmt(Math.round(num(p.last4WeeksSales) / 7 * 30))}</td>
       <td class="cell-num">${fmt(r.avgWeeklyDemand.toFixed(1))}</td>
       <td class="cell-num">${fmt(fbaV)}</td>
       <td class="cell-num">${fmt(osStockV)}</td>
@@ -3892,13 +4061,14 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="27" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="27" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="27" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="28" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="28" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="28" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
     <td colspan="9" style="text-align:right;">合计（${filtered.length} 个产品）</td>
     <td class="cell-num">${fmt(totalCurSales)}</td>
     <td class="cell-num">${fmt(totalLast4)}</td>
+    <td class="cell-num" title="近四周平均销量合计 ÷ 7 × 30（按近期实际销售速度折算的月销量合计）">${fmt(totalLast30)}</td>
     <td class="cell-num">${fmt(totalAvgDemand.toFixed(1))}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num">${fmt(totalOS)}</td>
@@ -4460,7 +4630,7 @@ function exportResultCSV(){ exportResult('csv'); }
 function exportResultXLSX(){ exportResult('xlsx'); }
 function exportResult(format){
   if(results.length === 0){ alert('暂无结果'); return; }
-  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退','尾数顺延'];  /* v4.7 末列=常规方式停用回退提示；v4.8 再末列=本周缺口不足阈值被顺延的量 */
+  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','近30天销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退','尾数顺延'];  /* v4.7 末列=常规方式停用回退提示；v4.8 再末列=本周缺口不足阈值被顺延的量 */
   const rows = [head];
   results.forEach((r, idx) => {
     const p = r.p;
@@ -4499,7 +4669,7 @@ function exportResult(format){
     rows.push([idx+1, p.categoryLevel3, p.materialCode, p.materialName, p.specCode, p.salesStatus,
       r.isTransit ? '中转' : '直发', p.priorityTier,
       r.orderFreqDays ? r.orderFreqDays + '天' : '7天',
-      p.currentWeekSales, p.last4WeeksSales, r.avgWeeklyDemand.toFixed(1),
+      p.currentWeekSales, p.last4WeeksSales, Math.round(num(p.last4WeeksSales) / 7 * 30), r.avgWeeklyDemand.toFixed(1),
       fbaV, osStockV, divertV, osInTrV, domT, domP, withProdTotal,
       Math.round(r.avgWeeklyDemand * (Math.round((num(p.prodCycleDays)||42)/7) + (num(p.safetyStockWeeks)||2))),
       r.rec, r.actualRec, thisWeekQty, r.sellableWeeks,
@@ -4552,7 +4722,7 @@ function exportPerspective(format){
   const fStatus = ($('perspFilterStatus')?.value || '');
   const resultMap = {};
   (results || []).forEach(r => { if(r.p) resultMap[r.p.materialCode] = r; });
-  const headers = ['#','三级','颜色套装','产品数','近四周平均销量','周需求','月均需求','FBA库存','海外仓库存','海外仓在途','挪用库存','当前库存合计','国内在途','在制未交','含在制总数','本次备货量','本周下单量','当前库存可售时间(月)','含在制总数可售时间(月)','含本周下单量可售(月)','含本周下单量实际可售(月)','状态','料品编码'];
+  const headers = ['#','三级','颜色套装','产品数','近四周平均销量','近30天销量','周需求','月均需求','FBA库存','海外仓库存','海外仓在途','挪用库存','当前库存合计','国内在途','在制未交','含在制总数','本次备货量','本周下单量','当前库存可售时间(月)','含在制总数可售时间(月)','含本周下单量可售(月)','含本周下单量实际可售(月)','状态','料品编码'];
   const rows = [headers];
   const groups = {};
   Object.values(importedProducts).forEach(p => {
@@ -4597,7 +4767,7 @@ function exportPerspective(format){
     else status = '呆滞';
     if(fStatus && fStatus !== status) return;
     counter++;
-    rows.push([counter, g.lv3, g.color, g.products.length, last4Sales, weeklyDemand, monthlyAvg,
+    rows.push([counter, g.lv3, g.color, g.products.length, last4Sales, Math.round(last4Sales / 7 * 30), weeklyDemand, monthlyAvg,
       fba, osStock, osInTransit, divert, currentStock, domT, domP, withProdTotal,
       replenish, thisWeekQty,
       sellNow >= 999 ? '∞' : sellNow.toFixed(1),
@@ -4677,6 +4847,8 @@ function renderDetailTable(){
   const fCode = ($('detailFilterCode')?.value || '').trim().toLowerCase();
   const fSpec = ($('detailFilterSpec')?.value || '').trim().toLowerCase();
   const fMethod = ($('detailFilterMethod')?.value || '').trim();
+  const fStatus = ($('detailFilterStatus')?.value || '').trim();
+  const fAdvice = ($('detailFilterAdvice')?.value || '').trim();
   const filtered = [];
   results.forEach((r, origIdx) => {
     const p = r.p;
@@ -4686,6 +4858,7 @@ function renderDetailTable(){
     if(fLv3 && !lv3.includes(fLv3)) return;
     if(fCode && !code.includes(fCode)) return;
     if(fSpec && !spec.includes(fSpec)) return;
+    if(fStatus && (p.salesStatus || '').trim() !== fStatus) return;
     if(fMethod){
       /* 命中条件：replenishments 中至少有一行满足"运输方式 = fMethod" */
       const hit = (r.replenishments || []).some(rp => {
@@ -4694,6 +4867,24 @@ function renderDetailTable(){
         return true;
       });
       if(!hit) return;
+    }
+    /* 备货建议筛选：与结果表 advice 算法同源（line 4790-4795）。预计算 4 个依赖值，逻辑保持一致 */
+    if(fAdvice){
+      const _wk = num(r.avgWeeklyDemand);
+      const _cs = num(p.currentWeekSales);
+      const _rate = _wk > 0 ? (_cs / _wk) : 0;
+      const _fba = num(p.fbaStock), _os = num(p.osStock), _div = num(p.divertStock), _osIn = num(p.osInTransit);
+      const _monthDisp = monthlyAvgImport(p);
+      const _monthSell = _monthDisp || (_wk * 4.33);
+      const _sellNowMonths = _monthSell > 0 ? ((_fba + _os + _div + _osIn) / _monthSell) : (_fba + _os + _div + _osIn > 0 ? 999 : 0);
+      let _advice;
+      if(r.noStock) _advice = '售完即止·不备货';
+      else if(_wk <= 0) _advice = '无需求·不备货';
+      else if(_rate < 0.6) _advice = '销量低迷·谨慎备货';
+      else if(num(r.stockoutWeeks) > 0 || _sellNowMonths < 1) _advice = '缺货·紧急补货';
+      else if(_sellNowMonths >= 4) _advice = '库存充足·慎备货';
+      else _advice = '正常·建议备货';
+      if(_advice !== fAdvice) return;
     }
     filtered.push({ r, origIdx });
   });
@@ -5025,6 +5216,8 @@ function clearDetailFilters(){
     const el = $(id); if(el) el.value = '';
   });
   const fm = $('detailFilterMethod'); if(fm) fm.value = '';
+  const fSt = $('detailFilterStatus'); if(fSt) fSt.value = '';
+  const fAd = $('detailFilterAdvice'); if(fAd) fAd.value = '';
   const fs2 = $('detailSortBy'); if(fs2) fs2.value = 'default';
   pageState.detail = 1;
   renderDetailTable();
@@ -5304,6 +5497,7 @@ function renderPerspective(){
       <td>${esc(agg.g.color||'--')}</td>
       <td class="cell-num">${productCount}</td>
       <td class="cell-num">${fmt(agg.last4Sales)}</td>
+      <td class="cell-num" title="近四周平均销量 ÷ 7 × 30（按近期实际销售速度折算的月销量）">${fmt(Math.round(agg.last4Sales / 7 * 30))}</td>
       <td class="cell-num">${fmt(agg.weeklyDemand)}</td>
       <td class="cell-num">${fmt(agg.monthlyAvg)}</td>
       <td class="cell-num cell-plan">${fmt(agg.currentStock)}</td>
@@ -5337,6 +5531,7 @@ function renderPerspective(){
       <td colspan="3" style="text-align:right;">合计（${counter} 组 / ${totalProductCount} 个产品）</td>
       <td class="cell-num">${totalProductCount}</td>
       <td class="cell-num">${fmt(totalLast4)}</td>
+      <td class="cell-num" title="近四周平均销量合计 ÷ 7 × 30（按近期实际销售速度折算的月销量合计）">${fmt(Math.round(totalLast4 / 7 * 30))}</td>
       <td class="cell-num">${fmt(totalWeeklyDemand)}</td>
       <td class="cell-num">${fmt(totalMonthly)}</td>
       <td class="cell-num cell-plan">${fmt(totalStockNow)}</td>
