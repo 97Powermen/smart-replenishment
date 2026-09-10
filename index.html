@@ -339,6 +339,16 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .fc-issue-table th { background:var(--bg-soft); font-weight:600; white-space:nowrap; }
 .fc-issue-table td.raw { font-family:ui-monospace,Consolas,monospace; color:#cf1322; }
 .fc-modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+/* v4.23 「已手工调整」标记（紫系：与橙运输回退 / 灰蓝尾数顺延 / 绿预放单 / 红预测异常区分）
+   用于备货分析结果明细：排序后仍能一眼看出哪些产品被自己改过（数量 / 运输方式 / 需求出货日期 / 新增批次） */
+.adj-badge { display:inline-block; margin-left:5px; padding:0 5px; border-radius:3px; background:#efe7ff; color:#6d28d9; border:1px solid #c4b0f7; font-size:10.5px; line-height:15px; vertical-align:1px; font-weight:600; cursor:help; white-space:nowrap; }
+.adj-count-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; background:#efe7ff; color:#6d28d9; border:1px solid #c4b0f7; font-size:12px; font-weight:600; cursor:pointer; }
+.adj-count-badge:hover { background:#e4d8ff; }
+tr.adj-row > td { background:#fbf9ff !important; }
+tr.adj-row:hover > td { background:#f4eeff !important; }
+tr.adj-row > td:first-child { box-shadow: inset 3px 0 0 0 #7c3aed; }
+.adj-tip { background:#f7f3ff; border:1px solid #d8c8fb; border-left:4px solid #7c3aed; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.7; color:#5b21b6; }
+.adj-tip b { color:#5b21b6; }
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
 .tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
@@ -820,11 +830,13 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
         <div class="icon" data-page-node-id="PvJAx9afXAnvT5JmVF4R8J">📋</div>
         <h2 data-page-node-id="9YHS18HwEAmIjcXYsMrKWE">备货分析结果明细（逐品周次计划）</h2>
         <div class="right" data-page-node-id="z7VGZH58leyoB1hVqZRQWp">
+          <!-- v4.23 已手工调整产品数：点击 = 一键只看已调整（与「调整状态」筛选联动） -->
+          <span class="adj-count-badge" id="detailAdjustedInfo" style="display:none;" onclick="filterDetailAdjustedOnly()" title="点击只看已手工调整的产品（数量 / 运输方式 / 需求出货日期 / 新增批次）"></span>
           <span class="count-badge" id="detailCount" data-page-node-id="hv3307RIxaYyeFoEnmScls">共 0 个产品</span>
           <button class="btn btn-sm btn-outline" onclick="toggleExpandAllDetail(this)" data-page-node-id="QvEcYDaN7ghKpDHn9h07qE">📂 全部展开</button>
         </div>
       </div>
-      <div class="warn-box" data-page-node-id="fhVxfa1B86yPLHjVLU0UA8">点击行展开/收起单个产品的周次计划与下单批次。每个产品的明细含 2 个子表：① 周次模拟（周/期初可售/到货/需求/期末可售/缺货/建议下单/方式）② 本品下单批次（需求出货日期/运输方式/数量）。</div>
+      <div class="warn-box" data-page-node-id="fhVxfa1B86yPLHjVLU0UA8">点击行展开/收起单个产品的周次计划与下单批次。每个产品的明细含 2 个子表：① 周次模拟（周/期初可售/到货/需求/期末可售/缺货/建议下单/方式）② 本品下单批次（需求出货日期/运输方式/数量）。<br><b style="color:#6d28d9;">✏️ 手工调整过的产品会自动带紫色「已调整」标记</b>（行底色 + 料品编码旁标签），可用「调整状态」筛选或「已调整优先」排序，改完关闭详情也不会搞混；重新「🚀 生成备货方案」即恢复为算法结果、标记清空。</div>
       <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;" data-page-node-id="ehkxaPGDH50f5k6VKL8pF8">
         <div class="form-group" style="margin:0;" data-page-node-id="N64hP45xVCrnvYR3taXmqb">
           <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ooTqvD6N1CAL7sXO9NU56p">三级</label>
@@ -869,10 +881,20 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
             <option value="售完即止·不备货" data-page-node-id="CzXANqjJrMyjk9Akt6WR3Z">售完即止·不备货</option>
           </select>
         </div>
+        <div class="form-group" style="margin:0;" data-page-node-id="AdjFilterGroup">
+          <!-- v4.23 调整状态筛选：只看自己改过的产品（排序后排查「哪些已处理、哪些还没动」） -->
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="AdjFilterLabel">调整状态</label>
+          <select id="detailFilterAdjusted" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;color:#6d28d9;font-weight:600;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="AdjFilterSelect">
+            <option value="">全部</option>
+            <option value="yes">✏️ 已调整</option>
+            <option value="no">未调整</option>
+          </select>
+        </div>
         <div class="form-group" style="margin:0;" data-page-node-id="O8jPdjhlsC0AXfAU2BKp3L">
           <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="g7XBeRD3hdUig0PeYiLkZZ">排序</label>
           <select id="detailSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="LDzElCJ1CTQmhemQO7KycX">
             <option value="default" data-page-node-id="uGPLM2QZZECGjN50QqB0hl">默认（原顺序）</option>
+            <option value="adjustedFirst" data-page-node-id="AdjSortOpt">✏️ 已调整优先</option>
             <option value="lv3" data-page-node-id="OBeP2DWbMskEk3GYtTPx2h">三级（分组）</option>
             <option value="codeAsc" data-page-node-id="TIXQluGvS0OC6U7Y0wbsR5">料品编码 ↑</option>
             <option value="weeklyDesc" data-page-node-id="MZgP3YeDe7LcJvkXgqA2gT">周均需求 ↓</option>
@@ -2909,6 +2931,17 @@ function planProduct(p){
     replenishments.push(...merged);
   }
 
+  /* v4.23 手工调整基线快照：记录算法生成的原始批次（数量 / 运输方式 / 需求出货日期）。
+     用户在各处编辑（周次计划、本品下单批次表、清空本周备货、新增本周批次、结果表本周下单量）
+     后，统一用 manualAdjustInfo(r) 与基线比对即可标出「已调整」产品——各编辑入口无需埋点。
+     重新「生成备货方案」会重建基线 → 标记自动清空。 */
+  replenishments.forEach(rp => {
+    rp.origAmount = num(rp.amount);
+    rp.origMethodName = (rp.method && rp.method.name) ? String(rp.method.name) : '';
+    rp.origArriveDate = rp.arriveDate || '';
+    rp.origOrderWeek = num(rp.orderWeek);   /* 放单周次（本周下单量为正数时会切批到 W1 放单） */
+  });
+
   // Final simulation
   const finalSim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArrivals, avgStartWeek, computeInitialStock(p));
   const totalRec = replenishments.reduce((a,b)=>a+b.amount, 0);
@@ -4383,6 +4416,7 @@ function onResultThisWeekEdit(td){
   renderResultTable();
   if(typeof renderMetricCards === 'function') renderMetricCards();
   toast(`已更新本周下单量：${pcode} → ${newVal} 套`);
+  refreshDetailRowAdjusted(r);   // v4.23 明细表该行「已调整」标记同步
 }
 
 /* detail 周次计划表可编辑单元格回调（thisWeekQty / arriveDate / method） */
@@ -4519,6 +4553,7 @@ function onWeekDetailEdit(td){
   renderOrderTable();
   if(typeof renderMetricCards === 'function') renderMetricCards();
   if(typeof renderPerspective === 'function') renderPerspective();
+  refreshDetailRowAdjusted(r);   // v4.23 明细表该行「已调整」标记同步
 }
 
 /* 本周下单量 pending 模式：编辑后标记为待确认，需点击「确认更改」按钮才生效 */
@@ -4695,6 +4730,7 @@ function onBatchFieldEdit(td, bidx, field){
   if(typeof renderMetricCards === 'function') renderMetricCards();
   if(typeof renderPerspective === 'function') renderPerspective();
   refreshCurrentDetail(pcode);
+  refreshDetailRowAdjusted(r);   // v4.23 明细表该行「已调整」标记同步
 }
 
 /* 根据 rp.arriveDate / rp.method / rp.isTransit 重算 rp.orderDate + rp.arriveWeek
@@ -4765,6 +4801,7 @@ function onBatchQtyEdit(td, bidx){
   if(typeof renderPerspective === 'function') renderPerspective();
   /* 同步刷新当前详情（弹窗/行内展开），让周次计划表/批次表看到新值 */
   refreshCurrentDetail(pcode);
+  refreshDetailRowAdjusted(r);   // v4.23 明细表该行「已调整」标记同步
 }
 
 /* 逐品周次计划表：「清除本周备货」按钮
@@ -5051,6 +5088,108 @@ function toast(msg){
 /* ============================================================
  * Page 2: 备货分析结果明细（行展开 inline — 懒加载 + 分页）
  * ============================================================ */
+/* ============================================================
+ * v4.23 「已手工调整」标记
+ * 背景：备货分析结果明细里用户会先排序、再逐个调整（数量 / 运输方式 / 需求出货日期），
+ *      详情关掉后就分不清哪些已经处理过。这里用「与算法基线比对」自动打标，无需在
+ *      各编辑入口埋点：只要结果与 planProduct 快照（rp.origAmount / origMethodName /
+ *      origArriveDate）不同，或出现算法之后新增的批次，即视为「已调整」。
+ *      重新「🚀 生成备货方案」重建基线 → 标记自动清空（与「清空本周备货」等语义一致）。
+ * ============================================================ */
+const ADJ_FIELD_LABEL = { amount:'数量', method:'运输方式', arriveDate:'需求出货日期', orderWeek:'放单周次', added:'新增批次' };
+/* 返回 { adjusted, count, kinds:[], rows:[{batch, field, from, to}] } */
+function manualAdjustInfo(r){
+  const rps = (r && Array.isArray(r.replenishments)) ? r.replenishments : [];
+  const rows = [];
+  let nAmount = 0, nMethod = 0, nDate = 0, nOrder = 0, nAdded = 0;
+  rps.forEach((rp, i) => {
+    if(!rp) return;
+    /* 算法之后新增的批次（ensureThisWeekBatch / 本周下单量填正数自动补批）没有基线字段 */
+    if(rp.origAmount === undefined){
+      nAdded++;
+      rows.push({ batch:i+1, field:'added', from:'—', to: fmt(num(rp.amount)) + ((rp.method && rp.method.name) ? ' / ' + rp.method.name : '') });
+      return;
+    }
+    if(num(rp.amount) !== num(rp.origAmount)){
+      nAmount++;
+      rows.push({ batch:i+1, field:'amount', from: fmt(num(rp.origAmount)), to: fmt(num(rp.amount)) });
+    }
+    const mn = (rp.method && rp.method.name) ? String(rp.method.name) : '';
+    const omn = String(rp.origMethodName || '');
+    if(mn !== omn){
+      nMethod++;
+      rows.push({ batch:i+1, field:'method', from: omn || '—', to: mn || '—' });
+    }
+    const ad = String(rp.arriveDate || '');
+    const oad = String(rp.origArriveDate || '');
+    if(ad !== oad){
+      nDate++;
+      rows.push({ batch:i+1, field:'arriveDate', from: oad || '—', to: ad || '—' });
+    }
+    if(num(rp.orderWeek) !== num(rp.origOrderWeek)){
+      nOrder++;
+      rows.push({ batch:i+1, field:'orderWeek', from: 'W' + (num(rp.origOrderWeek) + 1), to: 'W' + (num(rp.orderWeek) + 1) });
+    }
+  });
+  const kinds = [];
+  if(nAmount) kinds.push('数量 ×' + nAmount);
+  if(nMethod) kinds.push('运输方式 ×' + nMethod);
+  if(nDate) kinds.push('需求出货日期 ×' + nDate);
+  if(nOrder) kinds.push('放单周次 ×' + nOrder);
+  if(nAdded) kinds.push('新增批次 ×' + nAdded);
+  return { adjusted: rows.length > 0, count: rows.length, kinds, rows };
+}
+/* 明细表行内标记：料品编码旁紫色「已调整」标签（hover 显示逐批差异） */
+function adjBadgeHtml(info){
+  if(!info || !info.adjusted) return '';
+  const detail = info.rows.slice(0, 6).map(x => `批次${x.batch} ${ADJ_FIELD_LABEL[x.field] || x.field}：${x.from} → ${x.to}`).join('\n');
+  const more = info.rows.length > 6 ? `\n… 共 ${info.rows.length} 处` : '';
+  return `<span class="adj-badge" title="已手工调整（${info.kinds.join(' / ')}）\n${esc(detail)}${more}\n重新「生成备货方案」可恢复为算法结果">✏️ 已调整</span>`;
+}
+/* 详情头部提示条：列出该产品被改了什么（行内展开 / 弹窗共用） */
+function adjTipHtml(r){
+  const info = manualAdjustInfo(r);
+  if(!info.adjusted) return '';
+  const list = info.rows.slice(0, 8).map(x => `批次${x.batch} <b>${ADJ_FIELD_LABEL[x.field] || x.field}</b>：${esc(x.from)} → <b>${esc(x.to)}</b>`).join('；');
+  const more = info.rows.length > 8 ? ` …共 ${info.rows.length} 处` : '';
+  return `<div class="adj-tip" style="margin:0 0 12px;">✏️ <b>本产品已被手工调整</b>（${esc(info.kinds.join(' / '))}）——${list}${more}。<br>如要恢复算法结果，重新点击「🚀 生成备货方案」即可（标记会一并清空）。</div>`;
+}
+/* 明细页头部胶囊：点击 = 在「全部 / 仅已调整」之间切换（与筛选下拉联动） */
+function filterDetailAdjustedOnly(){
+  const sel = $('detailFilterAdjusted');
+  if(!sel) return;
+  sel.value = (sel.value === 'yes') ? '' : 'yes';
+  pageState.detail = 1;
+  renderDetailTable();
+}
+function renderAdjustedCount(){
+  const el = $('detailAdjustedInfo'); if(!el) return;
+  let n = 0;
+  results.forEach(r => { if(manualAdjustInfo(r).adjusted) n++; });
+  if(n === 0 || results.length === 0){ el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'inline-flex';
+  el.textContent = `✏️ 已调整 ${n} / ${results.length}`;
+}
+/* 单行刷新：只更新该产品在明细表里的「已调整」类名与标签。
+   为什么不用 renderDetailTable()：编辑多发生在行内展开的子表里，整表重建会把展开的子行
+   收起（DOM 被替换、焦点丢失），所以这里做最小 DOM 更新。 */
+function refreshDetailRowAdjusted(r){
+  if(!r) return;
+  const idx = results.indexOf(r);
+  if(idx < 0) return;
+  const tr = document.getElementById('detail-row-' + idx);
+  if(!tr) return;
+  const info = manualAdjustInfo(r);
+  tr.classList.toggle('adj-row', info.adjusted);
+  const cell = tr.children[2];
+  if(cell){
+    const old = cell.querySelector('.adj-badge');
+    if(old) old.remove();
+    if(info.adjusted) cell.insertAdjacentHTML('beforeend', adjBadgeHtml(info));
+  }
+  renderAdjustedCount();
+}
+
 function renderDetailTable(){
   const tbody = $('detailTbody');
   if(!tbody) return;
@@ -5059,6 +5198,7 @@ function renderDetailTable(){
     const dtf0 = $('detailTfoot'); if(dtf0) dtf0.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品';
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
+    renderAdjustedCount();   // v4.23 无结果时隐藏「已调整」胶囊
     return;
   }
   // 筛选 + 记录原始索引（用于懒加载时查找 results[idx]）
@@ -5068,6 +5208,13 @@ function renderDetailTable(){
   const fMethod = ($('detailFilterMethod')?.value || '').trim();
   const fStatus = ($('detailFilterStatus')?.value || '').trim();
   const fAdvice = ($('detailFilterAdvice')?.value || '').trim();
+  const fAdj = ($('detailFilterAdjusted')?.value || '').trim();   // v4.23 调整状态：'' / 'yes' / 'no'
+  /* v4.23 每个产品只算一次「手工调整」信息，筛选 / 排序 / 渲染三处共用 */
+  const _adjCache = {};
+  const adjOf = (origIdx, r) => {
+    if(!_adjCache[origIdx]) _adjCache[origIdx] = manualAdjustInfo(r);
+    return _adjCache[origIdx];
+  };
   const filtered = [];
   results.forEach((r, origIdx) => {
     const p = r.p;
@@ -5078,6 +5225,11 @@ function renderDetailTable(){
     if(fCode && !code.includes(fCode)) return;
     if(fSpec && !spec.includes(fSpec)) return;
     if(fStatus && (p.salesStatus || '').trim() !== fStatus) return;
+    if(fAdj){
+      const _adj = adjOf(origIdx, r).adjusted;
+      if(fAdj === 'yes' && !_adj) return;
+      if(fAdj === 'no' && _adj) return;
+    }
     if(fMethod){
       /* 命中条件：replenishments 中至少有一行满足"运输方式 = fMethod" */
       const hit = (r.replenishments || []).some(rp => {
@@ -5118,7 +5270,9 @@ function renderDetailTable(){
       recDesc: (a, b) => num(b.r.actualRec) - num(a.r.actualRec),
       thisWeekDesc: (a, b) => thisWeekOf(b.r) - thisWeekOf(a.r),
       stockoutDesc: (a, b) => num(b.r.stockoutWeeks) - num(a.r.stockoutWeeks),
-      sellableAsc: (a, b) => num(a.r.sellableWeeks) - num(b.r.sellableWeeks)
+      sellableAsc: (a, b) => num(a.r.sellableWeeks) - num(b.r.sellableWeeks),
+      /* v4.23 已调整优先：把手工改过的产品顶到最前，方便逐条确认/继续处理 */
+      adjustedFirst: (a, b) => (adjOf(b.origIdx, b.r).adjusted ? 1 : 0) - (adjOf(a.origIdx, a.r).adjusted ? 1 : 0)
     }[fSort];
     if(cmp) filtered.sort(cmp);
   }
@@ -5127,6 +5281,7 @@ function renderDetailTable(){
     const dtf1 = $('detailTfoot'); if(dtf1) dtf1.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品（筛选后）/ 总 ' + results.length;
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
+    renderAdjustedCount();
     return;
   }
   /* 2026-09-03 合计行：遍历全量 filtered（含跨页），与 body 单元格同口径累计 */
@@ -5203,10 +5358,10 @@ function renderDetailTable(){
     else if(r.stockoutWeeks > 0 || sellNowMonths < 1){ advice = '缺货·紧急补货'; adviceCls = 's-紧急'; }
     else if(sellNowMonths >= 4){ advice = '库存充足·慎备货'; adviceCls = 's-呆滞'; }
     else { advice = '正常·建议备货'; adviceCls = 's-健康'; }
-    html += `<tr id="detail-row-${origIdx}" onclick="toggleDetailRowLazy(${origIdx}, this)" style="cursor:pointer;">
+    html += `<tr id="detail-row-${origIdx}" class="${adjOf(origIdx, r).adjusted ? 'adj-row' : ''}" onclick="toggleDetailRowLazy(${origIdx}, this)" style="cursor:pointer;">
       <td class="cell-num">${pi+1}</td>
       <td>${esc(p.categoryLevel3||'--')}</td>
-      <td>${esc(p.materialCode||'--')}</td>
+      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(adjOf(origIdx, r))}</td>
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.salesStatus||'--')}</td>
@@ -5249,6 +5404,7 @@ function renderDetailTable(){
     </tr>`;
   }
   const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 ' + filtered.length + ' 个产品（筛选后）/ 总 ' + results.length;
+  renderAdjustedCount();   // v4.23 头部「✏️ 已调整 N / 总数」胶囊
   const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = paginationBar(filtered.length, curPage, 'detail');
 }
 
@@ -5264,6 +5420,7 @@ function buildDetailContent(r){
     <span>单品详情 - ${esc(p.materialCode||'')} ${esc(p.materialName||'')}</span>
     ${specBadgeHtml}
   </div>
+  ${adjTipHtml(r)}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;font-size:12.5px;">
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${tier}">${tier}</span></div>
@@ -5439,6 +5596,7 @@ function clearDetailFilters(){
   const fm = $('detailFilterMethod'); if(fm) fm.value = '';
   const fSt = $('detailFilterStatus'); if(fSt) fSt.value = '';
   const fAd = $('detailFilterAdvice'); if(fAd) fAd.value = '';
+  const fAdj = $('detailFilterAdjusted'); if(fAdj) fAdj.value = '';   // v4.23 调整状态
   const fs2 = $('detailSortBy'); if(fs2) fs2.value = 'default';
   pageState.detail = 1;
   renderDetailTable();
@@ -5892,7 +6050,8 @@ function openDetailBuild(r, p, methods){
       specBadge.style.display = 'none';
     }
   }
-  let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;font-size:12.5px;">
+  let html = `${adjTipHtml(r)}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;font-size:12.5px;">
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${p.priorityTier||99}">${p.priorityTier||'--'}</span></div>
     <div><b>销售状态：</b>${esc(p.salesStatus||'--')}</div>
