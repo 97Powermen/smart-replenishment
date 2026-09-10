@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="zh-CN" data-page-node-id="qr8mhgQE2xVSXkICmltJHA">
+<head data-page-node-id="1qU2ioDmxs6fUObfBdYgau">
+<meta charset="UTF-8" data-page-node-id="oftGlmChrLt64OZZEmKvPq">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="51iFlzNH41aVOPJJBnXSNY">
 <title>计划备货分析</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -330,6 +330,15 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .route-fallback-tip { background:#fff7e6; border:1px solid #f0c27b; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#7a4b00; }
 /* v4.21 预测起始月份缺失/无法识别提示（红，与 .route-fallback-tip 橙 / .tail-defer-tip 灰蓝区分） */
 .fc-warn-tip { background:#fff1f0; border:1px solid #ffa39e; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#a8071a; }
+/* v4.22 预测起始月份「程序无法判断」→ 备货清单常驻提示条 / 行内角标 / 明细弹窗表格 */
+.fc-start-banner { display:flex; align-items:center; gap:10px; margin:0 0 10px; padding:8px 12px; background:#fff1f0; border:1px solid #ffa39e; border-left:4px solid #cf1322; border-radius:6px; font-size:12px; line-height:1.6; color:#a8071a; }
+.fc-start-banner b { color:#cf1322; }
+.fc-bad-badge { display:inline-block; margin-left:5px; padding:0 4px; border-radius:3px; background:#cf1322; color:#fff; font-size:10px; line-height:14px; vertical-align:1px; cursor:help; font-weight:600; }
+.fc-issue-table { width:100%; border-collapse:collapse; font-size:12px; }
+.fc-issue-table th, .fc-issue-table td { border:1px solid var(--border); padding:4px 8px; text-align:left; }
+.fc-issue-table th { background:var(--bg-soft); font-weight:600; white-space:nowrap; }
+.fc-issue-table td.raw { font-family:ui-monospace,Consolas,monospace; color:#cf1322; }
+.fc-modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
 .tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
@@ -405,55 +414,55 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
 }
 </style>
 </head>
-<body>
-<div class="container">
+<body data-page-node-id="w4EOHErd0NiidGKLtXeJQd">
+<div class="container" data-page-node-id="awi4qVYxaFwPaHCOAr64wQ">
 
   <!-- Brand header -->
-  <header class="brand-header">
-    <div class="brand-row">
-      <div class="brand-left">
-        <div class="brand-logo">📦</div>
-        <div class="brand-text">
-          <h1>计划备货分析<span class="ver">v2 · 模式3算法</span></h1>
-          <p>基于周库存模拟 + 迭代补货 + 多方式分单 + 成本计算</p>
+  <header class="brand-header" data-page-node-id="DpD0YCVuMB2qgt5XycTfc5">
+    <div class="brand-row" data-page-node-id="93612KzwfphUIoFSFYGhfN">
+      <div class="brand-left" data-page-node-id="MSFbo4955uLUgFYOHqdDTN">
+        <div class="brand-logo" data-page-node-id="Z1u7zZ67jMIVUBsNosGtWL">📦</div>
+        <div class="brand-text" data-page-node-id="MxYut9uVVrQrzwosP1BiNm">
+          <h1 data-page-node-id="0wtrKsY1IE8G4ScGoLcELm">计划备货分析<span class="ver" data-page-node-id="ZrpyUwIhftrr7MXCPmsqg7">v2 · 模式3算法</span></h1>
+          <p data-page-node-id="a2xbPuLDe7JRFFdjlZb9p4">基于周库存模拟 + 迭代补货 + 多方式分单 + 成本计算</p>
         </div>
       </div>
-      <div class="brand-right">
-        <a class="home-btn" href="https://97powermen.github.io/supply-chain-hub/" target="_blank" rel="noopener" title="返回 supply-chain-hub 门户"><span class="emoji">🏠</span>主页</a>
-        <nav class="seg-tabs" id="brandTabs">
-          <a class="seg-tab active" data-page="page-basics" href="#page-basics"><span class="emoji">📋</span>基础数据</a>
-          <a class="seg-tab" data-page="page-result" href="#page-result"><span class="emoji">📊</span>分析结果</a>
-          <a class="seg-tab" data-page="page-perspective" href="#page-perspective"><span class="emoji">🔍</span>备货透视</a>
-          <a class="seg-tab" data-page="page-order" href="#page-order"><span class="emoji">📦</span>备货下单</a>
-          <a class="seg-tab" data-page="page-sysmgmt" href="#page-sysmgmt"><span class="emoji">⚙️</span>系统管理</a>
+      <div class="brand-right" data-page-node-id="TdCxt8qWS1NA6ff9ekYIJH">
+        <a class="home-btn" href="https://97powermen.github.io/supply-chain-hub/" target="_blank" rel="noopener" title="返回 supply-chain-hub 门户" data-page-node-id="bZNUO1mDI9q8QjXMnfVvJA"><span class="emoji" data-page-node-id="xwE4b0fGmqFMebd0OKQHZV">🏠</span>主页</a>
+        <nav class="seg-tabs" id="brandTabs" data-page-node-id="uZGgrH9FackYhtOniLjEJa">
+          <a class="seg-tab active" data-page="page-basics" href="#page-basics" data-page-node-id="7NfAYKBBeI0JRE4pvoZdZY"><span class="emoji" data-page-node-id="eELVx5KJB8EydnCe65ezfb">📋</span>基础数据</a>
+          <a class="seg-tab" data-page="page-result" href="#page-result" data-page-node-id="OZ30xJBG1YHwFAZRuTrjIY"><span class="emoji" data-page-node-id="BxEFNt4WLVLODaFuigyR7Z">📊</span>分析结果</a>
+          <a class="seg-tab" data-page="page-perspective" href="#page-perspective" data-page-node-id="ZSWepol1WKN5r7P8qnMf8r"><span class="emoji" data-page-node-id="JwQqM45f6TfWCisCrAkaja">🔍</span>备货透视</a>
+          <a class="seg-tab" data-page="page-order" href="#page-order" data-page-node-id="JKjRo0A7heb1GbJtZvdSzs"><span class="emoji" data-page-node-id="Ci6RgQG9wjItVvklFDFHqF">📦</span>备货下单</a>
+          <a class="seg-tab" data-page="page-sysmgmt" href="#page-sysmgmt" data-page-node-id="4gbHmzkR4v73FOunyng4KA"><span class="emoji" data-page-node-id="htvkiqInInD5X7pFW4sLnZ">⚙️</span>系统管理</a>
         </nav>
       </div>
     </div>
   </header>
 
   <!-- Collab bar -->
-  <div class="collab-bar">
-    <div class="group">
-      <label>当前用户：</label>
-      <select id="userSelect" onchange="onUserChange()" style="min-width:140px;"></select>
+  <div class="collab-bar" data-page-node-id="RgRHjygiAibop2z4yfzzYm">
+    <div class="group" data-page-node-id="F1OU6HAyCqhFppb2gNGXrk">
+      <label data-page-node-id="QsfG9RQn9oUVuJn6Rlvw7y">当前用户：</label>
+      <select id="userSelect" onchange="onUserChange()" style="min-width:140px;" data-page-node-id="YiDs3byPCd0JIJ4SOZrzbh"></select>
     </div>
-    <div class="group">
-      <label>角色：</label>
-      <select id="roleSelect">
-        <option value="录入">录入</option>
-        <option value="管理员">管理员</option>
-        <option value="查看者">查看者</option>
+    <div class="group" data-page-node-id="ZiZ4qvzoTtspODAvLed8FR">
+      <label data-page-node-id="3THGCldERaCnAuqHjnHMqY">角色：</label>
+      <select id="roleSelect" data-page-node-id="1qWahE0qUngCzVQVLq0L1O">
+        <option value="录入" data-page-node-id="C7y5EDrQ5GZMf3W4N1YH9u">录入</option>
+        <option value="管理员" data-page-node-id="fL0s3bu56RKy58xmO4CXqB">管理员</option>
+        <option value="查看者" data-page-node-id="xBBw7Mue84I1zHqq7ZSPZZ">查看者</option>
       </select>
     </div>
-    <div class="group">
-      <button class="btn btn-sm btn-outline" onclick="openUserModal()">👤 用户管理</button>
+    <div class="group" data-page-node-id="gf2qSRQ1741dsa14edBQmO">
+      <button class="btn btn-sm btn-outline" onclick="openUserModal()" data-page-node-id="JhF2jPI2WhwFwVi9CMyqrq">👤 用户管理</button>
     </div>
-    <div class="divider-v"></div>
-    <div class="group">
-      <label>数据状态：</label>
-      <span id="dataStatus" class="status-badge status-草稿">草稿</span>
+    <div class="divider-v" data-page-node-id="njKdyf7ginJayPnhmbqh7S"></div>
+    <div class="group" data-page-node-id="uautVI0ehxzjrsFfoOxbXO">
+      <label data-page-node-id="j6Q8Ioqv7pQw7iNiYFeSKl">数据状态：</label>
+      <span id="dataStatus" class="status-badge status-草稿" data-page-node-id="OhxaJ228zTXjnQMRJNd0AN">草稿</span>
     </div>
-    <div class="group" style="margin-left:auto;font-size:11px;color:var(--text-muted);">
+    <div class="group" style="margin-left:auto;font-size:11px;color:var(--text-muted);" data-page-node-id="5ladwbGXYS1NNNT41PxjaH">
       💡 所有数据自动保存到本地浏览器
     </div>
   </div>
@@ -462,202 +471,205 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
    * Page 1: 基础数据
    * 包含：运输方式管理 / 产品导入 / 在途在制
    * ============================================================ -->
-  <div class="page-section active" id="page-basics">
-    <div class="page-banner">
-      <div class="icon">📋</div>
-      <div>
-        <div class="title">基础数据</div>
-        <div class="subtitle">运输方式 / 产品导入 / 在途在制</div>
+  <div class="page-section active" id="page-basics" data-page-node-id="FXIl1HCMG1QifIlbNiCmNC">
+    <div class="page-banner" data-page-node-id="UAnmi7U06RjsQKweYSOkRj">
+      <div class="icon" data-page-node-id="rsEI8TBkKSj3ONYBZi9etW">📋</div>
+      <div data-page-node-id="AlxQjJ4FkKAaUxYjCV8mmH">
+        <div class="title" data-page-node-id="UX8OII1YnHDNbakt6z3u7E">基础数据</div>
+        <div class="subtitle" data-page-node-id="JotrYxZZ945HO3u1Qm3fMX">运输方式 / 产品导入 / 在途在制</div>
       </div>
     </div>
 
   <!-- Section 1: 运输方式管理 -->
-  <div class="card" id="sec-methods">
-    <div class="card-header">
-      <div class="icon">🚚</div>
-      <h2>运输方式管理（按优先级排序）</h2>
-      <div class="right">
-        <button class="btn btn-sm btn-outline" onclick="addMethodRow()">＋ 新增方式</button>
+  <div class="card" id="sec-methods" data-page-node-id="01POKFrDDIopAOSi7RcY3z">
+    <div class="card-header" data-page-node-id="cRiOJsNKBT5uZBbSESHyeX">
+      <div class="icon" data-page-node-id="4LXLH2VHmj1ABGbqYPnWrQ">🚚</div>
+      <h2 data-page-node-id="yocChiW7744vqpfFXNGHk0">运输方式管理（按优先级排序）</h2>
+      <div class="right" data-page-node-id="r4KGtgmBY1TjHsuG1mS7Ux">
+        <button class="btn btn-sm btn-outline" onclick="addMethodRow()" data-page-node-id="XWVkUbJP8CZgXE4qbABlAC">＋ 新增方式</button>
       </div>
     </div>
-    <div class="warn-box">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b>「是否启用」开关</b>：停用的方式<b>不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b>发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。🌍 <b>区域限制（v4.12）</b>：「区域」列标注线路适用区域（可填 美国/加拿大 等多值，用 / 分隔；空 = 通用）。产品备货只在<b>区域匹配</b>的线路中选择（精确相等 + 通用通配，如美国产品只能选区域=美国或通用的线路），跨区线路（如 美转加30）不会被选为常规/升舱方式。</div>
-    <div class="result-table-wrap is-resizable">
-      <table class="result-table" id="methodTable" style="min-width:1300px;table-layout:fixed;">
-        <thead>
-          <tr>
-            <th style="width:130px;text-align:center;">优先级</th>
-            <th style="width:140px;">运输方式</th>
-            <th style="width:110px;">区域</th>
-            <th style="width:120px;">单位运费(¥/KG)</th>
-            <th style="width:130px;">海外仓到FBA时效(天)</th>
-            <th style="width:130px;">国内到FBA时效(天)</th>
-            <th style="width:120px;">最小批次量</th>
-            <th style="width:140px;text-align:center;">是否启用</th>
-            <th style="width:160px;text-align:center;">操作</th>
+    <div class="warn-box" data-page-node-id="TqIDTvVw0oshm4KBnGUo2x">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b data-page-node-id="US8zu2pDGjUHw4kwQbodDw">「是否启用」开关</b>：停用的方式<b data-page-node-id="a7sCHO2bcvY8hCd861OQAr">不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b data-page-node-id="2c6rcyp569CrThO56o0vv3">发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。🌍 <b data-page-node-id="FyWRHP9wco8PrJp6QLCbot">区域限制（v4.12）</b>：「区域」列标注线路适用区域（可填 美国/加拿大 等多值，用 / 分隔；空 = 通用）。产品备货只在<b data-page-node-id="pSY0IDd0Q7K5ltDaLPO2Ek">区域匹配</b>的线路中选择（精确相等 + 通用通配，如美国产品只能选区域=美国或通用的线路），跨区线路（如 美转加30）不会被选为常规/升舱方式。</div>
+    <div class="result-table-wrap is-resizable" data-page-node-id="CA4PZGpEgDMwr0IgMIf2vM">
+      <table class="result-table" id="methodTable" style="min-width:1300px;table-layout:fixed;" data-page-node-id="vxJt6POPNqb4TEflohieOs">
+        <thead data-page-node-id="BI2JYX7dDUdYg8FRGEAc4i">
+          <tr data-page-node-id="BbX5Oj8NMZA9pOvR3QI8Gm">
+            <th style="width:130px;text-align:center;" data-page-node-id="S4Bgp1W4P9lsHHsNa8dxCH">优先级</th>
+            <th style="width:140px;" data-page-node-id="PmDumTim99lQM3BicCOmzt">运输方式</th>
+            <th style="width:110px;" data-page-node-id="w1E3254awL8IjEt4OS8l7L">区域</th>
+            <th style="width:120px;" data-page-node-id="cUSzPQBj5DpGcME3EjQ7Ev">单位运费(¥/KG)</th>
+            <th style="width:130px;" data-page-node-id="H3n9BNnmvWiSYq1miXDYLT">海外仓到FBA时效(天)</th>
+            <th style="width:130px;" data-page-node-id="kCUdyessoG1SLmhpswwfQX">国内到FBA时效(天)</th>
+            <th style="width:120px;" data-page-node-id="G24ZWdysYwGsDcTZyWj2KX">最小批次量</th>
+            <th style="width:140px;text-align:center;" data-page-node-id="oCWIvyQQOcPBKIE1m0lOJh">是否启用</th>
+            <th style="width:160px;text-align:center;" data-page-node-id="xH2BXGGFJmQX1iqC6UEa2S">操作</th>
           </tr>
         </thead>
-        <tbody id="methodTbody"></tbody>
+        <tbody id="methodTbody" data-page-node-id="v1H26MEADYmAw5SoV1TF14"></tbody>
       </table>
     </div>
   </div>
 
   <!-- Section 1.5: FBA上架天数设定 -->
-  <div class="card" id="sec-fba-shelf">
-    <div class="card-header">
-      <div class="icon">📦</div>
-      <h2>FBA 上架天数</h2>
+  <div class="card" id="sec-fba-shelf" data-page-node-id="ovrRfc2JTuY2C8p2IAvlhh">
+    <div class="card-header" data-page-node-id="DYVpClsv85Omgqyvj40OOi">
+      <div class="icon" data-page-node-id="WvpMNMLgXnb1XD7Af01aCd">📦</div>
+      <h2 data-page-node-id="t5p4Zpo8yWaFirStkUtYEI">FBA 上架天数</h2>
     </div>
-    <div class="warn-box">FBA上架天数指货物到达FBA仓库后，完成接收、贴标、上架等处理并可售所需的时间（天）。此参数用于计算「预计到仓时间」= 需求出货日期 + 运输方式时效 + FBA上架天数。</div>
-    <div class="cfg-row">
-      <div class="cfg-label">FBA 上架天数</div>
-      <div class="cfg-control">
-        <input type="number" min="0" id="fbaShelfDaysInput" value="3" onchange="onFbaShelfDaysChange(this.value)">
-        <div class="hint">默认 3 天</div>
+    <div class="warn-box" data-page-node-id="3eNf5aEk0VLucPhegS6gid">FBA上架天数指货物到达FBA仓库后，完成接收、贴标、上架等处理并可售所需的时间（天）。此参数用于计算「预计到仓时间」= 需求出货日期 + 运输方式时效 + FBA上架天数。</div>
+    <div class="cfg-row" data-page-node-id="2fbxBhVLQ2xaHhN6QFBqxK">
+      <div class="cfg-label" data-page-node-id="a3HaXDfQKLp7fgehwHzLlB">FBA 上架天数</div>
+      <div class="cfg-control" data-page-node-id="lT50ZEZDS3MqDuviAti0w4">
+        <input type="number" min="0" id="fbaShelfDaysInput" value="3" onchange="onFbaShelfDaysChange(this.value)" data-page-node-id="EUeEHwyNcrPQ5DDjDbuLMr">
+        <div class="hint" data-page-node-id="hQCxGXHZIXRMg0ePhRLuFK">默认 3 天</div>
       </div>
     </div>
   </div>
 
   <!-- Section 1.55: 提前释放订单周数（预放单 v4.17） -->
-  <div class="card" id="sec-release-orders">
-    <div class="card-header">
-      <div class="icon">🎯</div>
-      <h2>提前释放订单（预放单）</h2>
+  <div class="card" id="sec-release-orders" data-page-node-id="Kf6RHWZSp1TL4O9v4KkdD6">
+    <div class="card-header" data-page-node-id="nRaaHlltC9DZaBeeL5X5Dz">
+      <div class="icon" data-page-node-id="aEyxR0eYppEs3Jaf29UHSo">🎯</div>
+      <h2 data-page-node-id="XoavEmruhDy5lcypVKBnu2">提前释放订单（预放单）</h2>
     </div>
-    <div class="warn-box">长假/节假日（如国庆）常需要<b>提前放单</b>：本周把未来 1~2 周该下的订单批次也一并下出去（PO 提前下发），各批次的<b>需求出货日期 / 预计到仓时间保持原计划不变</b> —— 不是把两三周的量合并成一单集中出货，只是下单动作提前。本周下单量、备货下单表会同步包含这些提前释放的批次。</div>
-    <div class="cfg-row">
-      <div class="cfg-label">释放订单周数</div>
-      <div class="cfg-control">
-        <select id="releaseOrderWeeksInput" onchange="onReleaseOrderWeeksChange(this.value)">
-          <option value="1">1 周（默认：本周只放当周订单）</option>
-          <option value="2">2 周（本周连同下一周的订单一起放）</option>
-          <option value="3">3 周（本周连同未来两周的订单一起放）</option>
-          <option value="4">4 周（最长：一次性放一个月量的单）</option>
+    <div class="warn-box" data-page-node-id="dRX4OM814Sw2VWUXGA7yAH">长假/节假日（如国庆）常需要<b data-page-node-id="tpSwdfZXgCGKSBKRMBF7QG">提前放单</b>：本周把未来 1~2 周该下的订单批次也一并下出去（PO 提前下发），各批次的<b data-page-node-id="61FN0iLZYql4ptQ2rPzIZP">需求出货日期 / 预计到仓时间保持原计划不变</b> —— 不是把两三周的量合并成一单集中出货，只是下单动作提前。本周下单量、备货下单表会同步包含这些提前释放的批次。</div>
+    <div class="cfg-row" data-page-node-id="jha6fOH6vDtDS601FYk6DB">
+      <div class="cfg-label" data-page-node-id="LFrUyuzqpfgvNvS5TH191B">释放订单周数</div>
+      <div class="cfg-control" data-page-node-id="eZmh3cfqGfroUU0tAeMHEb">
+        <select id="releaseOrderWeeksInput" onchange="onReleaseOrderWeeksChange(this.value)" data-page-node-id="65tqkhsTvMjuNl6uACHE56">
+          <option value="1" data-page-node-id="QVKxUOZ0MaDjjKMElRZJvz">1 周（默认：本周只放当周订单）</option>
+          <option value="2" data-page-node-id="Czvdkt1QAqjRLkZknXpfTJ">2 周（本周连同下一周的订单一起放）</option>
+          <option value="3" data-page-node-id="EtLoi1namW6ACgQmMHilYm">3 周（本周连同未来两周的订单一起放）</option>
+          <option value="4" data-page-node-id="Y3Gif4o35cdUndXXPcGlSA">4 周（最长：一次性放一个月量的单）</option>
         </select>
-        <div class="hint">节假日或停摆期临时调大，放完长假后改回 1 周即可。<b>实现方式</b>：把未来 N-1 周该放的补货批次提前到「本周下单量」——不改各批到货节奏、不合并数量、不集中出货。所有产品统一生效（含单独配置了下单频率的产品，按各自排程周合并）。改配置后需重新点「🚀 生成备货方案」。</div>
+        <div class="hint" data-page-node-id="Rau0MmNJNQabCGoSTA8wKa">节假日或停摆期临时调大，放完长假后改回 1 周即可。<b data-page-node-id="B7WPqaBCtOubmNMcdLILzQ">实现方式</b>：把未来 N-1 周该放的补货批次提前到「本周下单量」——不改各批到货节奏、不合并数量、不集中出货。所有产品统一生效（含单独配置了下单频率的产品，按各自排程周合并）。改配置后需重新点「🚀 生成备货方案」。</div>
       </div>
     </div>
   </div>
 
   <!-- Section 1.6: 尾数顺延设定（v4.8 起） -->
-  <div class="card" id="sec-tail-defer">
-    <div class="card-header">
-      <div class="icon">🕓</div>
-      <h2>尾数顺延</h2>
+  <div class="card" id="sec-tail-defer" data-page-node-id="u1B5XPbb041IpDasGHeNAA">
+    <div class="card-header" data-page-node-id="b2zthuZhpnW57CaFY1QXQ8">
+      <div class="icon" data-page-node-id="4EEjVCYOILncf9RJZ9huzi">🕓</div>
+      <h2 data-page-node-id="2BXa5FDDkhT6GoU1r94Syn">尾数顺延</h2>
     </div>
-    <div class="warn-box">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b>顺延一两周</b>、等缺口累积足够后一次性集中下单。<b>尾数顺延</b>即按此规则：本周应下单量<b>同时低于以下两项阈值</b>（与关系：① 周均倍数阈值 = N × 周均需求；② 绝对数量阈值，默认 30 套）且推演未来<b>不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b>强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
-    <div class="cfg-row">
-      <div class="cfg-label">启用尾数顺延</div>
-      <div class="cfg-control">
-        <label class="cfg-switch-line">
-          <input type="checkbox" id="tailDeferToggle" checked onchange="onTailDeferToggle(this.checked)">
-          <span>本周缺口低于阈值时自动顺延（默认开启）</span>
+    <div class="warn-box" data-page-node-id="ay3mZ1EqQMoWFMXdC6QKPL">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b data-page-node-id="wrYVguEGixoC3YzVYyFcQ6">顺延一两周</b>、等缺口累积足够后一次性集中下单。<b data-page-node-id="baUKzVqzCEdJy6eN8IpXfG">尾数顺延</b>即按此规则：本周应下单量<b data-page-node-id="6L2FXTdaxZI5gJ07euz27X">同时低于以下两项阈值</b>（与关系：① 周均倍数阈值 = N × 周均需求；② 绝对数量阈值，默认 30 套）且推演未来<b data-page-node-id="SEKo8PiHOhJUtledmAo0eu">不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b data-page-node-id="9xaDnWYFA4FXpnwJVIZDAU">强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
+    <div class="cfg-row" data-page-node-id="VWRhEDC2OoJAhgGfyyzgsw">
+      <div class="cfg-label" data-page-node-id="knIldYrn0sitUKm7AA69MZ">启用尾数顺延</div>
+      <div class="cfg-control" data-page-node-id="ZRhbJnVviKhGTBpiEKmm8T">
+        <label class="cfg-switch-line" data-page-node-id="VCWi420cruRsKoxbJkf9i2">
+          <input type="checkbox" id="tailDeferToggle" checked onchange="onTailDeferToggle(this.checked)" data-page-node-id="NTQGA704YdrP74mXYFGKaU">
+          <span data-page-node-id="0Eu7Gng5WQ9egOk7JAGXU5">本周缺口低于阈值时自动顺延（默认开启）</span>
         </label>
-        <div class="hint">关闭后恢复原行为：缺口再小也照常排本周批次</div>
+        <div class="hint" data-page-node-id="a4Ep9dOMh94k8lEEFe4WO3">关闭后恢复原行为：缺口再小也照常排本周批次</div>
       </div>
     </div>
-    <div class="cfg-row">
-      <div class="cfg-label">周均倍数阈值</div>
-      <div class="cfg-control">
-        <select id="tailDeferThreshold" onchange="onTailDeferThresholdChange(this.value)">
-          <option value="0.5">0.5 周需求（较激进：只顺延极小缺口）</option>
-          <option value="1" selected>1 周需求（推荐：不足一周的量不值得排单）</option>
-          <option value="1.5">1.5 周需求</option>
-          <option value="2">2 周需求（较保守：缺口需达两周才下单）</option>
+    <div class="cfg-row" data-page-node-id="AbRBR37HTYkHlguivrlF5q">
+      <div class="cfg-label" data-page-node-id="k5Ne7Ykqd9vVVPpBeRZ9a1">周均倍数阈值</div>
+      <div class="cfg-control" data-page-node-id="387eviky5F1wI74uZzErB7">
+        <select id="tailDeferThreshold" onchange="onTailDeferThresholdChange(this.value)" data-page-node-id="6ajMFAHjuPQfWlj3KJhPgY">
+          <option value="0.5" data-page-node-id="geRZbilRg537XClCDnKwal">0.5 周需求（较激进：只顺延极小缺口）</option>
+          <option value="1" selected data-page-node-id="OlTGt4xiET7gv3HNwXqo0f">1 周需求（推荐：不足一周的量不值得排单）</option>
+          <option value="1.5" data-page-node-id="V7Uw5suRZ0joVAVDAB4Dw3">1.5 周需求</option>
+          <option value="2" data-page-node-id="c2ueH62AZqGqRHbn72uAQw">2 周需求（较保守：缺口需达两周才下单）</option>
         </select>
-        <div class="hint">判定条件①：缺口 &lt; N × 周均需求。周均需求 = 方案「周均需求」列（月预测均摊口径）</div>
+        <div class="hint" data-page-node-id="fOBqHmegR9MdIBhtiFrAxP">判定条件①：缺口 &lt; N × 周均需求。周均需求 = 方案「周均需求」列（月预测均摊口径）</div>
       </div>
     </div>
-    <div class="cfg-row">
-      <div class="cfg-label">绝对数量阈值（套）</div>
-      <div class="cfg-control">
-        <input type="number" min="0" id="tailDeferAbsQty" value="30" onchange="onTailDeferAbsQtyChange(this.value)">
-        <div class="hint">判定条件②：缺口 &lt; 该数值才视为尾数。与「周均倍数阈值」为<b>且</b>关系（两项同时满足才顺延）；设为 0 = 不启用该门槛（仅按倍数判定）</div>
+    <div class="cfg-row" data-page-node-id="mzrYaN2KaumGuboxEA0eTE">
+      <div class="cfg-label" data-page-node-id="9wfb13p6kS4aEITEBoQWjr">绝对数量阈值（套）</div>
+      <div class="cfg-control" data-page-node-id="rSKpKXSd2s4n7nFYMOGsIi">
+        <input type="number" min="0" id="tailDeferAbsQty" value="30" onchange="onTailDeferAbsQtyChange(this.value)" data-page-node-id="xWQ1BHApL3auTzO73eBpR5">
+        <div class="hint" data-page-node-id="p8NPWB4flX4fXVdxUoUsDE">判定条件②：缺口 &lt; 该数值才视为尾数。与「周均倍数阈值」为<b data-page-node-id="psrRus9Zldab5IFwVRfOjm">且</b>关系（两项同时满足才顺延）；设为 0 = 不启用该门槛（仅按倍数判定）</div>
       </div>
     </div>
   </div>
 
   <!-- Section 4: 已导入产品列表（备货清单） -->
-  <div class="card" id="sec-product-list">
-    <div class="card-header">
-      <div class="icon">📋</div>
-      <h2>已导入产品列表（备货清单）</h2>
-      <div class="right">
-        <span class="count-badge" id="listCount">共 0 个产品</span>
-        <button class="btn btn-primary" onclick="generatePlan()">🚀 生成备货方案</button>
+  <div class="card" id="sec-product-list" data-page-node-id="3yy6Yn3ynsbjPzt4akCX0Z">
+    <div class="card-header" data-page-node-id="Y2WCCeFCApKZgQvVavD4hv">
+      <div class="icon" data-page-node-id="LtwpFuWPIPFqKOqfAt0TXv">📋</div>
+      <h2 data-page-node-id="edd20FwPng5CiLy1hCv5SP">已导入产品列表（备货清单）</h2>
+      <div class="right" data-page-node-id="IEoxuvpp6KxsWfOKHQyo5n">
+        <span class="count-badge" id="listCount" data-page-node-id="zxPJzsgieMzDmuKBdvxDXw">共 0 个产品</span>
+        <button class="btn btn-primary" onclick="generatePlan()" data-page-node-id="6LYqrmAl2sVoQFYuUJVorC">🚀 生成备货方案</button>
       </div>
     </div>
 
+    <!-- v4.22 常驻提示条：预测起始月份程序无法判断时显示，可再次打开明细弹窗（导入弹窗关掉后仍可见） -->
+    <div class="fc-start-banner" id="fcStartBanner" style="display:none;" data-page-node-id="FcStartBannerRow"></div>
+
     <!-- Toolbar -->
-    <div class="toolbar" style="margin-bottom:8px;">
-      <button class="btn btn-outline" onclick="downloadTemplate()">📥 下载导入模板</button>
-      <button class="btn btn-outline" onclick="document.getElementById('xlsxInput').click()">📤 导入 XLSX</button>
-      <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none;" onchange="importXlsx(event)">
-      <div class="divider-v"></div>
-      <button class="btn btn-outline" onclick="document.getElementById('pipelineInput').click()">📦 导入在途/在制</button>
-      <input type="file" id="pipelineInput" accept=".xlsx,.xls" style="display:none;" onchange="importPipelineXlsx(event)">
-      <button class="btn btn-sm btn-outline" onclick="downloadPipelineTemplate()" title="下载在途/在制导入模板">📋 模板</button>
-      <label class="pipeline-mode-toggle" title="勾选后下次导入将覆盖（先清空原数据）再写入；未勾选则追加（保留原数据）">
-        <input type="checkbox" id="pipelineOverwriteMode" />
-        <span style="font-size:12px;color:var(--text-secondary);">覆盖模式</span>
+    <div class="toolbar" style="margin-bottom:8px;" data-page-node-id="i8HCFf6G8cLzRDbGThW0o0">
+      <button class="btn btn-outline" onclick="downloadTemplate()" data-page-node-id="Xym1T2EmYlvQUpUT5qLAJR">📥 下载导入模板</button>
+      <button class="btn btn-outline" onclick="document.getElementById('xlsxInput').click()" data-page-node-id="wVTeWBACdMS3cuSC6EEeII">📤 导入 XLSX</button>
+      <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none;" onchange="importXlsx(event)" data-page-node-id="eNni5yMKRfXmo1PQ3lrJQ6">
+      <div class="divider-v" data-page-node-id="jTgPPKeZDDJe3T1uiHeiqW"></div>
+      <button class="btn btn-outline" onclick="document.getElementById('pipelineInput').click()" data-page-node-id="kBajgRcjxKu6JORZqhq56K">📦 导入在途/在制</button>
+      <input type="file" id="pipelineInput" accept=".xlsx,.xls" style="display:none;" onchange="importPipelineXlsx(event)" data-page-node-id="hv1SEXC7wEnMlmlWEkJLNF">
+      <button class="btn btn-sm btn-outline" onclick="downloadPipelineTemplate()" title="下载在途/在制导入模板" data-page-node-id="ulNUhIQmNOfyuSUv274Hl6">📋 模板</button>
+      <label class="pipeline-mode-toggle" title="勾选后下次导入将覆盖（先清空原数据）再写入；未勾选则追加（保留原数据）" data-page-node-id="1QE1Pg8gSajUE6MFNiqOlQ">
+        <input type="checkbox" id="pipelineOverwriteMode" data-page-node-id="yOKgisVUv2wI18mfa1Abc6" />
+        <span style="font-size:12px;color:var(--text-secondary);" data-page-node-id="CAS1rpk9DWAXQnFMB1I8w0">覆盖模式</span>
       </label>
-      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的国内在途/在制数据（pipelineTickets + 单字段 domInTransit/domInProd；海外仓在途 osInTransit 随库存资料导入，不属于采购在制在途，不在此清空范围）" style="color:var(--danger);">🧹 清空在制在途</button>
-      <span id="pipelineImportStatus" class="pipeline-status" style="display:none;"></span>
-      <span id="pipelineDataSummary" class="pipeline-summary" style="display:none;"></span>
-      <div class="divider-v"></div>
-      <button class="btn btn-outline" onclick="exportProductList()">📊 导出当前列表</button>
-      <div class="divider-v"></div>
-      <button class="btn btn-danger" onclick="clearAllData()">🗑 清除数据</button>
+      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的国内在途/在制数据（pipelineTickets + 单字段 domInTransit/domInProd；海外仓在途 osInTransit 随库存资料导入，不属于采购在制在途，不在此清空范围）" style="color:var(--danger);" data-page-node-id="BYnW2Hz7bA0l13TfFUXfRa">🧹 清空在制在途</button>
+      <span id="pipelineImportStatus" class="pipeline-status" style="display:none;" data-page-node-id="xe3WSTRBOQi5VGHee3ydfE"></span>
+      <span id="pipelineDataSummary" class="pipeline-summary" style="display:none;" data-page-node-id="lIe1fD7oUvaPEpYLu6W4Qn"></span>
+      <div class="divider-v" data-page-node-id="rT9E2FzOIfkEoR0jSa10SN"></div>
+      <button class="btn btn-outline" onclick="exportProductList()" data-page-node-id="5fRpuYyoot3UhXYAuNBHgQ">📊 导出当前列表</button>
+      <div class="divider-v" data-page-node-id="kffEioTNuykPd9SKD3Sigt"></div>
+      <button class="btn btn-danger" onclick="clearAllData()" data-page-node-id="3o1tJBO1MskWlg3d35rLLb">🗑 清除数据</button>
     </div>
 
     <!-- Filter row (matches screenshot 1) -->
-    <div class="filter-row" id="listFilter">
-      <div class="filter-item">
-        <label>筛选：三级</label>
-        <input type="text" id="listFilterLevel3" placeholder="如 A4标签纸" oninput="pageState.product=1;renderProductList()">
+    <div class="filter-row" id="listFilter" data-page-node-id="nBOszR9c1SloUn4caEviMF">
+      <div class="filter-item" data-page-node-id="gNrpcQa4AOFigxaFAqcNGv">
+        <label data-page-node-id="gox51UV2ZXXnvOKc2QU0OF">筛选：三级</label>
+        <input type="text" id="listFilterLevel3" placeholder="如 A4标签纸" oninput="pageState.product=1;renderProductList()" data-page-node-id="CgRsrFwaNQuhqwDfN2wIbJ">
       </div>
-      <div class="filter-item">
-        <label>筛选：料品编码</label>
-        <input type="text" id="listFilterCode" placeholder="如 CODE-001" oninput="pageState.product=1;renderProductList()">
+      <div class="filter-item" data-page-node-id="uA4xOScsOaNU9YNCsZ3JFr">
+        <label data-page-node-id="bxuM27Uh49JVcSHO54tqbt">筛选：料品编码</label>
+        <input type="text" id="listFilterCode" placeholder="如 CODE-001" oninput="pageState.product=1;renderProductList()" data-page-node-id="YgbOdWMf9s0ifcYEjAVFxO">
       </div>
-      <div class="filter-item">
-        <label>筛选：料品规格</label>
-        <input type="text" id="listFilterSpec" placeholder="如 SP-X" oninput="pageState.product=1;renderProductList()">
+      <div class="filter-item" data-page-node-id="1pLLnDYN2wcZJKRs9LJFMi">
+        <label data-page-node-id="qMK7h8G13IgGsSqbXbL1S9">筛选：料品规格</label>
+        <input type="text" id="listFilterSpec" placeholder="如 SP-X" oninput="pageState.product=1;renderProductList()" data-page-node-id="5pKHQDtPkaN7ZLJDLGNeAY">
       </div>
-      <button class="filter-clear" onclick="clearListFilters()">清除筛选</button>
+      <button class="filter-clear" onclick="clearListFilters()" data-page-node-id="aF58q0UG2vumSE2y6ov2fZ">清除筛选</button>
     </div>
 
-    <div class="result-table-wrap is-resizable">
-      <table class="result-table" id="productTable" style="min-width:2000px;">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>三级</th>
-            <th>料品编码</th>
-            <th>存货名称</th>
-            <th>料品规格</th>
-            <th>颜色套装</th>
-            <th>梯队</th>
-            <th>销售状态</th>
-            <th>发货模式</th>
-            <th>计划周期</th>
-            <th>下单频率</th>
-            <th>最新周销量</th>
-            <th>月均需求</th>
-            <th>FBA库存</th>
-            <th>海外仓库存</th>
-            <th>可挪用库存</th>
-            <th>海外仓在途</th>
-            <th>国内在途</th>
-            <th>在制未交</th>
-            <th>含在制总数</th>
-            <th>备注</th>
+    <div class="result-table-wrap is-resizable" data-page-node-id="48gwpXydMZqgbpDOiNSlBo">
+      <table class="result-table" id="productTable" style="min-width:2000px;" data-page-node-id="vlm6yahCrlrLcjLif6dd8I">
+        <thead data-page-node-id="oG0QI5zY1o1MBB5295krJD">
+          <tr data-page-node-id="Iz3b55UZ8yuT7fzZ5XDTQZ">
+            <th data-page-node-id="uJvPdqW0iG03AT2SmXalkE">#</th>
+            <th data-page-node-id="kFGiUofBRDxHhItbKi1aPf">三级</th>
+            <th data-page-node-id="2pN7vFmSAjA53ZpGuMmDwu">料品编码</th>
+            <th data-page-node-id="kpjAeHYS2FD1PfOAYMJL2A">存货名称</th>
+            <th data-page-node-id="sqbQSIYzsEN4pPbsAIVnqd">料品规格</th>
+            <th data-page-node-id="OrwsMfy7R3eebKfPRv761C">颜色套装</th>
+            <th data-page-node-id="dlN9qQV6qnFTumwE3bWlvA">梯队</th>
+            <th data-page-node-id="pWLykAo0WxQhVBTLIX7fNK">销售状态</th>
+            <th data-page-node-id="UOoSeTxZFJoHR3KQs3si2G">发货模式</th>
+            <th data-page-node-id="kv7dsNziaURg5QoRkijZlt">计划周期</th>
+            <th data-page-node-id="IrmEZV4c5mbllUq3I3qowp">下单频率</th>
+            <th data-page-node-id="yYzP96hqkpIvvAaSgYUGyt">最新周销量</th>
+            <th data-page-node-id="4BFOsJ1wR46KX64B9uO9Sr">月均需求</th>
+            <th data-page-node-id="nQMphHugQKIkUnJm4nxBqw">FBA库存</th>
+            <th data-page-node-id="pCQ5vTUoXaw9fFwbEfa1cA">海外仓库存</th>
+            <th data-page-node-id="KPpkz7h2EIWCMy1CAGreXc">可挪用库存</th>
+            <th data-page-node-id="VPSuVMaxWBJib44ttNjsMK">海外仓在途</th>
+            <th data-page-node-id="VxFeIFHCN5YV2dalGgXkMz">国内在途</th>
+            <th data-page-node-id="Wb5bcSRiogZLsZ6VAy7aMy">在制未交</th>
+            <th data-page-node-id="YclbsEEiIx70Yt4ZgNsEhk">含在制总数</th>
+            <th data-page-node-id="yaJf01LuqkkXfy4ODk671J">备注</th>
           </tr>
         </thead>
-        <tbody id="productTbody"></tbody>
-        <tfoot id="productTfoot"></tfoot>
+        <tbody id="productTbody" data-page-node-id="4rODhwGCM3wOSFrR9T9mEv"></tbody>
+        <tfoot id="productTfoot" data-page-node-id="JICHfMOQaslEWgnkMB1E3y"></tfoot>
       </table>
     </div>
-    <div id="productPageBar"></div>
+    <div id="productPageBar" data-page-node-id="lU4GaIVPAZXMAOM28wxCY0"></div>
   </div>
 
   </div><!-- /page-basics -->
@@ -666,239 +678,239 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
    * Page 2: 分析结果
    * 包含：备货分析结果（4 指标卡 + 主表） + 备货分析结果明细（周次计划 + 本品下单批次）
    * ============================================================ -->
-  <div class="page-section" id="page-result">
-    <div class="page-banner">
-      <div class="icon">📊</div>
-      <div>
-        <div class="title">分析结果</div>
-        <div class="subtitle">点击「🚀 生成备货方案」后查看结果；明细卡片内可逐品查看周次计划与下单批次</div>
+  <div class="page-section" id="page-result" data-page-node-id="h0phsvKhm6HfEXWDE7SyK9">
+    <div class="page-banner" data-page-node-id="EmWnmJwpQMXGoToHMN6KFz">
+      <div class="icon" data-page-node-id="tfO7Gc45zYQleQrO3ssiUH">📊</div>
+      <div data-page-node-id="GmMOEuMqZwPvUDRwweSZve">
+        <div class="title" data-page-node-id="R8T6cU29y5reWsd21mZlI0">分析结果</div>
+        <div class="subtitle" data-page-node-id="1yVD5GbbcdynBAsh3Jk1kR">点击「🚀 生成备货方案」后查看结果；明细卡片内可逐品查看周次计划与下单批次</div>
       </div>
     </div>
 
   <!-- Section 5: 备货分析结果 -->
-  <div class="card" id="sec-result">
-    <div class="card-header">
-      <div class="icon">📊</div>
-      <h2>备货分析结果</h2>
-      <div class="right">
-        <div class="btn-group">
-          <button class="btn btn-sm btn-outline" onclick="exportResultCSV()">📄 CSV</button>
-          <button class="btn btn-sm btn-outline" onclick="exportResultXLSX()">📊 Excel</button>
+  <div class="card" id="sec-result" data-page-node-id="JythC5q3VZw3zHBqAh0oxK">
+    <div class="card-header" data-page-node-id="OJx4qNNvS6NAiZkrG42hCW">
+      <div class="icon" data-page-node-id="nWcWYD5izMMnfGIZRka7n1">📊</div>
+      <h2 data-page-node-id="eS5va1fpJ6FrpA5aHz4593">备货分析结果</h2>
+      <div class="right" data-page-node-id="WH8Czst7dljHjyQWls6Jn0">
+        <div class="btn-group" data-page-node-id="B03alPtJMWF8rlZXjAw9A6">
+          <button class="btn btn-sm btn-outline" onclick="exportResultCSV()" data-page-node-id="hULDIYiqFukDvOUe5jOP23">📄 CSV</button>
+          <button class="btn btn-sm btn-outline" onclick="exportResultXLSX()" data-page-node-id="6tHjz06MJWcaqLjIDpyJoM">📊 Excel</button>
         </div>
-        <button class="btn btn-sm btn-outline" onclick="copyResultTable()">📋 一键复制</button>
+        <button class="btn btn-sm btn-outline" onclick="copyResultTable()" data-page-node-id="jmCqjjbxq7AEQlcJzYFCiB">📋 一键复制</button>
       </div>
     </div>
 
     <!-- 5 metric cards (前置期卡片已移除) -->
-    <div class="metric-cards" id="metricCards">
-      <div class="metric-card accent">
-        <div class="value" id="mProductCount">0</div>
-        <div class="label">产品数</div>
+    <div class="metric-cards" id="metricCards" data-page-node-id="6gA6FqqYsQI1kVkSUEnn84">
+      <div class="metric-card accent" data-page-node-id="WYiAeNHlbNcrxbpS0XvWdA">
+        <div class="value" id="mProductCount" data-page-node-id="cPK8LU7NCkGLL8h76W56dL">0</div>
+        <div class="label" data-page-node-id="PYVT85Fb3hZ9GYUoyUZGZF">产品数</div>
       </div>
-      <div class="metric-card">
-        <div class="value accent" id="mTotalRec">0</div>
-        <div class="label">建议备货总量(套)</div>
+      <div class="metric-card" data-page-node-id="JPJRg4ZWbdYmugRBVt4CJS">
+        <div class="value accent" id="mTotalRec" data-page-node-id="8c4fL6B9UaqO67qeILw2jh">0</div>
+        <div class="label" data-page-node-id="NlcGLCmf2pDABwrd6bqajP">建议备货总量(套)</div>
       </div>
-      <div class="metric-card">
-        <div class="value accent" id="mTotalActual">0</div>
-        <div class="label">实际下单总量(套)</div>
+      <div class="metric-card" data-page-node-id="FHHdYfmYBsfcCiQb16l4Px">
+        <div class="value accent" id="mTotalActual" data-page-node-id="BbmXSLo9Jcxbp1qAEEQO2S">0</div>
+        <div class="label" data-page-node-id="Vk5mvppNeIW7Z2a7dnwXRD">实际下单总量(套)</div>
       </div>
-      <div class="metric-card">
-        <div class="value" style="color:var(--primary);" id="mTotalThisWeek">0</div>
-        <div class="label">本周下单量(套)</div>
+      <div class="metric-card" data-page-node-id="svXAh9mO1XjBvS1joM1lL2">
+        <div class="value" style="color:var(--primary);" id="mTotalThisWeek" data-page-node-id="FoYJfVHDZ1pV9Nc2NJaq3w">0</div>
+        <div class="label" data-page-node-id="iLX9QRhwYQrlLhck3o3kQG">本周下单量(套)</div>
       </div>
-      <div class="metric-card">
-        <div class="value danger" id="mTotalGap">0</div>
-        <div class="label">计划周期总缺口(套)</div>
+      <div class="metric-card" data-page-node-id="9FclICmrswdvXSSG9YSmlA">
+        <div class="value danger" id="mTotalGap" data-page-node-id="CizqtDO3KE7KFSPdUPDkLC">0</div>
+        <div class="label" data-page-node-id="LK9AEofEDU62zYU60KhEnV">计划周期总缺口(套)</div>
       </div>
     </div>
 
     <!-- Green recommendation box (matches screenshot 2) -->
-    <div class="reco-box" id="recoBox">
-      <strong>备货建议：</strong>点击「🚀 生成备货方案」开始计算。
+    <div class="reco-box" id="recoBox" data-page-node-id="dq3NNBBNobn2BsrkC8jKsU">
+      <strong data-page-node-id="VC3ywWbSKeNHAm0WfRN13k">备货建议：</strong>点击「🚀 生成备货方案」开始计算。
     </div>
 
     <!-- Detail table -->
-    <div style="margin-top:18px;">
-      <div class="section-label">📋 备货分析结果明细（点击行展开周次计划）</div>
-      <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">三级</label>
-          <input type="text" id="resultFilterLv3" placeholder="如 办公文具/A4纸" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:160px;" oninput="pageState.result=1;renderResultTable()">
+    <div style="margin-top:18px;" data-page-node-id="GaDoLRaDcXhALuEV2zOS3u">
+      <div class="section-label" data-page-node-id="37XvHa1e8AYitxnnrYIyCI">📋 备货分析结果明细（点击行展开周次计划）</div>
+      <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;" data-page-node-id="jddM35ATndHrphBQfrrYHA">
+        <div class="form-group" style="margin:0;" data-page-node-id="RVmf8WTxlaKze0hEZdNIMD">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="K8Rjv1ttg4qdzJF6r18RYR">三级</label>
+          <input type="text" id="resultFilterLv3" placeholder="如 办公文具/A4纸" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:160px;" oninput="pageState.result=1;renderResultTable()" data-page-node-id="csxa3eVMAnKa97zmyvV2tH">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">料品编码</label>
-          <input type="text" id="resultFilterCode" placeholder="如 CODE-001" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:180px;" oninput="pageState.result=1;renderResultTable()">
+        <div class="form-group" style="margin:0;" data-page-node-id="hOoFoxsKJVeSTAeVxJNwPu">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="g1uotCIxdRzXDznLuOny0G">料品编码</label>
+          <input type="text" id="resultFilterCode" placeholder="如 CODE-001" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:180px;" oninput="pageState.result=1;renderResultTable()" data-page-node-id="Z7KthV2HmwlgolhFBBMy88">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">料品规格</label>
-          <input type="text" id="resultFilterSpec" placeholder="如 70g 500张/包" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;" oninput="pageState.result=1;renderResultTable()">
+        <div class="form-group" style="margin:0;" data-page-node-id="ENdsqiGhUasJgpD9DYUxNi">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="lXb1QPmSetHAMJEJbo6ZGG">料品规格</label>
+          <input type="text" id="resultFilterSpec" placeholder="如 70g 500张/包" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;" oninput="pageState.result=1;renderResultTable()" data-page-node-id="oI52M6cJ1vpMSxeyIJyf6u">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">销售状态</label>
-          <select id="resultFilterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;" onchange="pageState.result=1;renderResultTable()">
-            <option value="">全部</option>
-            <option value="售完即止">售完即止</option>
-            <option value="正常销售">正常销售</option>
-            <option value="新品新上">新品新上</option>
-            <option value="销呆滞">销呆滞</option>
-            <option value="销呆滞不备货">销呆滞不备货</option>
+        <div class="form-group" style="margin:0;" data-page-node-id="wqGbxHQahcEG1VkLNCaAsP">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="Kcnb1K9FbR4SCSHxAbMrPE">销售状态</label>
+          <select id="resultFilterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;" onchange="pageState.result=1;renderResultTable()" data-page-node-id="4oCX5DZqwAhEOAqMiaNsMx">
+            <option value="" data-page-node-id="FEFnI5LNHvZFPP4dTpbNMo">全部</option>
+            <option value="售完即止" data-page-node-id="b542GI4r9rmUsBXSAWmrvD">售完即止</option>
+            <option value="正常销售" data-page-node-id="BS5H9VY6y1Y1BnCBP88Aqp">正常销售</option>
+            <option value="新品新上" data-page-node-id="xLaBiC9rwSidFBnL06BoNz">新品新上</option>
+            <option value="销呆滞" data-page-node-id="xycUORvAmfsh746yDSiyQI">销呆滞</option>
+            <option value="销呆滞不备货" data-page-node-id="Cd2ZQCuNzYOyFpSdeKwRxO">销呆滞不备货</option>
           </select>
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">排序</label>
-          <select id="resultSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.result=1;renderResultTable()">
-            <option value="default">默认（原顺序）</option>
-            <option value="lv3">三级（分组）</option>
-            <option value="codeAsc">料品编码 ↑</option>
-            <option value="weeklyDesc">周均需求 ↓</option>
-            <option value="recDesc">建议下单量 ↓</option>
-            <option value="thisWeekDesc">本周下单量 ↓</option>
-            <option value="stockoutDesc">缺货周数 ↓</option>
-            <option value="sellableAsc">库存可售周数 ↑</option>
+        <div class="form-group" style="margin:0;" data-page-node-id="i9Janr9GHPv2Dafh1Pqwuw">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ArqdXhaksq23wMK4ZTKGFq">排序</label>
+          <select id="resultSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.result=1;renderResultTable()" data-page-node-id="qlUxEmiLtaH2rFRIpt561x">
+            <option value="default" data-page-node-id="ByXPkwurtGMWUBmH8jx7xX">默认（原顺序）</option>
+            <option value="lv3" data-page-node-id="xdz3PrrsxQ1UiJd6EAFMuB">三级（分组）</option>
+            <option value="codeAsc" data-page-node-id="UGTNLEDRaEQEy0NsC2WJXn">料品编码 ↑</option>
+            <option value="weeklyDesc" data-page-node-id="sLnE0vDVAJ0FbolhyXJuDT">周均需求 ↓</option>
+            <option value="recDesc" data-page-node-id="zzqH9BY35r6ePcgeabVzut">建议下单量 ↓</option>
+            <option value="thisWeekDesc" data-page-node-id="RUbcc7Co0UVHD5T1pZZyqh">本周下单量 ↓</option>
+            <option value="stockoutDesc" data-page-node-id="KvupGpAQzQaHFOHFqP4Z9i">缺货周数 ↓</option>
+            <option value="sellableAsc" data-page-node-id="GvOWggi0wK0qTtqsDChhTL">库存可售周数 ↑</option>
           </select>
         </div>
-        <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearResultFilters()">🔄 清空筛选</button>
+        <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearResultFilters()" data-page-node-id="4IEZb2wBtVjiR4qN28TCez">🔄 清空筛选</button>
       </div>
-      <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="resultTable" style="min-width:2560px;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>三级</th>
-              <th>料品编码</th>
-              <th>存货名称</th>
-              <th>规格型号</th>
-              <th>销售状态</th>
-              <th>发货模式</th>
-              <th>梯队</th>
-              <th>下单频率</th>
-              <th>最新周销量</th>
-              <th>近四周平均销量</th>
-              <th>近30天销量</th>
-              <th>周均需求</th>
-              <th>FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）">▾</button></th>
-              <th>海外仓库存</th>
-              <th>可挪用库存</th>
-              <th>海外仓在途</th>
-              <th>国内在途</th>
-              <th>在制未交</th>
-              <th>含在制总数</th>
-              <th>目标库存</th>
-              <th>建议备货量</th>
-              <th>实际下单量</th>
-              <th>本周下单量</th>
-              <th>库存可售(周)</th>
-              <th>缺货周数</th>
-              <th>状态</th>
-              <th>操作</th>
+      <div class="result-table-wrap is-resizable" data-page-node-id="Uj2ac6b5Olv17UICdL3BUM">
+        <table class="result-table" id="resultTable" style="min-width:2560px;" data-page-node-id="BPdbrN1ML6Cf0niC7KAjZD">
+          <thead data-page-node-id="1EHDYU2qCf03UH00vkm3QD">
+            <tr data-page-node-id="GvUDEz0XfXt5drLXxPVELU">
+              <th data-page-node-id="BxlmKnaRBM1cxYgRXrVbgl">#</th>
+              <th data-page-node-id="yk1ZpVyYQSRtgYnmb16ucP">三级</th>
+              <th data-page-node-id="6phvfkVR5VburTjcBRuPCq">料品编码</th>
+              <th data-page-node-id="MMTWcXdN8S2vBMpN1ZkuP0">存货名称</th>
+              <th data-page-node-id="uBnuwJ2G8Eg7f6GFCt1G3D">规格型号</th>
+              <th data-page-node-id="HP5AcXCd5XsunVEh9JOroh">销售状态</th>
+              <th data-page-node-id="lHOl3LdiEQ3B0etOW1k929">发货模式</th>
+              <th data-page-node-id="FX8YhNOFaq66qIYGyc2zkH">梯队</th>
+              <th data-page-node-id="auvuvfCwy5717gEQbsIoZ8">下单频率</th>
+              <th data-page-node-id="NfvWdP4dBIz3jToPJnyklO">最新周销量</th>
+              <th data-page-node-id="TALOddpXw2K01QE5ii1x0e">近四周平均销量</th>
+              <th data-page-node-id="AZN21LKO10egpwvNTOBjcO">近30天销量</th>
+              <th data-page-node-id="1bl445ccyB8y2YJrMmrbom">周均需求</th>
+              <th data-page-node-id="PShnlSLEB92LtLFzymHO88">FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）" data-page-node-id="nt6240GWhOEZUbMbtGET1b">▾</button></th>
+              <th data-page-node-id="gihk5weNOmjIIlcsED44KC">海外仓库存</th>
+              <th data-page-node-id="JInA3tr4TZqbcHGkyXwvPm">可挪用库存</th>
+              <th data-page-node-id="ANSY8u7AjSTAhYNPRjhmnF">海外仓在途</th>
+              <th data-page-node-id="nEdhHiGha1uD5wO2icnb6d">国内在途</th>
+              <th data-page-node-id="0hLCHStApprISYTXcjOhPq">在制未交</th>
+              <th data-page-node-id="U9c4QmWTaDVCQSw3ovpL8h">含在制总数</th>
+              <th data-page-node-id="CiuG8QGYAV4HMjA9Kah6OX">目标库存</th>
+              <th data-page-node-id="cI4uNWH7DG9legwHM4xUqG">建议备货量</th>
+              <th data-page-node-id="RHFuq3DVI9YQ2iS6T1Q5mN">实际下单量</th>
+              <th data-page-node-id="Bdk60q9kcaBupwk7nfUy77">本周下单量</th>
+              <th data-page-node-id="MXIhI7F0XmkhGsnGQucvaQ">库存可售(周)</th>
+              <th data-page-node-id="CK8FnuPYIUnihojMHh35Za">缺货周数</th>
+              <th data-page-node-id="uuneWmlldZPXLMJKyGNQHU">状态</th>
+              <th data-page-node-id="tKiJcQdWJxB2oId5LvPtKW">操作</th>
             </tr>
           </thead>
-          <tbody id="resultTbody"></tbody>
-          <tfoot id="resultTfoot"></tfoot>
+          <tbody id="resultTbody" data-page-node-id="pbWcvSQCWt1GCJwwUvqYdw"></tbody>
+          <tfoot id="resultTfoot" data-page-node-id="2MkKTWVJ4SetTEtmeDur4e"></tfoot>
         </table>
       </div>
-      <div id="resultPageBar"></div>
+      <div id="resultPageBar" data-page-node-id="zAXD3AF5hZDUN4cyS89DBH"></div>
     </div>
   </div>
 
     <!-- ===== 备货分析结果明细（新） ===== -->
-    <div class="card" id="sec-result-detail">
-      <div class="card-header">
-        <div class="icon">📋</div>
-        <h2>备货分析结果明细（逐品周次计划）</h2>
-        <div class="right">
-          <span class="count-badge" id="detailCount">共 0 个产品</span>
-          <button class="btn btn-sm btn-outline" onclick="toggleExpandAllDetail(this)">📂 全部展开</button>
+    <div class="card" id="sec-result-detail" data-page-node-id="KRVGqMcRcwMD2AGZ2uHJG4">
+      <div class="card-header" data-page-node-id="LqAmoX1u1XoDjnK4ieNh2h">
+        <div class="icon" data-page-node-id="PvJAx9afXAnvT5JmVF4R8J">📋</div>
+        <h2 data-page-node-id="9YHS18HwEAmIjcXYsMrKWE">备货分析结果明细（逐品周次计划）</h2>
+        <div class="right" data-page-node-id="z7VGZH58leyoB1hVqZRQWp">
+          <span class="count-badge" id="detailCount" data-page-node-id="hv3307RIxaYyeFoEnmScls">共 0 个产品</span>
+          <button class="btn btn-sm btn-outline" onclick="toggleExpandAllDetail(this)" data-page-node-id="QvEcYDaN7ghKpDHn9h07qE">📂 全部展开</button>
         </div>
       </div>
-      <div class="warn-box">点击行展开/收起单个产品的周次计划与下单批次。每个产品的明细含 2 个子表：① 周次模拟（周/期初可售/到货/需求/期末可售/缺货/建议下单/方式）② 本品下单批次（需求出货日期/运输方式/数量）。</div>
-      <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">三级</label>
-          <input type="text" id="detailFilterLv3" placeholder="如 HP902" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:160px;" oninput="pageState.detail=1;renderDetailTable()">
+      <div class="warn-box" data-page-node-id="fhVxfa1B86yPLHjVLU0UA8">点击行展开/收起单个产品的周次计划与下单批次。每个产品的明细含 2 个子表：① 周次模拟（周/期初可售/到货/需求/期末可售/缺货/建议下单/方式）② 本品下单批次（需求出货日期/运输方式/数量）。</div>
+      <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;" data-page-node-id="ehkxaPGDH50f5k6VKL8pF8">
+        <div class="form-group" style="margin:0;" data-page-node-id="N64hP45xVCrnvYR3taXmqb">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ooTqvD6N1CAL7sXO9NU56p">三级</label>
+          <input type="text" id="detailFilterLv3" placeholder="如 HP902" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:160px;" oninput="pageState.detail=1;renderDetailTable()" data-page-node-id="HxjgnkRnPnob5fXONU07pG">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">料品编码</label>
-          <input type="text" id="detailFilterCode" placeholder="如 CODE-001" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:180px;" oninput="pageState.detail=1;renderDetailTable()">
+        <div class="form-group" style="margin:0;" data-page-node-id="LlKgN2j7neyIyYnLR5Skvw">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="iME8hU7UjXTF56EiWjUE6i">料品编码</label>
+          <input type="text" id="detailFilterCode" placeholder="如 CODE-001" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:180px;" oninput="pageState.detail=1;renderDetailTable()" data-page-node-id="PBgt4rv2YbXg8D8jE9sb1Z">
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">料品规格</label>
-          <input type="text" id="detailFilterSpec" placeholder="如 70g 500张/包" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;" oninput="pageState.detail=1;renderDetailTable()">
+        <div class="form-group" style="margin:0;" data-page-node-id="64jVqFQhYp5mNlQwO2CtYr">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="2O8v4PSyHD7QknVfn16S4d">料品规格</label>
+          <input type="text" id="detailFilterSpec" placeholder="如 70g 500张/包" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:200px;" oninput="pageState.detail=1;renderDetailTable()" data-page-node-id="B8q5CXKC6kBdk8EABV8AYp">
         </div>
-        <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearDetailFilters()">🔄 清空筛选</button>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">运输方式</label>
-          <select id="detailFilterMethod" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:120px;" onchange="pageState.detail=1;renderDetailTable()">
-            <option value="">全部</option>
+        <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearDetailFilters()" data-page-node-id="HZj2UwSCK8Td0CEyOF7pLr">🔄 清空筛选</button>
+        <div class="form-group" style="margin:0;" data-page-node-id="PbZC9n7Y4V4SDBs70H8q7v">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="EvwQbp8Os6vpC4iRcL4OOh">运输方式</label>
+          <select id="detailFilterMethod" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:120px;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="lQRVBRt4RtdvxKUVDSPuhF">
+            <option value="" data-page-node-id="t7zPS6qvk5XqAZTGGwWw1h">全部</option>
             <!-- v4.16 起运输方式选项由 renderDetailFilterMethod() 从 methodConfig 动态渲染（与「基础数据 → 运输方式管理」表同源），不再硬编码 -->
           </select>
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">销售状态</label>
-          <select id="detailFilterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;" onchange="pageState.detail=1;renderDetailTable()">
-            <option value="">全部</option>
-            <option value="售完即止">售完即止</option>
-            <option value="正常销售">正常销售</option>
-            <option value="新品新上">新品新上</option>
-            <option value="销呆滞">销呆滞</option>
-            <option value="销呆滞不备货">销呆滞不备货</option>
+        <div class="form-group" style="margin:0;" data-page-node-id="9xNvW7ZGW6LlmDqw1yvKNi">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="f1kj78c7E65cdvnZJyXTJm">销售状态</label>
+          <select id="detailFilterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="hamMfgLJvo6DTpeGJYvTWp">
+            <option value="" data-page-node-id="NRAO1CeBOpkgNUgH3OEEGc">全部</option>
+            <option value="售完即止" data-page-node-id="Jlb0JN6Rvltp2VdaFNDgKY">售完即止</option>
+            <option value="正常销售" data-page-node-id="o6DlGrSkiDrxTMgnZF3z7Y">正常销售</option>
+            <option value="新品新上" data-page-node-id="DdLsJXCypAhC1Ps93Tn8jb">新品新上</option>
+            <option value="销呆滞" data-page-node-id="vfmgygCZ9QxSdSYePHnDcQ">销呆滞</option>
+            <option value="销呆滞不备货" data-page-node-id="VsM6T5i8iB8GLvAWGg2BoY">销呆滞不备货</option>
           </select>
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">备货建议</label>
-          <select id="detailFilterAdvice" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:140px;" onchange="pageState.detail=1;renderDetailTable()">
-            <option value="">全部</option>
-            <option value="缺货·紧急补货">缺货·紧急补货</option>
-            <option value="销量低迷·谨慎备货">销量低迷·谨慎备货</option>
-            <option value="正常·建议备货">正常·建议备货</option>
-            <option value="库存充足·慎备货">库存充足·慎备货</option>
-            <option value="无需求·不备货">无需求·不备货</option>
-            <option value="售完即止·不备货">售完即止·不备货</option>
+        <div class="form-group" style="margin:0;" data-page-node-id="MGODkvwidEkf3ZX1O7l2uB">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="cUN0Q93U7Wv8ofs2fG7b8y">备货建议</label>
+          <select id="detailFilterAdvice" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:140px;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="8bJwfnS3rbKU8DmNqGR09E">
+            <option value="" data-page-node-id="ezFShRDhjyfc9lQUkcFwk1">全部</option>
+            <option value="缺货·紧急补货" data-page-node-id="XJABmKdhFX7LIal21k9yxQ">缺货·紧急补货</option>
+            <option value="销量低迷·谨慎备货" data-page-node-id="9YHKxOUfEVGBHc2t0PSIgv">销量低迷·谨慎备货</option>
+            <option value="正常·建议备货" data-page-node-id="HaovBGE2qRcqG9Nnus6CxQ">正常·建议备货</option>
+            <option value="库存充足·慎备货" data-page-node-id="764ZRiEbf4MTbU0OhALpDw">库存充足·慎备货</option>
+            <option value="无需求·不备货" data-page-node-id="I3ZfoRHitEc0AiqzHLMjqO">无需求·不备货</option>
+            <option value="售完即止·不备货" data-page-node-id="CzXANqjJrMyjk9Akt6WR3Z">售完即止·不备货</option>
           </select>
         </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;color:var(--text-muted);">排序</label>
-          <select id="detailSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.detail=1;renderDetailTable()">
-            <option value="default">默认（原顺序）</option>
-            <option value="lv3">三级（分组）</option>
-            <option value="codeAsc">料品编码 ↑</option>
-            <option value="weeklyDesc">周均需求 ↓</option>
-            <option value="recDesc">建议下单量 ↓</option>
-            <option value="thisWeekDesc">本周下单量 ↓</option>
-            <option value="stockoutDesc">缺货周数 ↓</option>
-            <option value="sellableAsc">库存可售周数 ↑</option>
+        <div class="form-group" style="margin:0;" data-page-node-id="O8jPdjhlsC0AXfAU2BKp3L">
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="g7XBeRD3hdUig0PeYiLkZZ">排序</label>
+          <select id="detailSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.detail=1;renderDetailTable()" data-page-node-id="LDzElCJ1CTQmhemQO7KycX">
+            <option value="default" data-page-node-id="uGPLM2QZZECGjN50QqB0hl">默认（原顺序）</option>
+            <option value="lv3" data-page-node-id="OBeP2DWbMskEk3GYtTPx2h">三级（分组）</option>
+            <option value="codeAsc" data-page-node-id="TIXQluGvS0OC6U7Y0wbsR5">料品编码 ↑</option>
+            <option value="weeklyDesc" data-page-node-id="MZgP3YeDe7LcJvkXgqA2gT">周均需求 ↓</option>
+            <option value="recDesc" data-page-node-id="HkYCaY0LmcGOAqsGFHfX1L">建议下单量 ↓</option>
+            <option value="thisWeekDesc" data-page-node-id="0ovEwPxJuolGM3jFuftb40">本周下单量 ↓</option>
+            <option value="stockoutDesc" data-page-node-id="PuDgCVEnhd0BsGUyPNNwkh">缺货周数 ↓</option>
+            <option value="sellableAsc" data-page-node-id="OMM1Yf7CTWVWxorzaKei6z">库存可售周数 ↑</option>
           </select>
         </div>
       </div>
-      <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="detailTable" style="min-width:1650px;">
-          <thead>
-            <tr>
-              <th style="width:42px;">#</th>
-              <th style="width:110px;text-align:left;">三级</th>
-              <th style="width:110px;text-align:left;">料品编码</th>
-              <th style="width:150px;text-align:left;">存货名称</th>
-              <th style="width:120px;text-align:left;">规格型号</th>
-              <th style="width:100px;text-align:left;">销售状态</th>
-              <th style="width:60px;text-align:left;">梯队</th>
-              <th style="width:95px;">最新周销量</th>
-              <th style="width:95px;">周均需求</th>
-              <th style="width:95px;">月均需求</th>
-              <th style="width:95px;">最新周达成</th>
-              <th style="width:95px;">含在制总数</th>
-              <th style="width:95px;">建议下单量</th>
-              <th style="width:95px;">本周下单量</th>
-              <th style="width:70px;">缺货周数</th>
-              <th style="width:130px;">备货建议</th>
-              <th style="width:80px;">明细</th>
+      <div class="result-table-wrap is-resizable" data-page-node-id="JpCFmZTpGLKju2K9lxmmVl">
+        <table class="result-table" id="detailTable" style="min-width:1650px;" data-page-node-id="BvF13Q1PvtUcrMW8kxuHsg">
+          <thead data-page-node-id="Qgwsfb6osQIl8LHhUWjvDN">
+            <tr data-page-node-id="C3e617Rc3DYF7cEAcWGCkO">
+              <th style="width:42px;" data-page-node-id="CEAHUN7fav2XUDhgZyyjbi">#</th>
+              <th style="width:110px;text-align:left;" data-page-node-id="LvRckeeCFBk0b7FZmPL99n">三级</th>
+              <th style="width:110px;text-align:left;" data-page-node-id="O5B70TB8nOOL3tBBhq1Vv7">料品编码</th>
+              <th style="width:150px;text-align:left;" data-page-node-id="E4zqpKJmrR7dBpGN4jQpmk">存货名称</th>
+              <th style="width:120px;text-align:left;" data-page-node-id="r4Cau1P85T2iLPAHXnLFsf">规格型号</th>
+              <th style="width:100px;text-align:left;" data-page-node-id="OfIhkLCnEglGIFMLU4F5GJ">销售状态</th>
+              <th style="width:60px;text-align:left;" data-page-node-id="VbGWznYHo7GZJybbpt4q43">梯队</th>
+              <th style="width:95px;" data-page-node-id="OhO5Ro2QWyaqvx9rC44LKl">最新周销量</th>
+              <th style="width:95px;" data-page-node-id="RKf0XuUE81GtDMCcvMqJl8">周均需求</th>
+              <th style="width:95px;" data-page-node-id="pikVenWZPwxdyfMtbbrbO2">月均需求</th>
+              <th style="width:95px;" data-page-node-id="BPxs6ItFDDfyEZQmeWhedv">最新周达成</th>
+              <th style="width:95px;" data-page-node-id="Sr5Y6UmXeodHFRSZ3tZGUl">含在制总数</th>
+              <th style="width:95px;" data-page-node-id="fYduvMgBTm5A1RPkIFNzOC">建议下单量</th>
+              <th style="width:95px;" data-page-node-id="mrZBeMABfBi3QNb0BKseH3">本周下单量</th>
+              <th style="width:70px;" data-page-node-id="EYCGBA9G8A0C9jZwmv8a1k">缺货周数</th>
+              <th style="width:130px;" data-page-node-id="erWLVPROuvefpNqmQBDmrK">备货建议</th>
+              <th style="width:80px;" data-page-node-id="tlYT0UC5EYFplMQWoN3R7j">明细</th>
             </tr>
           </thead>
-          <tbody id="detailTbody"></tbody>
-          <tfoot id="detailTfoot"></tfoot>
+          <tbody id="detailTbody" data-page-node-id="YBzf4eyr2ZZm8VI9UTU2mn"></tbody>
+          <tfoot id="detailTfoot" data-page-node-id="07Uh3nRzD5sJzVcD9prAdK"></tfoot>
         </table>
       </div>
-      <div id="detailPageBar"></div>
+      <div id="detailPageBar" data-page-node-id="7YBC8XwMc3gfE6vowcjCou"></div>
     </div>
 
   </div><!-- /page-result -->
@@ -907,52 +919,52 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
    * Page 3: 备货下单
    * 包含：备货下单表（含合计行）
    * ============================================================ -->
-  <div class="page-section" id="page-order">
-    <div class="page-banner">
-      <div class="icon">📦</div>
-      <div>
-        <div class="title">备货下单</div>
-        <div class="subtitle">每个产品按"周次+运输方式"自动拆批；运输方式由算法按"最便宜且能到货"原则选择</div>
+  <div class="page-section" id="page-order" data-page-node-id="EfvkmxG8FiOinHyrZBG73h">
+    <div class="page-banner" data-page-node-id="YuivP6NQWDDZ26D0UV1Txd">
+      <div class="icon" data-page-node-id="6CF038wzFh0oOWhTE55968">📦</div>
+      <div data-page-node-id="7aKc7HbQV1kGvLarrYYRH3">
+        <div class="title" data-page-node-id="QX0C0G1rcWVED7d9bi5hMw">备货下单</div>
+        <div class="subtitle" data-page-node-id="sDN0OsfE5LVtKKsyQ29fK2">每个产品按"周次+运输方式"自动拆批；运输方式由算法按"最便宜且能到货"原则选择</div>
       </div>
     </div>
 
   <!-- Section 4: 备货下单表 -->
-  <div class="card" id="sec-order">
-    <div class="card-header">
-      <div class="icon">📝</div>
-      <h2>备货下单表</h2>
-      <div class="right">
-        <span id="orderCount" class="count-badge" style="background:var(--success-light);color:var(--success);">共 0 批</span>
-        <div class="btn-group">
-          <button class="btn btn-sm btn-outline" onclick="exportOrderCSV()">📄 CSV</button>
-          <button class="btn btn-sm btn-outline" onclick="exportOrderXLSX()">📊 Excel</button>
+  <div class="card" id="sec-order" data-page-node-id="7xiTHYV3x8cuZ2rYGoWhYy">
+    <div class="card-header" data-page-node-id="HBnRJeGyxfvDUTAadyd8Ng">
+      <div class="icon" data-page-node-id="B4la0lgS9oyF2iKMFiZMDc">📝</div>
+      <h2 data-page-node-id="f8I37bqADcAow21J7Vjm1y">备货下单表</h2>
+      <div class="right" data-page-node-id="nGpSh4cmOfaz3Ct9LAsC6s">
+        <span id="orderCount" class="count-badge" style="background:var(--success-light);color:var(--success);" data-page-node-id="LK5brYPGeFzhunKsXLwy4H">共 0 批</span>
+        <div class="btn-group" data-page-node-id="oyr4RYTVRgHNIPgm99EHh3">
+          <button class="btn btn-sm btn-outline" onclick="exportOrderCSV()" data-page-node-id="fb98dz2SSouA8M47e9qABT">📄 CSV</button>
+          <button class="btn btn-sm btn-outline" onclick="exportOrderXLSX()" data-page-node-id="1omkLmItjGAHwztd22IXoF">📊 Excel</button>
         </div>
-        <button class="btn btn-sm btn-outline" onclick="copyOrderTable()">📋 一键复制</button>
+        <button class="btn btn-sm btn-outline" onclick="copyOrderTable()" data-page-node-id="nM3SWxRcFJEzDgeqIBqHO3">📋 一键复制</button>
       </div>
     </div>
-    <div class="warn-box">每个产品可能按多个"周次+运输方式"被拆成多批。本表仅展示<b>本周需下单</b>的批次（根据生产交期推算 orderWeek=0），可延后的批次下周分析时再下。每周滚动备货，需求变动也能及时管控。</div>
-    <div class="result-table-wrap is-resizable">
-      <table class="result-table" id="orderTable" style="min-width:1200px;">
-        <thead>
-          <tr>
-            <th>三级</th>
-            <th>料品编码</th>
-            <th>存货名称</th>
-            <th>规格型号</th>
-            <th>数量(套)</th>
-            <th>需求出货日期</th>
-            <th>运输方式</th>
-            <th>站点</th>
-            <th>区域</th>
-            <th>目的仓库</th>
-            <th>备注</th>
+    <div class="warn-box" data-page-node-id="HXnyuzJlyjGKlRSRUYbraT">每个产品可能按多个"周次+运输方式"被拆成多批。本表仅展示<b data-page-node-id="Vc0GmRRapAC5kB7jfQf2AE">本周需下单</b>的批次（根据生产交期推算 orderWeek=0），可延后的批次下周分析时再下。每周滚动备货，需求变动也能及时管控。</div>
+    <div class="result-table-wrap is-resizable" data-page-node-id="WCZkPcHrY51InweVWDu8rm">
+      <table class="result-table" id="orderTable" style="min-width:1200px;" data-page-node-id="kfRkIkMH9GMMa1gOkZjlUM">
+        <thead data-page-node-id="ZFmfb38BEjCRYUmjq8mQ5A">
+          <tr data-page-node-id="DULRgHTKLjQEzwAiN0H0bc">
+            <th data-page-node-id="DqZZsSEHlQGocPKsRV3bUo">三级</th>
+            <th data-page-node-id="D15YYbREXFeCSgsmBG5yqK">料品编码</th>
+            <th data-page-node-id="QYxvl7Ik0MzeYVSjoUw75L">存货名称</th>
+            <th data-page-node-id="IqA6z9bynAZBk3JDH9CRpp">规格型号</th>
+            <th data-page-node-id="YJRcuuDGxVg975T0DxdFZY">数量(套)</th>
+            <th data-page-node-id="SwCKLKD2eeKjmcwzcSiunp">需求出货日期</th>
+            <th data-page-node-id="Ch1pHzuyV4TtrxeK9q3JFV">运输方式</th>
+            <th data-page-node-id="SGNtboliMFSIYHfhxgvfEp">站点</th>
+            <th data-page-node-id="iLsOWFYZ1WPDJBL6ExoGqg">区域</th>
+            <th data-page-node-id="7QniueON0g2soI2TR7FtbO">目的仓库</th>
+            <th data-page-node-id="Vng79JP1RuPJZ2u9DOOrc3">备注</th>
           </tr>
         </thead>
-        <tbody id="orderTbody"></tbody>
-        <tfoot id="orderTfoot"></tfoot>
+        <tbody id="orderTbody" data-page-node-id="TOErt6Xuq2BwR2VhwtdkuL"></tbody>
+        <tfoot id="orderTfoot" data-page-node-id="JsKBzMZti9kDKIh3Z5BnOZ"></tfoot>
       </table>
     </div>
-    <div id="orderPageBar"></div>
+    <div id="orderPageBar" data-page-node-id="eIEFXQ4yPsJceTLisHWqib"></div>
   </div>
 
   </div><!-- /page-order -->
@@ -961,135 +973,135 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
    * Page 4: 备货透视
    * 包含：按"三级 + 颜色套装"聚合，逐品展示当前库存、本次备货、可售时间、按需展开库存明细
    * ============================================================ -->
-  <div class="page-section" id="page-perspective">
-    <div class="page-banner">
-      <div class="icon">🔍</div>
-      <div>
-        <div class="title">备货透视</div>
-        <div class="subtitle">按"三级 + 颜色套装"逐品展示当前库存、本次备货量、多口径可售时间（月：当前库存 / 含在制总数 / 含本周下单量 / 按实际销量）；点击「库存」列展开四源明细</div>
+  <div class="page-section" id="page-perspective" data-page-node-id="5Hayx6peP7QesBuCZANjw1">
+    <div class="page-banner" data-page-node-id="9ODvlihZ9OMnNaHLpZmYK1">
+      <div class="icon" data-page-node-id="G2jzAFKeGuy10NflrZex2Q">🔍</div>
+      <div data-page-node-id="VFZZXsGRunlQORD3Yc5jjf">
+        <div class="title" data-page-node-id="BxqXPyE6LdvR2UPFSmVCLL">备货透视</div>
+        <div class="subtitle" data-page-node-id="1dI3NP1nCWtCC24Kk5BD3L">按"三级 + 颜色套装"逐品展示当前库存、本次备货量、多口径可售时间（月：当前库存 / 含在制总数 / 含本周下单量 / 按实际销量）；点击「库存」列展开四源明细</div>
       </div>
     </div>
 
-    <div class="card" id="sec-perspective">
-      <div class="card-header">
-        <div class="icon">🔍</div>
-        <h2>备货透视表</h2>
-        <div class="right">
-          <span class="count-badge" id="perspectiveCount">共 0 行</span>
-          <div class="btn-group">
-          <button class="btn btn-sm btn-outline" onclick="exportPerspectiveCSV()">📄 CSV</button>
-          <button class="btn btn-sm btn-outline" onclick="exportPerspectiveXLSX()">📊 Excel</button>
+    <div class="card" id="sec-perspective" data-page-node-id="uzQpSD2x96mYS5XuJ06nCW">
+      <div class="card-header" data-page-node-id="XyC0uR7b8vTUX7Cy5lNA4K">
+        <div class="icon" data-page-node-id="ezZm3hO4RA7vtjMAfFGoha">🔍</div>
+        <h2 data-page-node-id="YKl8H59BemC7eZv9lA32ZV">备货透视表</h2>
+        <div class="right" data-page-node-id="UHYbpeD7DGl0379v3Gns4j">
+          <span class="count-badge" id="perspectiveCount" data-page-node-id="TMyWYRwF0zvZD17R9LxRyf">共 0 行</span>
+          <div class="btn-group" data-page-node-id="mQVXI4crgnOGjfOxdiwQul">
+          <button class="btn btn-sm btn-outline" onclick="exportPerspectiveCSV()" data-page-node-id="8tnKkFZUc8O8mbyGkBnS1C">📄 CSV</button>
+          <button class="btn btn-sm btn-outline" onclick="exportPerspectiveXLSX()" data-page-node-id="IK1jfw6ZmlA6mx5QwtVWSt">📊 Excel</button>
         </div>
         </div>
       </div>
 
       <!-- 筛选工具行 -->
-      <div class="filter-row" id="perspFilter">
-        <div class="filter-item">
-          <label>筛选：三级</label>
-          <input type="text" id="perspFilterLv3" placeholder="如 办公文具/A4纸/复印纸" oninput="pageState.perspective=1;renderPerspective()">
+      <div class="filter-row" id="perspFilter" data-page-node-id="H6N6LyWk419vL083hdAM5i">
+        <div class="filter-item" data-page-node-id="hDtjAi3FpVGzOwG99Awn7A">
+          <label data-page-node-id="JkC5zf5KcfODw8a239beDD">筛选：三级</label>
+          <input type="text" id="perspFilterLv3" placeholder="如 办公文具/A4纸/复印纸" oninput="pageState.perspective=1;renderPerspective()" data-page-node-id="pH1fKGVdypjpcUumgqo8bI">
         </div>
-        <div class="filter-item">
-          <label>筛选：颜色套装</label>
-          <input type="text" id="perspFilterColor" placeholder="如 黑色" oninput="pageState.perspective=1;renderPerspective()">
+        <div class="filter-item" data-page-node-id="r0vNBO4uYqn5j6ji6dABmq">
+          <label data-page-node-id="P3SUYc33MKOCMIOLZarc2F">筛选：颜色套装</label>
+          <input type="text" id="perspFilterColor" placeholder="如 黑色" oninput="pageState.perspective=1;renderPerspective()" data-page-node-id="GuwQVlMnNlHCTWayhyJbil">
         </div>
-        <div class="filter-item">
-          <label>状态筛选</label>
-          <select id="perspFilterStatus" onchange="pageState.perspective=1;renderPerspective()">
-            <option value="">全部</option>
-            <option value="紧急">🔴 紧急（&lt;1月 且 本周需下单）</option>
-            <option value="紧张">🟠 紧张（&lt;2月）</option>
-            <option value="健康">🟢 健康（2-3月）</option>
-            <option value="预呆滞">🟢 预呆滞（3-4月）</option>
-            <option value="呆滞">🔵 呆滞（≥4月）</option>
-            <option value="无需求">⚪ 无需求（无周需求）</option>
+        <div class="filter-item" data-page-node-id="qfDEJEaGQTlSlCvG131eOT">
+          <label data-page-node-id="C0Alf3DVfGoFVoYlRN7yHH">状态筛选</label>
+          <select id="perspFilterStatus" onchange="pageState.perspective=1;renderPerspective()" data-page-node-id="lqRRO1On9WXuyOmfXF5sSj">
+            <option value="" data-page-node-id="C0cz5FjllYYiFxSpGs5igB">全部</option>
+            <option value="紧急" data-page-node-id="ZfmCr9u9anTPbWf7KtrEOR">🔴 紧急（&lt;1月 且 本周需下单）</option>
+            <option value="紧张" data-page-node-id="hRgEnRMieTCpw4KLjEP04Q">🟠 紧张（&lt;2月）</option>
+            <option value="健康" data-page-node-id="e78rGQLEKf32cQ9kTHs1Br">🟢 健康（2-3月）</option>
+            <option value="预呆滞" data-page-node-id="C2tZe9gzeWYjyoFnckHHo1">🟢 预呆滞（3-4月）</option>
+            <option value="呆滞" data-page-node-id="kFImr6A7VxWgNnUYdlyMma">🔵 呆滞（≥4月）</option>
+            <option value="无需求" data-page-node-id="yuuaOSUGGimJYChRIgcvWY">⚪ 无需求（无周需求）</option>
           </select>
         </div>
-        <div class="filter-item">
-          <label>排序</label>
-          <select id="perspSortBy" onchange="pageState.perspective=1;renderPerspective()">
-            <option value="lv3">三级（默认）</option>
-            <option value="monthlyDesc">月均需求 ↓</option>
-            <option value="thisWeekDesc">本周下单量 ↓</option>
-            <option value="currentStockDesc">当前库存 ↓</option>
-            <option value="replenishDesc">本次备货量 ↓</option>
-            <option value="sellNowAsc">可售时间 ↑</option>
-            <option value="withProdDesc">含在制总数 ↓</option>
-            <option value="weeklyDesc">周需求 ↓</option>
+        <div class="filter-item" data-page-node-id="D8iBTl1ij8ZGOZSiWoFtrY">
+          <label data-page-node-id="r6COFSZp49hJvUtAp8E1ue">排序</label>
+          <select id="perspSortBy" onchange="pageState.perspective=1;renderPerspective()" data-page-node-id="rLDDBQn3Sg9CVLv8K0wafx">
+            <option value="lv3" data-page-node-id="JvoxwKosdvfhwlSEiAkXeL">三级（默认）</option>
+            <option value="monthlyDesc" data-page-node-id="v1IcJwc5dXRBLDOFcAuX0X">月均需求 ↓</option>
+            <option value="thisWeekDesc" data-page-node-id="lz2QdjDpDV1jIPjuUgCGHl">本周下单量 ↓</option>
+            <option value="currentStockDesc" data-page-node-id="uUEUPMRqJyXWjK2oB1O4IC">当前库存 ↓</option>
+            <option value="replenishDesc" data-page-node-id="ha60uH5CyVWQFKVC1QY6V6">本次备货量 ↓</option>
+            <option value="sellNowAsc" data-page-node-id="1RzfdX1riPgmtDgIBbsSS8">可售时间 ↑</option>
+            <option value="withProdDesc" data-page-node-id="RzNbw3n21qpVXjZJCE88IM">含在制总数 ↓</option>
+            <option value="weeklyDesc" data-page-node-id="ApRjvzqSmPYtvaxo6GZ6Lm">周需求 ↓</option>
           </select>
         </div>
-        <button class="filter-clear" onclick="clearPerspFilters()">清除筛选</button>
+        <button class="filter-clear" onclick="clearPerspFilters()" data-page-node-id="uETEZdWtX8ezRfNpbCuyWq">清除筛选</button>
       </div>
 
       <!-- 摘要指标 -->
-      <div class="metric-cards" id="perspectiveMetricCards" style="margin-bottom:16px; grid-template-columns: repeat(3, 1fr);">
-        <div class="metric-card accent">
-          <div class="value" id="pmProductCount">0</div>
-          <div class="label">透视产品数</div>
+      <div class="metric-cards" id="perspectiveMetricCards" style="margin-bottom:16px; grid-template-columns: repeat(3, 1fr);" data-page-node-id="U3v8VAXQSDhIxJu9sgbDg6">
+        <div class="metric-card accent" data-page-node-id="BDBKzVCb0XYJn2G4rPTGzq">
+          <div class="value" id="pmProductCount" data-page-node-id="MjPFsfce441c7UX3TfVSIk">0</div>
+          <div class="label" data-page-node-id="xz2ovegqATN59brdFCUdYB">透视产品数</div>
         </div>
-        <div class="metric-card">
-          <div class="value accent" id="pmHealthCount">0</div>
-          <div class="label">🟢 健康行数</div>
+        <div class="metric-card" data-page-node-id="d7l4QFhGWAERCkdMxem7Yk">
+          <div class="value accent" id="pmHealthCount" data-page-node-id="Hsm1vl1dw9QlALygo94ceN">0</div>
+          <div class="label" data-page-node-id="7vOxJnlnOqrDuJygtKoaig">🟢 健康行数</div>
         </div>
-        <div class="metric-card">
-          <div class="value" style="color:var(--warning);" id="pmWarnCount">0</div>
-          <div class="label">🟡 紧张行数</div>
+        <div class="metric-card" data-page-node-id="uTXy1qPAOzvf7eLdtjsRua">
+          <div class="value" style="color:var(--warning);" id="pmWarnCount" data-page-node-id="HaAFpKoFEF9meHNP5exjTk">0</div>
+          <div class="label" data-page-node-id="wWDPsNkVjv674kDSM2u73b">🟡 紧张行数</div>
         </div>
-        <div class="metric-card">
-          <div class="value danger" id="pmCriticalCount">0</div>
-          <div class="label">🔴 紧急行数</div>
+        <div class="metric-card" data-page-node-id="lvV3ouAZ3kI1iEFNTNe8JC">
+          <div class="value danger" id="pmCriticalCount" data-page-node-id="TyRbA4TSnGqNvuIsdV5TZ9">0</div>
+          <div class="label" data-page-node-id="nKPvJXfIumFlIAltKhULQE">🔴 紧急行数</div>
         </div>
-        <div class="metric-card" title="整体（筛选后全部组汇总）：当前库存合计 ÷ 月均需求合计">
-          <div class="value success" id="pmSellNow">∞</div>
-          <div class="label">当前库存可售(月)</div>
+        <div class="metric-card" title="整体（筛选后全部组汇总）：当前库存合计 ÷ 月均需求合计" data-page-node-id="zjHIMwLfUGNNbcTP3qjx1o">
+          <div class="value success" id="pmSellNow" data-page-node-id="77A5aYR8l0xyRJ3aRqoKk3">∞</div>
+          <div class="label" data-page-node-id="0dkZJ541CQy4x1C1FXEfUs">当前库存可售(月)</div>
         </div>
-        <div class="metric-card" title="整体（筛选后全部组汇总）：(含在制总数合计 + 本周下单量合计) ÷ 月均需求合计">
-          <div class="value accent" id="pmSellNew">∞</div>
-          <div class="label">含本周下单量可售(月)</div>
+        <div class="metric-card" title="整体（筛选后全部组汇总）：(含在制总数合计 + 本周下单量合计) ÷ 月均需求合计" data-page-node-id="cQm8PXLWqqmD1LRTZZnxki">
+          <div class="value accent" id="pmSellNew" data-page-node-id="YNUpg7nW9gm5B1h3MUicfw">∞</div>
+          <div class="label" data-page-node-id="bDLZSrq5H2GEFxI6MSF83Z">含本周下单量可售(月)</div>
         </div>
       </div>
 
-      <div class="warn-box">
-        状态规则：按「当前库存可售时间」判定 &lt; 1 月 <b>紧急（红，仅当本周需下单）</b> ｜ &lt; 2 月 <b>紧张（橙）</b> ｜ &lt; 3 月 <b>健康（绿）</b> ｜ &lt; 4 月 <b>预呆滞（深绿）</b> ｜ ≥ 4 月 <b>呆滞（蓝）</b> ｜ 无周需求 <b>无需求（灰）</b>。<br>
-        「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。<br>
-        可售时间（月）四列口径：<b>当前库存可售时间</b> = 当前库存 ÷ 月均需求；<b>含在制总数可售时间</b> = 含在制总数 ÷ 月均需求；<b>含本周下单量可售时间</b> = (含在制总数 + 本周下单量) ÷ 月均需求；<b>含本周下单量实际可售时间</b> = (含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)，分母用近期实际销量月速度（非预测月均）。
+      <div class="warn-box" data-page-node-id="dXxMXaTsHG6kRZzJRaVBkA">
+        状态规则：按「当前库存可售时间」判定 &lt; 1 月 <b data-page-node-id="mFTGISdA3H1EH506UAi3l5">紧急（红，仅当本周需下单）</b> ｜ &lt; 2 月 <b data-page-node-id="E7WwYFXfU4O0KgQtBwa10L">紧张（橙）</b> ｜ &lt; 3 月 <b data-page-node-id="Jna99ZfDjCuqQkkw80LQwx">健康（绿）</b> ｜ &lt; 4 月 <b data-page-node-id="rxn7stupSvUP1aiM3lCFNc">预呆滞（深绿）</b> ｜ ≥ 4 月 <b data-page-node-id="mby5HSmk5PWVBXDZonR2cG">呆滞（蓝）</b> ｜ 无周需求 <b data-page-node-id="kkybHMz82rOvYfbSaDSc07">无需求（灰）</b>。<br data-page-node-id="THPBD8DkONnKkPHw6SkOdQ">
+        「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。<br data-page-node-id="eSNRl7UzVqHvWyMeKr1Gkn">
+        可售时间（月）四列口径：<b data-page-node-id="PYARpcsJXfRcDHf3SJNn4y">当前库存可售时间</b> = 当前库存 ÷ 月均需求；<b data-page-node-id="8Hgrwle15lLSFEN2dVxFzG">含在制总数可售时间</b> = 含在制总数 ÷ 月均需求；<b data-page-node-id="kjnSoPDkchGNf9MuqM2Jgj">含本周下单量可售时间</b> = (含在制总数 + 本周下单量) ÷ 月均需求；<b data-page-node-id="vNu6TNW8aMgLDiyeHAwWsH">含本周下单量实际可售时间</b> = (含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)，分母用近期实际销量月速度（非预测月均）。
       </div>
 
-      <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="perspectiveTable" style="min-width:2400px;">
-          <thead>
-            <tr>
-              <th style="width:42px;">#</th>
-              <th style="width:200px;">三级</th>
-              <th style="width:120px;">颜色套装</th>
-              <th style="width:80px;">产品数</th>
-              <th style="width:90px;">近四周平均销量</th>
-              <th style="width:90px;">近30天销量</th>
-              <th style="width:80px;">周需求</th>
-              <th style="width:80px;">月均需求</th>
-              <th style="width:140px;">当前库存<button type="button" class="pipe-fold-btn" id="perspFoldBtn" onclick="togglePerspCols()" title="展开/折叠明细列（FBA库存/海外仓库存/海外仓在途/挪用库存）">▾</button></th>
-              <th style="width:80px;">FBA库存</th>
-              <th style="width:80px;">海外仓库存</th>
-              <th style="width:80px;">海外仓在途</th>
-              <th style="width:80px;">挪用库存</th>
-              <th style="width:80px;">国内在途</th>
-              <th style="width:80px;">在制未交</th>
-              <th style="width:90px;">含在制总数</th>
-              <th style="width:90px;">本次备货量</th>
-              <th style="width:90px;">本周下单量</th>
-              <th style="width:100px;">当前库存可售时间(月)</th>
-              <th style="width:100px;">含在制总数可售时间(月)</th>
-              <th style="width:110px;">含本周下单量可售(月)</th>
-              <th style="width:120px;">含本周下单量实际可售(月)</th>
-              <th style="width:90px;">状态</th>
-              <th>料品编码</th>
+      <div class="result-table-wrap is-resizable" data-page-node-id="CnGbkkFwJF0UzpMpZFh7YG">
+        <table class="result-table" id="perspectiveTable" style="min-width:2400px;" data-page-node-id="H5F0kB7sGqAbX484GuV3xM">
+          <thead data-page-node-id="jopMk0xA7OSjTDkW5o4XxX">
+            <tr data-page-node-id="rPwmAOwUWVCbmjFjLMueSF">
+              <th style="width:42px;" data-page-node-id="E6LoCwmJGisQlJWQbmK7tt">#</th>
+              <th style="width:200px;" data-page-node-id="tGQJToirkS7LUFKaoMfTiB">三级</th>
+              <th style="width:120px;" data-page-node-id="DWxx925wfTFpuJPCJ8aP6f">颜色套装</th>
+              <th style="width:80px;" data-page-node-id="aUcB5Md0B5n3nLnXjxyVRq">产品数</th>
+              <th style="width:90px;" data-page-node-id="PNr8sNXw6eyDkxbZDtbdus">近四周平均销量</th>
+              <th style="width:90px;" data-page-node-id="CUdDJMD9WemUUvibYHl6Ve">近30天销量</th>
+              <th style="width:80px;" data-page-node-id="deXeJ5amdgLu7RbQX1REV9">周需求</th>
+              <th style="width:80px;" data-page-node-id="88TNPmK7HrTKhzoMpc1xkD">月均需求</th>
+              <th style="width:140px;" data-page-node-id="JgFYrHL2xt3uSVVYfQJrhW">当前库存<button type="button" class="pipe-fold-btn" id="perspFoldBtn" onclick="togglePerspCols()" title="展开/折叠明细列（FBA库存/海外仓库存/海外仓在途/挪用库存）" data-page-node-id="ntm76oFyYqYd0wycpvFmlj">▾</button></th>
+              <th style="width:80px;" data-page-node-id="kTmn1hltYiuvG7ZO8ibUTE">FBA库存</th>
+              <th style="width:80px;" data-page-node-id="XpIxfLUpyJsoQoxS7f0JCx">海外仓库存</th>
+              <th style="width:80px;" data-page-node-id="r9TX7qvzKzgpFFenE81Uvk">海外仓在途</th>
+              <th style="width:80px;" data-page-node-id="EtjilaYOAZhmQgJuxfNRuF">挪用库存</th>
+              <th style="width:80px;" data-page-node-id="zNPgDeShQSy7SM6Upfpayv">国内在途</th>
+              <th style="width:80px;" data-page-node-id="h4JlNPG57LycGQTg0omRsF">在制未交</th>
+              <th style="width:90px;" data-page-node-id="sVSUFgAuavEQFnL3adQJwe">含在制总数</th>
+              <th style="width:90px;" data-page-node-id="h9azVbaIR3ee6Cs8JamgD4">本次备货量</th>
+              <th style="width:90px;" data-page-node-id="v1SHO6d8CNDtiYmGxhul8k">本周下单量</th>
+              <th style="width:100px;" data-page-node-id="jFbtURzZAfMWM5KCR20yHm">当前库存可售时间(月)</th>
+              <th style="width:100px;" data-page-node-id="MxiaCCeiuRHrLhGiqBHERg">含在制总数可售时间(月)</th>
+              <th style="width:110px;" data-page-node-id="jByKnRERwfOjLxvGhUgmji">含本周下单量可售(月)</th>
+              <th style="width:120px;" data-page-node-id="hYOVuMeAgoNPi47wzD114A">含本周下单量实际可售(月)</th>
+              <th style="width:90px;" data-page-node-id="zbe3JeZqr2EWOuoNexPBZS">状态</th>
+              <th data-page-node-id="cdwabqiDeYS7UgWxWoKHLx">料品编码</th>
             </tr>
           </thead>
-          <tbody id="perspectiveTbody"></tbody>
-          <tfoot id="perspectiveTfoot"></tfoot>
+          <tbody id="perspectiveTbody" data-page-node-id="QXQCao0IiFgGw6S3YvxlG3"></tbody>
+          <tfoot id="perspectiveTfoot" data-page-node-id="J8HFm9mdizHzuHDBVcMMNK"></tfoot>
         </table>
       </div>
-      <div id="perspectivePageBar"></div>
+      <div id="perspectivePageBar" data-page-node-id="uvQ9tMeFhQuqzGG2GajDLc"></div>
     </div>
   </div><!-- /page-perspective -->
 
@@ -1097,222 +1109,222 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
    * Page 5: 系统管理
    * 包含：导入记录（可点击查看 / 可删除） / 用户管理
    * ============================================================ -->
-  <div class="page-section" id="page-sysmgmt">
-    <div class="page-banner">
-      <div class="icon">⚙️</div>
-      <div>
-        <div class="title">系统管理</div>
-        <div class="subtitle">导入记录快照（可回溯查看分析结果） / 多人协作用户管理</div>
+  <div class="page-section" id="page-sysmgmt" data-page-node-id="HaOgxycubKKH5L68HlAPA4">
+    <div class="page-banner" data-page-node-id="JYjWxPKO8OOHznSsUnczMd">
+      <div class="icon" data-page-node-id="9Q6TYIwDhbj7ZfAkhKpPeL">⚙️</div>
+      <div data-page-node-id="E9otUgaNbbB2hODASKDVKX">
+        <div class="title" data-page-node-id="ECrzVwcw4cDg4V7IHxSYwc">系统管理</div>
+        <div class="subtitle" data-page-node-id="9t0gRoKfvaA20LHMy7OKxL">导入记录快照（可回溯查看分析结果） / 多人协作用户管理</div>
       </div>
     </div>
 
     <!-- 导入记录 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon">📦</div>
-        <h2>导入记录</h2>
-        <div class="right" id="recTotalLabel">共 0 条</div>
+    <div class="card" data-page-node-id="nEvwQHmBCDtMtW5SK3n0ah">
+      <div class="card-header" data-page-node-id="MMuQgcdywe4QHa48z3GjeH">
+        <div class="icon" data-page-node-id="m4qetZXk6yhqlSpLj3BLa4">📦</div>
+        <h2 data-page-node-id="YymEdMyWDcuLfae6ofTWWd">导入记录</h2>
+        <div class="right" id="recTotalLabel" data-page-node-id="ilryU2WUwxHBqGNazHoYQl">共 0 条</div>
       </div>
-      <div class="rec-toolbar">
-        <span class="rec-count" id="recCountText">点击记录可回溯查看对应分析结果</span>
-        <button class="rec-clear-btn" onclick="clearAllImportRecords()" id="recClearBtn" style="display:none;">清空全部</button>
+      <div class="rec-toolbar" data-page-node-id="ACus1EOvg5z4U9ijFIVlb7">
+        <span class="rec-count" id="recCountText" data-page-node-id="wvKLxUA8DvCHzZ6YV1OdF0">点击记录可回溯查看对应分析结果</span>
+        <button class="rec-clear-btn" onclick="clearAllImportRecords()" id="recClearBtn" style="display:none;" data-page-node-id="kGbNW3vREuZBAmYsWAA4w7">清空全部</button>
       </div>
-      <div class="rec-list" id="recList">
-        <div class="rec-empty">
-          <div class="icon">📭</div>
-          <div>暂无导入记录</div>
-          <div style="margin-top:4px;font-size:11px;">导入产品并生成备货方案后，记录将自动保存</div>
+      <div class="rec-list" id="recList" data-page-node-id="pLkiYxBs9JNFeQUmYYbeJQ">
+        <div class="rec-empty" data-page-node-id="otir93XBCiEwPaeAezbbwq">
+          <div class="icon" data-page-node-id="QB6Oc8LmoNwxMZEeqZojTf">📭</div>
+          <div data-page-node-id="NFAMuLS2QftBycBYzNtl6O">暂无导入记录</div>
+          <div style="margin-top:4px;font-size:11px;" data-page-node-id="529JCoeDXGHmGGR8xRsgi1">导入产品并生成备货方案后，记录将自动保存</div>
         </div>
       </div>
       <!-- 操作日志（addLog 的展示位置） -->
-      <div class="log-section">
-        <div class="log-section-title">📜 操作日志（最近 10 条）</div>
-        <div id="logList" class="log-list-mini"></div>
+      <div class="log-section" data-page-node-id="1UM8Y0tDulUUGSPuHqxdGc">
+        <div class="log-section-title" data-page-node-id="A6Mx5V5Z95BXrQF9mpYFZH">📜 操作日志（最近 10 条）</div>
+        <div id="logList" class="log-list-mini" data-page-node-id="GhcporaESwRchvMRWS9qG8"></div>
       </div>
     </div>
 
     <!-- 用户管理 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon">👥</div>
-        <h2>用户管理（多人协作）</h2>
+    <div class="card" data-page-node-id="PFk9ITEkY0oY28J6TXe6t6">
+      <div class="card-header" data-page-node-id="0UZl9HHo6180U9kwKAABkq">
+        <div class="icon" data-page-node-id="432YHCcmUAmj5RuBQ4jE7O">👥</div>
+        <h2 data-page-node-id="mGqPTNb4PoSbbWD7trdxvA">用户管理（多人协作）</h2>
       </div>
-      <div class="warn-box">默认包含管理员账号 admin（admin / 123456）。新增用户需填写姓名、角色。导入/生成/提交等操作会写入审计日志。</div>
-      <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="userTable" style="min-width:900px;">
-          <thead>
-            <tr>
-              <th>姓名</th>
-              <th>角色</th>
-              <th>创建时间</th>
-              <th>最后活动</th>
-              <th>操作</th>
+      <div class="warn-box" data-page-node-id="JDuvggElXwZXIuqUfH5OSu">默认包含管理员账号 admin（admin / 123456）。新增用户需填写姓名、角色。导入/生成/提交等操作会写入审计日志。</div>
+      <div class="result-table-wrap is-resizable" data-page-node-id="OB1vED6QN7zdlQfTIWzf2S">
+        <table class="result-table" id="userTable" style="min-width:900px;" data-page-node-id="2aqcZKS9XMW6sq6BkNiaeO">
+          <thead data-page-node-id="M29nruGMJrTziMiyzlnaDh">
+            <tr data-page-node-id="0gAZ9kbmi2qqbcxQl70t08">
+              <th data-page-node-id="VkAxi9ULdMXtzxWi4HxSa4">姓名</th>
+              <th data-page-node-id="7NGqeiRwNPnGA0bEBu7DyN">角色</th>
+              <th data-page-node-id="egLuDB3EasHfkkxGDImpSH">创建时间</th>
+              <th data-page-node-id="pkXoIlhCqtLPOFNUHcvd77">最后活动</th>
+              <th data-page-node-id="3CQGQ3CQq4s2JSs7cYwNzh">操作</th>
             </tr>
           </thead>
-          <tbody id="userTbody"></tbody>
+          <tbody id="userTbody" data-page-node-id="CWO3PpV6iZ84MVCacAsOdr"></tbody>
         </table>
       </div>
     </div>
 
     <!-- 算法说明 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="icon">🧮</div>
-        <h2>算法说明（备货需求计算逻辑）</h2>
-        <button class="rec-clear-btn" style="display:inline-block;" onclick="toggleAlgoDoc()">展开 / 收起</button>
+    <div class="card" data-page-node-id="tc61XbXNjjCpMWqKbBFn92">
+      <div class="card-header" data-page-node-id="5sTpQrawZPomJbn6s1CNBo">
+        <div class="icon" data-page-node-id="wVHo1cd27dhXhvCHdzwmp6">🧮</div>
+        <h2 data-page-node-id="GSTVLuegZbTeKz6ach0laf">算法说明（备货需求计算逻辑）</h2>
+        <button class="rec-clear-btn" style="display:inline-block;" onclick="toggleAlgoDoc()" data-page-node-id="VDzmFQBfHOrf6pVTeJDlEe">展开 / 收起</button>
       </div>
-      <div id="algoDoc" style="display:none;">
-        <div class="warn-box" style="margin-bottom:10px;">以下为「生成备货方案」的需求计算逻辑说明，供核对口径使用。核心链路：<b>月度预测 → 周需求 → 到货基线 → 库存模拟 → 缺口识别 → 备货量计算 → 批次下单</b>。</div>
+      <div id="algoDoc" style="display:none;" data-page-node-id="0r2mtGWLBbC1kB75gjGVbr">
+        <div class="warn-box" style="margin-bottom:10px;" data-page-node-id="s2TCFYMRas7i1jHJ8HEPGT">以下为「生成备货方案」的需求计算逻辑说明，供核对口径使用。核心链路：<b data-page-node-id="UEpAAE6qqcbCL6xH3JS7H8">月度预测 → 周需求 → 到货基线 → 库存模拟 → 缺口识别 → 备货量计算 → 批次下单</b>。</div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>① 输入（产品级字段）</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:100px;">类别</th><th>字段</th></tr></thead>
-            <tbody>
-              <tr><td>需求</td><td>月预测 M0~M5（6 个月）、预测起始月份、最新周销量 / 近四周销量（无月预测时兜底）</td></tr>
-              <tr><td>库存</td><td>FBA库存、下架库存、海外仓库存、挪用库存</td></tr>
-              <tr><td>在途/在制</td><td>海外仓在途（+周数）、国内在途（+周数）、在制未交（+周数）、多票导入</td></tr>
-              <tr><td>参数</td><td>安全库存周数、生产周期(天)、计划周期(天)、备货下单频率(天)、直发比例(%)、海外仓保底天数</td></tr>
+        <div class="algo-block" data-page-node-id="ewlSCuMpzDZNLwghPJLDLn">
+          <div class="algo-step" data-page-node-id="W6lF7hIA5yuCvlGlTzM9qj"><b data-page-node-id="ESxoD1tVsqAFE5fv1I40iD">① 输入（产品级字段）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="e0VwgNZmOREi0vwfIF3zVf">
+            <thead data-page-node-id="FdfHOzi1gw2iWrBSkhidFS"><tr data-page-node-id="laYGurAwcjbR4BASc9ykJB"><th style="width:100px;" data-page-node-id="IgKsYz8DQUHb4VfxkZEIGv">类别</th><th data-page-node-id="ynYTCmnnxKYuv8tl1bN7ky">字段</th></tr></thead>
+            <tbody data-page-node-id="RAQEfKh8ed67SCk8yCSus0">
+              <tr data-page-node-id="GfOs3HKqItQUPAaZ1fxRUC"><td data-page-node-id="Pd7goPFmWBo1g77jXCMR2f">需求</td><td data-page-node-id="t3llccNSEa2qH7uFxQCDBR">月预测 M0~M5（6 个月）、预测起始月份、最新周销量 / 近四周销量（无月预测时兜底）</td></tr>
+              <tr data-page-node-id="oML9twlGJcGWXq4kF0Jzg2"><td data-page-node-id="vCPUNJ9dn3JGEN5mBykZ8k">库存</td><td data-page-node-id="68RI3a6AgNcYpnjqw0xqqr">FBA库存、下架库存、海外仓库存、挪用库存</td></tr>
+              <tr data-page-node-id="CrobtvAsAKEn84ZCsuBJlL"><td data-page-node-id="HBBqZID4RNJTCLgEebe3j4">在途/在制</td><td data-page-node-id="rxytYoJNmnT5rINLDMCegv">海外仓在途（+周数）、国内在途（+周数）、在制未交（+周数）、多票导入</td></tr>
+              <tr data-page-node-id="rDW3cgwkVTqwtOwruq0u9u"><td data-page-node-id="Y5Vt5aIOAXXnVYqEB1ktoT">参数</td><td data-page-node-id="yDxMqaNjAWdoxH3hYRnqYw">安全库存周数、生产周期(天)、计划周期(天)、备货下单频率(天)、直发比例(%)、海外仓保底天数</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>② 周需求展开</b>　月度预测 → 每周需求 = 月预测 ÷ 4.33（按月内周数均摊）</div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:140px;">情况</th><th>逻辑</th></tr></thead>
-            <tbody>
-              <tr><td>有预测起始月份</td><td>起始月之前的周 → 需求 = 0；起始月起的周 → 按「周所在月 − 起始月」偏移取对应 fcMx，超出 6 个月用平均值</td></tr>
-              <tr><td>无预测起始月份</td><td>从第 0 周按 所在月索引（w÷4.33）取 fcMx 展开</td></tr>
-              <tr><td>无月预测（全空）</td><td>兜底用 实际周销量 / 近四周销量 / 最新周销量</td></tr>
+        <div class="algo-block" data-page-node-id="P227lI0HCYpqeBD3J7r77u">
+          <div class="algo-step" data-page-node-id="Aa8HXkVq92gf2rrnIF9tfo"><b data-page-node-id="yaxe5PJLJ7yTkyKRpRoICM">② 周需求展开</b>　月度预测 → 每周需求 = 月预测 ÷ 4.33（按月内周数均摊）</div>
+          <table class="result-table" style="width:100%;" data-page-node-id="FfNAtmexffwQLZFMUTovg4">
+            <thead data-page-node-id="AO2BkG2AH6ZGDTLm4WfP32"><tr data-page-node-id="Nm6UkdKtYKD5smQVE1BZK5"><th style="width:140px;" data-page-node-id="46MjpD4LSPDTIDfNlJNW5C">情况</th><th data-page-node-id="RZWzCzZ7fwjLcWBOPgQdNH">逻辑</th></tr></thead>
+            <tbody data-page-node-id="jcmVeFsmHu0npuyw2PNZhv">
+              <tr data-page-node-id="Zw0w8KFjpEXd8rk4rgkAqC"><td data-page-node-id="22Qj8c79Yt399RsODwPdCI">有预测起始月份</td><td data-page-node-id="JdXVIi1fZtV8RGQof8qZtR">起始月之前的周 → 需求 = 0；起始月起的周 → 按「周所在月 − 起始月」偏移取对应 fcMx，超出 6 个月用平均值</td></tr>
+              <tr data-page-node-id="XP09zwhAL4UWCtzOubmUqf"><td data-page-node-id="tYhPVFEUlvQX3p74OKdNSW">无预测起始月份</td><td data-page-node-id="vUF9oOsxPvjyzAckN8SA0I">从第 0 周按 所在月索引（w÷4.33）取 fcMx 展开</td></tr>
+              <tr data-page-node-id="ke0rAtw8fNEvKE5nVzKrMj"><td data-page-node-id="EvHAccg1ZZU6HOQOqUtQgc">无月预测（全空）</td><td data-page-node-id="tXyQltII3KI6ShQLxIKsbL">兜底用 实际周销量 / 近四周销量 / 最新周销量</td></tr>
             </tbody>
           </table>
-          <div class="algo-note">⚠️ 前导 0 月份不得 slice 掉（会左移错位）——直接按偏移取原始值，0 预测月的周需求自然为 0。</div>
+          <div class="algo-note" data-page-node-id="VmWxKpJDr4p3H20ZYWKzdC">⚠️ 前导 0 月份不得 slice 掉（会左移错位）——直接按偏移取原始值，0 预测月的周需求自然为 0。</div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>③ 到货基线</b></div>
-          <div style="padding:6px 10px;font-size:13px;">第 0 周 = <b>FBA库存 + 下架库存 + 海外仓库存 + 挪用库存</b>（期初可售）；之后各周 = 海外仓在途到仓 + 国内在途到仓 + 在制未交到仓（按各自到仓周数）+ 多票在途/在制累加。</div>
+        <div class="algo-block" data-page-node-id="RxxoAnfvfKmUnxHGaL8g1s">
+          <div class="algo-step" data-page-node-id="cAP0DyZ86Ph3loMBAWpGZl"><b data-page-node-id="aPztoxASoMqeNC7Xo3AE1H">③ 到货基线</b></div>
+          <div style="padding:6px 10px;font-size:13px;" data-page-node-id="MCKz9zFWS4THcRqX2haztT">第 0 周 = <b data-page-node-id="LGrnQL2wX2lJWJ35Ap3DFh">FBA库存 + 下架库存 + 海外仓库存 + 挪用库存</b>（期初可售）；之后各周 = 海外仓在途到仓 + 国内在途到仓 + 在制未交到仓（按各自到仓周数）+ 多票在途/在制累加。</div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>④ 库存模拟（逐周滚动）</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">指标</th><th>公式 / 规则</th></tr></thead>
-            <tbody>
-              <tr><td>期末可售</td><td>期初可售 + 当周到货 − 当周需求</td></tr>
-              <tr><td>安全线（周级）</td><td>周需求 × 安全库存周数</td></tr>
-              <tr><td>缺货判定</td><td>可用量 &lt; 周需求 → 缺货 = 周需求 − 可用量（期末 = 0）</td></tr>
-              <tr><td>预警判定</td><td>期末可售 &lt; 安全线 → 黄色预警（周次计划表显示）</td></tr>
+        <div class="algo-block" data-page-node-id="f8hA7lDpWXwVSv4nbggGGJ">
+          <div class="algo-step" data-page-node-id="Ttm9W1EJdORtNvg43h4Bab"><b data-page-node-id="Y7DZDEaJQ8anHRBTtsA7ZB">④ 库存模拟（逐周滚动）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="LPcPxEpKRz5RxmLl0szzpk">
+            <thead data-page-node-id="QA2ERQZnzDQEiznyCx9Hfi"><tr data-page-node-id="KU9h72SgAqtCTuvfN4nvMX"><th style="width:160px;" data-page-node-id="EZi7wswRDVP1G3FatcEABJ">指标</th><th data-page-node-id="Cd3MLvVK1HvdDGtnE8v7Zh">公式 / 规则</th></tr></thead>
+            <tbody data-page-node-id="64ASh00myx2oiiZGUak4m0">
+              <tr data-page-node-id="ocRrB6rlPfZykg3a9EwCUN"><td data-page-node-id="tXgzDsEixeCSIQoNvRWdKC">期末可售</td><td data-page-node-id="2EUgoogdU6Vvm0C8znl8IJ">期初可售 + 当周到货 − 当周需求</td></tr>
+              <tr data-page-node-id="yBlKbQLB2alerZ6exmFpwG"><td data-page-node-id="30GB8YjWDS1RB0znT6OBcI">安全线（周级）</td><td data-page-node-id="cyTtWY3qviaDS6WDtPI1vW">周需求 × 安全库存周数</td></tr>
+              <tr data-page-node-id="JjvScydKDfzAwB0zlw5Pk0"><td data-page-node-id="4wlbDbit8UALo2qjswPD0z">缺货判定</td><td data-page-node-id="PWnQRSeE3OjWUEcjYwnehc">可用量 &lt; 周需求 → 缺货 = 周需求 − 可用量（期末 = 0）</td></tr>
+              <tr data-page-node-id="2qklmqFDN78qp06ORJ4Cuv"><td data-page-node-id="Q2uX5rYsPIZHJsb56U7Wy8">预警判定</td><td data-page-node-id="lY0qwTnKroJAGezqWCiQ7C">期末可售 &lt; 安全线 → 黄色预警（周次计划表显示）</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>⑤ 缺口扫描（按 cadence 逐轮评估，2026-09-03 v4）</b></div>
-          <div style="padding:6px 10px;font-size:13px;">
-            每轮先做<b>全量库存模拟</b>（含已排补货用 prevExtraArrivals 快照，扣除下游已排避免重复计入缺口），再从<b>全局最早可补救范围</b>（reachFromGlobal = cadence 0 用最快方式能到货的最早周，<b>所有 cadence 共用同一个下限</b>，而非每轮按 cadenceOrderWeek 重算）起扫描：<br>
-            <b>firstStockout</b> = reachFromGlobal 起首个<b>真断货</b>周（available &lt; 周需求，期末 = 0）。早于 reachFromGlobal 的断货
-            无论本批还是更晚批次都无法挽回（不可避免历史断货），不再触发下单，避免因历史断货周永远存在而无限应急；同时 cadence N 不会再误把 cadence 0 已尽力却救不回的历史缺口重新判为"现在断货"触发升舱。<br>
+        <div class="algo-block" data-page-node-id="7iHHGTD499tdzSvd7hpQm2">
+          <div class="algo-step" data-page-node-id="CVwo6CpNHXhsCKdP86wIEI"><b data-page-node-id="oeL3BEFY52bqeV897rGsb0">⑤ 缺口扫描（按 cadence 逐轮评估，2026-09-03 v4）</b></div>
+          <div style="padding:6px 10px;font-size:13px;" data-page-node-id="9r9VLHAuL0CzNg5vgnY797">
+            每轮先做<b data-page-node-id="lWINFISTOxUtVBWBfPh5gS">全量库存模拟</b>（含已排补货用 prevExtraArrivals 快照，扣除下游已排避免重复计入缺口），再从<b data-page-node-id="e0pguPqkCAzrVCXW4ZeHly">全局最早可补救范围</b>（reachFromGlobal = cadence 0 用最快方式能到货的最早周，<b data-page-node-id="f14FOYdtSQvvCGCt0Bq7Mo">所有 cadence 共用同一个下限</b>，而非每轮按 cadenceOrderWeek 重算）起扫描：<br data-page-node-id="Lh33wuqkWKXldgD2IioZ9T">
+            <b data-page-node-id="unVsVCacrCNnObzeJPBfs1">firstStockout</b> = reachFromGlobal 起首个<b data-page-node-id="afGMiRyUS4uavo9dJrNCat">真断货</b>周（available &lt; 周需求，期末 = 0）。早于 reachFromGlobal 的断货
+            无论本批还是更晚批次都无法挽回（不可避免历史断货），不再触发下单，避免因历史断货周永远存在而无限应急；同时 cadence N 不会再误把 cadence 0 已尽力却救不回的历史缺口重新判为"现在断货"触发升舱。<br data-page-node-id="6YeZ406SIy4gWwaLbTw4VA">
             cadence 下单周 = 批序 × 频率周数（7天→0,1,2…每周一单；15天→0,2,4…；30天→0,4,8…每月一单）；
-            <b>下单周 ≥ 计划期 或 常规到货周 ≥ 计划期且无断货需救 → 排单结束</b>（不再升舱堆货）。<br>
-            分档（用户三规则）：<br>
-            <b>① 常规滚动</b>：常规方式到货周在计划期内、且不晚于首个断货周（无断货时只看能否到货）→ 用常规 35 天慢衔接，不因低安全线就升舱快运。<br>
-            <b>② 缺货能衔接（升舱）</b>：常规到不了 / 到货晚于断货 → 升舱到最早能 ≤ 首断货周到货的方式。<br>
-            <b>③ 断货应急</b>：连最快都救不回断货周 → fastestSub（最快方式）首批止损，后续批次接力。
+            <b data-page-node-id="tGao4ogDlmkmmKbOGajyoZ">下单周 ≥ 计划期 或 常规到货周 ≥ 计划期且无断货需救 → 排单结束</b>（不再升舱堆货）。<br data-page-node-id="J4ogwM8R8kOIRMfmaPf5vA">
+            分档（用户三规则）：<br data-page-node-id="54W7zBBgGNa85jcfLabHIv">
+            <b data-page-node-id="fKFyoXGqokFNbJBlMzhmkl">① 常规滚动</b>：常规方式到货周在计划期内、且不晚于首个断货周（无断货时只看能否到货）→ 用常规 35 天慢衔接，不因低安全线就升舱快运。<br data-page-node-id="FI3yiRx4vBG4PHs5mnVXCZ">
+            <b data-page-node-id="HHoCwmrKWrTYFsxjtjqqQz">② 缺货能衔接（升舱）</b>：常规到不了 / 到货晚于断货 → 升舱到最早能 ≤ 首断货周到货的方式。<br data-page-node-id="o7Czp12hvjWAXtJAWlU9fT">
+            <b data-page-node-id="G6vLRjmniORzANCOy73nPf">③ 断货应急</b>：连最快都救不回断货周 → fastestSub（最快方式）首批止损，后续批次接力。
           </div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>⑥ 下单量（qty，2026-09-03 v4.6）</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">档位</th><th>规则</th></tr></thead>
-            <tbody>
-              <tr><td>应急档（到货周 ≥ 首断货周）</td><td><b>qty = 到货周安全线</b>（规则 2：不加当周需求——断货周需求已丢失，补不回已丢销量；最大即安全线，此后批次接力慢慢衔接）</td></tr>
-              <tr><td>衔接档（到货早于任何断货）</td><td>反推 <b>qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3，<b>2026-09-03 v4.6 去普适 safetyStock/2 缓冲</b>——之前会让每个 cadence 期末都超安全线、16 周累积过量）</td></tr>
-              <tr><td>到货周已 ≥ 安全线</td><td>查 reachFromGlobal..到货周 之间是否仍有真断货：无 → 本 cadence <b>空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线（v4.6 同步去 +safetyStock/2）</td></tr>
-              <tr><td>快慢分流衔接槽（v4.5 → v4.13 阶梯 / v4.14 托底线收紧）</td><td>本批到货周 aw 之前若存在期末 &lt; 该周「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」的薄点周 → 把缺口拆给最便宜能救回的快运方式提前到货托底（v4.13 起按 dom 降序阶梯选，非 fastestSub），剩余仍走本批方式到 aw（同一 cadence 下单周、两种运输方式）。v4.14 托底线由安全线 1/2 收紧为 1/4（原 1/2 在 safetyWeeks=4 时达 2 周需求，偏敏感）</td></tr>
-              <tr><td>取整/上限</td><td>按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆（≈2×安全线口径）</td></tr>
+        <div class="algo-block" data-page-node-id="4sqo3AchkxTK0vPgaguJCp">
+          <div class="algo-step" data-page-node-id="KPpSD9uza7cuCb8qG3mObd"><b data-page-node-id="GA1IowiHz5x7yfrLJ5t4LX">⑥ 下单量（qty，2026-09-03 v4.6）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="d0v8s8Appomvw4GzcDGQuW">
+            <thead data-page-node-id="njyZZ51VJTAhO9yHLs7DZz"><tr data-page-node-id="9XMZRAPEW6hSbWg8xSnTTm"><th style="width:160px;" data-page-node-id="ZN01rekTlDSLv5fPyGzRN2">档位</th><th data-page-node-id="lzreFx0CBMFS4IYVFe2DRK">规则</th></tr></thead>
+            <tbody data-page-node-id="9JPeBZYIjFd85n9wLQnQtj">
+              <tr data-page-node-id="wSiR5jNHbSMvB8Hs1du0Xa"><td data-page-node-id="68JC4WBaZy9BFXRi17V6ae">应急档（到货周 ≥ 首断货周）</td><td data-page-node-id="TZdQKuCrZ89C0HO2dfElfc"><b data-page-node-id="uEmVPI1CeB9FEgLKADCAOk">qty = 到货周安全线</b>（规则 2：不加当周需求——断货周需求已丢失，补不回已丢销量；最大即安全线，此后批次接力慢慢衔接）</td></tr>
+              <tr data-page-node-id="jjuI6QEAqqBNEw8AhgtY21"><td data-page-node-id="TQSWyLHJRZGhVXCEqfCqv5">衔接档（到货早于任何断货）</td><td data-page-node-id="ea2pVoKQxiCctYUQd68az7">反推 <b data-page-node-id="eDRi5Za2BXMLlMBGmG6heE">qty = 安全线 − (期初可售 − 周需求)</b>，使「到货 + 期初 − 周需求 = 安全线」，到货后期末刚好回到安全线，不多补（规则 1/3，<b data-page-node-id="2m9tOuIgLWlq4OdO78MXz7">2026-09-03 v4.6 去普适 safetyStock/2 缓冲</b>——之前会让每个 cadence 期末都超安全线、16 周累积过量）</td></tr>
+              <tr data-page-node-id="Zxirj3hTLxLgbPuIJGhusC"><td data-page-node-id="IFEkLiPKVeqDF5shma7e8d">到货周已 ≥ 安全线</td><td data-page-node-id="JgSy9JM8UCfhCZn8lyRpqS">查 reachFromGlobal..到货周 之间是否仍有真断货：无 → 本 cadence <b data-page-node-id="qj2QzHS1iRGVnsPD3oRyFI">空跑推进</b>（高库存不产生垃圾单）；有 → 补足该断货周安全线（v4.6 同步去 +safetyStock/2）</td></tr>
+              <tr data-page-node-id="VCzolcXUb5TLnhIJAaAiJx"><td data-page-node-id="pRurcsRDqqPn0pxTwaFm53">快慢分流衔接槽（v4.5 → v4.13 阶梯 / v4.14 托底线收紧）</td><td data-page-node-id="QL8qQ1kxPVP3X04vqrvDoD">本批到货周 aw 之前若存在期末 &lt; 该周「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」的薄点周 → 把缺口拆给最便宜能救回的快运方式提前到货托底（v4.13 起按 dom 降序阶梯选，非 fastestSub），剩余仍走本批方式到 aw（同一 cadence 下单周、两种运输方式）。v4.14 托底线由安全线 1/2 收紧为 1/4（原 1/2 在 safetyWeeks=4 时达 2 周需求，偏敏感）</td></tr>
+              <tr data-page-node-id="6jl0R1WRXs2njiuoj5obH2"><td data-page-node-id="62UlE3UFKwoKb4HpYrxPEz">取整/上限</td><td data-page-node-id="lGUNbcUPTowfw5NifSEgVf">按单箱向上取整；safetyCeiling = max(maxBatchSize, 安全库存×2 按箱取整) 防爆（≈2×安全线口径）</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>⑦ 批次生成与下单</b></div>
-          <div style="padding:6px 10px;font-size:13px;">
-            <b>候选方式池</b>：仅「基础数据 → 运输方式管理」中<b>已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<b>区域限制（v4.12）</b>：候选池再按产品<b>「区域」</b>过滤——方式区域须与产品区域<b>精确相等</b>（支持 / 分隔多值），或方式标「通用/不限/空」；产品无区域则不限制。区域不匹配的线路（如美国产品对「美转加30」）不会进入常规方式解析、升舱候选、最快应急及任何批次下拉，杜绝跨区误选。<br>
-            <b>常规方式停用自动回退（2026-09-03 v4.7）</b>：产品导入的「常规运输方式」若在管理中已被停用/改名 → 不再静默漏补（旧逻辑：库存中等无断货时 regM 匹配失败直接结束排单、期末库存跌破安全线；有断货时被迫连后续批次全走最快方式、运费高）。现自动就近回退到已启用池中的方式衔接：同档（时效相同，如 普船35→卡航35）→ 次慢档 → 最快档 → 最慢兜底；方案仍保持「常规滚动衔接 + 断货才升舱」语义，回退结果在 分析结果表（行下橙色提示条）/ 单品详情 / 导出（末列「运输方式回退」）醒目提示。<br>
-            下单周 <b>cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br>
-            到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b>到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br>
+        <div class="algo-block" data-page-node-id="GZGQl8a6LM7WJXluvQo4Wo">
+          <div class="algo-step" data-page-node-id="id6G5m1DKxLDVG7e3ANLe3"><b data-page-node-id="CKw7sc3AlFPR8OMKF0F5WM">⑦ 批次生成与下单</b></div>
+          <div style="padding:6px 10px;font-size:13px;" data-page-node-id="48xD9LA5c5c82Bv89lUlxe">
+            <b data-page-node-id="sSK3h5FDQVI1R1OnKfUFGi">候选方式池</b>：仅「基础数据 → 运输方式管理」中<b data-page-node-id="r7HRdBYOd1lv9GRI0hjMOH">已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<b data-page-node-id="K810IJaZH6N9UthjZrkhUy">区域限制（v4.12）</b>：候选池再按产品<b data-page-node-id="J6UWmI5g6NeG3FcFAjnKnm">「区域」</b>过滤——方式区域须与产品区域<b data-page-node-id="DwxY5mFGmDuBU0ADMVibbO">精确相等</b>（支持 / 分隔多值），或方式标「通用/不限/空」；产品无区域则不限制。区域不匹配的线路（如美国产品对「美转加30」）不会进入常规方式解析、升舱候选、最快应急及任何批次下拉，杜绝跨区误选。<br data-page-node-id="ea1V5gBCt8E9ZpDxb0Uee9">
+            <b data-page-node-id="2cYH5OQy1af2mGd8ZzrBca">常规方式停用自动回退（2026-09-03 v4.7）</b>：产品导入的「常规运输方式」若在管理中已被停用/改名 → 不再静默漏补（旧逻辑：库存中等无断货时 regM 匹配失败直接结束排单、期末库存跌破安全线；有断货时被迫连后续批次全走最快方式、运费高）。现自动就近回退到已启用池中的方式衔接：同档（时效相同，如 普船35→卡航35）→ 次慢档 → 最快档 → 最慢兜底；方案仍保持「常规滚动衔接 + 断货才升舱」语义，回退结果在 分析结果表（行下橙色提示条）/ 单品详情 / 导出（末列「运输方式回退」）醒目提示。<br data-page-node-id="GkfJ9FCSfIFs5EXYSwOYCK">
+            下单周 <b data-page-node-id="6cdnY3GSpvKCZIYlhoqeP2">cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br data-page-node-id="Naxp7NRR8G6PZ6bXmea1SF">
+            到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b data-page-node-id="Ds3D8PgIMtpbLA8hBmbm8h">到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br data-page-node-id="FjWOCFqlDJVIGH8oDo9q5D">
             常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量（v4.6 朴素公式，不含普适半安全线缓冲），
-            常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br>
-            <b>升舱按阶梯选方式（v4.13 替代 v4.11 "最早到货"策略）</b>：当 regM 救不回断货周 → 在「严格比常规快（dom &lt; regM.dom）」的启用池中按 <b>(dom 降序, pricePerKG 升序, 数组索引 升序)</b> 选方式——常规 55 → 先试 35 → 救不回再 27 → 救不回再 22，避免一动就快船22（运费高）。同 dom 时按单价升序（如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg）。无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。<br>
-            断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br>
-            快慢分流衔接槽：衔接档下到货周 aw 前若出现期末低于「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」（v4.14 收紧，原 v4.5~v4.13 为 1/2）的薄点周，把缺口拆给「最便宜能救回的」方式（v4.13 起按阶梯选：dom 降序→price 升序，与升舱阶梯同源）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<b>注意</b>：v4.13 之前衔接槽直接选 fastestSub（最快方式），现已升级到阶梯选——若仍有 ⚠ fastest 提示说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档）。
-            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br>
+            常规海运逐周滚动到货衔接 —— 不会出现「一次性大额应急单 + 高价快运」（修复前：W9 出 4,960 快船22；修复后：应急首选单批最快走法不拆普船）。<br data-page-node-id="nOOmUn1CuA3cbXfGd6xoSI">
+            <b data-page-node-id="NC5BA9yg5yDrwgfaMt3bci">升舱按阶梯选方式（v4.13 替代 v4.11 "最早到货"策略）</b>：当 regM 救不回断货周 → 在「严格比常规快（dom &lt; regM.dom）」的启用池中按 <b data-page-node-id="jFozqR0ZwTfrF1kCE5YCk7">(dom 降序, pricePerKG 升序, 数组索引 升序)</b> 选方式——常规 55 → 先试 35 → 救不回再 27 → 救不回再 22，避免一动就快船22（运费高）。同 dom 时按单价升序（如卡航35 4.5¥/kg 优先 普船35 5.87¥/kg）。无任何严格更快能救回 → fastestSub 兜底（实际不可达：fastestSub 到货周 ≤ firstStockout 恒成立）。<br data-page-node-id="1R0KcBohrL2C0vr9WSKZ3Z">
+            断货应急（规则 2）：首批 fastestSub、qty 封顶安全线，后续批次每轮重新评估，断货解除后自动转回常规滚动。<br data-page-node-id="jwbLAUzG3d57Jhej5NUIGI">
+            快慢分流衔接槽：衔接档下到货周 aw 前若出现期末低于「托底线 = 安全线 1/4 = 当周需求×safetyWeeks÷4」（v4.14 收紧，原 v4.5~v4.13 为 1/2）的薄点周，把缺口拆给「最便宜能救回的」方式（v4.13 起按阶梯选：dom 降序→price 升序，与升舱阶梯同源）+ 普船/原方式（原到货周衔接）两批；同 cadence 下单周、两种运输方式对应实际"调约一周需求走快运衔接"模式。<b data-page-node-id="eovAFmAyb16EeQRfB2FpOe">注意</b>：v4.13 之前衔接槽直接选 fastestSub（最快方式），现已升级到阶梯选——若仍有 ⚠ fastest 提示说明候选池里只有最快方式能在槽位到货（数学上无更便宜的中间档）。
+            按发货模式拆子批：直发（早到）/ 中转（dom + osToFba 晚到）/ 混合（直发比例拆分两批，浅克隆 method 对象避免跨产品共享）。<br data-page-node-id="8JtwzboYwrrGFiOP7iZOwP">
             循环终止：无缺口 / 下单周 ≥ 计划期 / 常规到不了计划期且无断货需救 / 达最大迭代数。
           </div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>⑧ 尾数顺延（2026-09-04 v4.8；v4.9 起双阈值且关系）</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
-            <tbody>
-              <tr><td>触发条件</td><td>衔接档本 cadence 应下量 <b>qty &gt; 0</b>，且<b>同时满足</b>两项阈值（且关系）：① <b>qty &lt; 周均倍数线</b>（N × 周均需求，默认 1 周）；② <b>qty &lt; 绝对数量阈值</b>（默认 30 套，可配 0 = 关闭该项）—— 即「低于 N 周的量」<b>且</b>「低于 N 套」都成立才视为尾数；<b>且推演全程无真断货</b>（firstStockout &lt; 0）</td></tr>
-              <tr><td>动作</td><td>本 cadence <b>不排批次</b>，缺口滚入下一 cadence —— 库存随需求自然消耗，下轮缺口 ≈ 本轮 + 1 个下单频率窗口的需求，达到阈值后一次性集中下单（对应实际「几套先不下，过一两周再下，下单更集中」）</td></tr>
-              <tr><td>断货防呆</td><td>存在真断货风险（firstStockout ≥ 0 / 到货周前已断货需补）→ <b>强制下单</b>，尾数规则不生效 —— 顺延只用于无断货风险的场景，不会因延后而增加缺货周</td></tr>
-              <tr><td>不启用情形</td><td>配置开关关闭；周均需求 ≤ 0（无需求产品，倍数线=0）；应急档（量=到货周安全线，恒 ≥ 阈值）；缺口 ≥ 任意启用阈值（说明缺得够多，照常下单）</td></tr>
-              <tr><td>醒目标注</td><td>本周被顺延 → 分析结果表行下灰蓝提示条 + 单品详情头部提示条 + 导出末列「尾数顺延」（本周顺延量）；可直接点击「本周下单量」单元格手动补单</td></tr>
+        <div class="algo-block" data-page-node-id="HUhHwTF8Lj8Q4Un8cILtWF">
+          <div class="algo-step" data-page-node-id="gEcLDVbAMFjNzLMoxHrPq8"><b data-page-node-id="KlqCUsRTmVq6mxLu3Ci84g">⑧ 尾数顺延（2026-09-04 v4.8；v4.9 起双阈值且关系）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="Brst1r6zemgbvCwkH8YmcX">
+            <thead data-page-node-id="0ENwRakFOvmy3sX7Uamhx8"><tr data-page-node-id="2GLOLDsAMWu5eJs8xGK5xZ"><th style="width:160px;" data-page-node-id="CiBC5mSUbpny14wtT7t4mI">项</th><th data-page-node-id="msCb4r8tbnoU7QlMDXIAZb">规则</th></tr></thead>
+            <tbody data-page-node-id="AhtIsYykW5JUeMc4sb3jmx">
+              <tr data-page-node-id="ts3C6BqmY7EDLf42GyBG6j"><td data-page-node-id="VuHA2iSjnWxaOMdVaoBB5D">触发条件</td><td data-page-node-id="JW7o5zFvxVEsKgwfcQCJlx">衔接档本 cadence 应下量 <b data-page-node-id="IqkN6jfOfSPaNoXAQXPigC">qty &gt; 0</b>，且<b data-page-node-id="Q7b8VybtXaLd5Gj4Qg2FNB">同时满足</b>两项阈值（且关系）：① <b data-page-node-id="BOFaKuRzTwVjQoxpBjeKDA">qty &lt; 周均倍数线</b>（N × 周均需求，默认 1 周）；② <b data-page-node-id="ZDILcYafTdF3zKzVw3XFBq">qty &lt; 绝对数量阈值</b>（默认 30 套，可配 0 = 关闭该项）—— 即「低于 N 周的量」<b data-page-node-id="WZun10GXlpBUb2tGZO5pyC">且</b>「低于 N 套」都成立才视为尾数；<b data-page-node-id="vyFByAygQ63BE358VTlnwJ">且推演全程无真断货</b>（firstStockout &lt; 0）</td></tr>
+              <tr data-page-node-id="A8E86FXjS7oxjCFLcCyhz7"><td data-page-node-id="qaiVmMKhUIJeDS0DUh0dBh">动作</td><td data-page-node-id="5vbvSPlLHhzZWObYPbvmqw">本 cadence <b data-page-node-id="nynyISOWD69n8HLTiTvzrO">不排批次</b>，缺口滚入下一 cadence —— 库存随需求自然消耗，下轮缺口 ≈ 本轮 + 1 个下单频率窗口的需求，达到阈值后一次性集中下单（对应实际「几套先不下，过一两周再下，下单更集中」）</td></tr>
+              <tr data-page-node-id="GQOttBj8jJqI33fq5Q2Ew7"><td data-page-node-id="Pfk3B2yMgqHksfEo6bz9m0">断货防呆</td><td data-page-node-id="bsJh143ILARsiYpfOcJB6w">存在真断货风险（firstStockout ≥ 0 / 到货周前已断货需补）→ <b data-page-node-id="hUCD6pi0ABPE2NoTcpjVHn">强制下单</b>，尾数规则不生效 —— 顺延只用于无断货风险的场景，不会因延后而增加缺货周</td></tr>
+              <tr data-page-node-id="0aJsUTRfIgdDOP17RlOYnN"><td data-page-node-id="s16pj3Sm5KRGuAe35fUBn8">不启用情形</td><td data-page-node-id="9FreZKndrw1XRI5pGGHHfX">配置开关关闭；周均需求 ≤ 0（无需求产品，倍数线=0）；应急档（量=到货周安全线，恒 ≥ 阈值）；缺口 ≥ 任意启用阈值（说明缺得够多，照常下单）</td></tr>
+              <tr data-page-node-id="bjXCa8j2lQ4OaXGxVPJNrj"><td data-page-node-id="AjEJFcnAXSKzidWgwOTvs0">醒目标注</td><td data-page-node-id="sIIljVKFuYRvnDcdEypeh0">本周被顺延 → 分析结果表行下灰蓝提示条 + 单品详情头部提示条 + 导出末列「尾数顺延」（本周顺延量）；可直接点击「本周下单量」单元格手动补单</td></tr>
             </tbody>
           </table>
-          <div class="algo-note">阈值在「基础数据 → 尾数顺延」可配置（开关 + 周均倍数 0.5/1/1.5/2 周 + 绝对数量阈值套数，两项为且关系）。总下单量不因顺延减少，只是把零碎小单合并为集中大单。</div>
+          <div class="algo-note" data-page-node-id="m3v5rN3CLdaFwcfqLn4M6C">阈值在「基础数据 → 尾数顺延」可配置（开关 + 周均倍数 0.5/1/1.5/2 周 + 绝对数量阈值套数，两项为且关系）。总下单量不因顺延减少，只是把零碎小单合并为集中大单。</div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>⑨ 提前释放订单（预放单 2026-09-08 v4.17）</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">项</th><th>规则</th></tr></thead>
-            <tbody>
-              <tr><td>配置位置</td><td>「基础数据 → 提前释放订单（预放单）」下拉：1/2/3/4 周（默认 1 = 关闭，本周只放当周批）</td></tr>
-              <tr><td>业务场景</td><td>长假/节假日（国庆）前<b>提前放单</b>：本周把未来 N-1 周该下的订单批次 PO 一并下出去 —— <b>不是</b>把两三周的量合并成一单集中出货，各批次的<b>需求出货日期 / 预计到仓时间保持原计划不变</b>，只是下单动作提前</td></tr>
-              <tr><td>实现口径</td><td>算法排程不变（各 cadence 批次的量/方式/到货周均不动）；凡「本周下单量 / 本周需下单批次」的统计、合计、编辑、导出口径从 <code>orderWeek===0</code> 放宽为 <code>orderWeek &lt; 释放周数</code> —— 即本次放单窗口内全部批次（含未来提前释放批）</td></tr>
-              <tr><td>联动视图</td><td>分析结果表「本周下单量」列 / 备货下单表（Page 3）/ 备货下单表导出 / 透视表与指标卡「含本周下单量可售」/ 单品详情周次计划「本周下单量」列 —— 全部按放单窗口汇总</td></tr>
-              <tr><td>醒目标注</td><td>释放周数 &gt; 1 且产品存在提前释放批 → 分析结果表行下绿色提示条「🎯 预放单（释放 N 周）：本周连同未来 X 批一起放」</td></tr>
-              <tr><td>编辑兼容</td><td>手动改「本周下单量」时分配到窗口内全部批次（按到货周/比例分摊，逻辑与原 orderWeek===0 一致）；改配置后需重新生成方案生效</td></tr>
+        <div class="algo-block" data-page-node-id="FGIBctZ3aYzBaY65axvCaj">
+          <div class="algo-step" data-page-node-id="DTG2y94k1zXghKFpWTS02R"><b data-page-node-id="d4hz5oFeezgVWN0b4xOfFV">⑨ 提前释放订单（预放单 2026-09-08 v4.17）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="DHb16wiZNamkARKNXcFLNK">
+            <thead data-page-node-id="EaOtIsrkNJs774jSldwFoI"><tr data-page-node-id="AtTqAtWmp6brt9lQLBXTol"><th style="width:160px;" data-page-node-id="lHDrMHjafeFKzZNYbROPSh">项</th><th data-page-node-id="PM8boiL1l2Yg1HGVgDSNIq">规则</th></tr></thead>
+            <tbody data-page-node-id="SvtSJqMch9HMGSVXhfAPUH">
+              <tr data-page-node-id="ioRhzsNKwzFw6l2tcvIVCJ"><td data-page-node-id="F6XFoY0G6sBBFXF4MQWbfH">配置位置</td><td data-page-node-id="QEAXdotawje26zf85zLRLe">「基础数据 → 提前释放订单（预放单）」下拉：1/2/3/4 周（默认 1 = 关闭，本周只放当周批）</td></tr>
+              <tr data-page-node-id="nZ5gJzYvjr7cpUIaijgozY"><td data-page-node-id="V04eyH2gL36Az1K3KozhC4">业务场景</td><td data-page-node-id="VkTuB3LmO12nnr8VxE69VP">长假/节假日（国庆）前<b data-page-node-id="CIZimN3vkLUj4ikiZFucyD">提前放单</b>：本周把未来 N-1 周该下的订单批次 PO 一并下出去 —— <b data-page-node-id="UFKeyiAXAxKzSluJhVlTbF">不是</b>把两三周的量合并成一单集中出货，各批次的<b data-page-node-id="CUVYldBcw886BcLas0wsyt">需求出货日期 / 预计到仓时间保持原计划不变</b>，只是下单动作提前</td></tr>
+              <tr data-page-node-id="BzJebsXcaA69zJdTMmeVFG"><td data-page-node-id="12j68UifDy3hxuSH9SnTRG">实现口径</td><td data-page-node-id="b3dEVTEtdbBKPQxS2evAkO">算法排程不变（各 cadence 批次的量/方式/到货周均不动）；凡「本周下单量 / 本周需下单批次」的统计、合计、编辑、导出口径从 <code data-page-node-id="ACntF2kAkVj3Im6PTSPCux">orderWeek===0</code> 放宽为 <code data-page-node-id="mUsGKcdJVPvRFV1vjEcDo4">orderWeek &lt; 释放周数</code> —— 即本次放单窗口内全部批次（含未来提前释放批）</td></tr>
+              <tr data-page-node-id="tEMhURDAkkMe5SzeRvV1nu"><td data-page-node-id="uBoCNFUoGgIiQ0hDxLGxGq">联动视图</td><td data-page-node-id="xiEErq0V8FbOshE6cRAXMc">分析结果表「本周下单量」列 / 备货下单表（Page 3）/ 备货下单表导出 / 透视表与指标卡「含本周下单量可售」/ 单品详情周次计划「本周下单量」列 —— 全部按放单窗口汇总</td></tr>
+              <tr data-page-node-id="oiRGIA24lPj1HU3gtysbLT"><td data-page-node-id="HYfxDh8jmiPAUbSRwRA6T5">醒目标注</td><td data-page-node-id="O9i9Jdr11RcLVPIFnSOj27">释放周数 &gt; 1 且产品存在提前释放批 → 分析结果表行下绿色提示条「🎯 预放单（释放 N 周）：本周连同未来 X 批一起放」</td></tr>
+              <tr data-page-node-id="jV2cfg7LFMFEu1ADMEdL8Z"><td data-page-node-id="3NaC47IE1zOLTWFNPUeIlg">编辑兼容</td><td data-page-node-id="4HNWRu7BEJw6E6F3YhWAEG">手动改「本周下单量」时分配到窗口内全部批次（按到货周/比例分摊，逻辑与原 orderWeek===0 一致）；改配置后需重新生成方案生效</td></tr>
             </tbody>
           </table>
-          <div class="algo-note">放完长假恢复每周放单：把释放周数改回 1 并重新生成即可。长按「一次性放一个月量的单」可用 4 周。</div>
+          <div class="algo-note" data-page-node-id="4c46B3wZfNIi318VC3Scyt">放完长假恢复每周放单：把释放周数改回 1 并重新生成即可。长按「一次性放一个月量的单」可用 4 周。</div>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>核心公式速记</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">指标</th><th>公式</th></tr></thead>
-            <tbody>
-              <tr><td>周需求</td><td>月预测 ÷ 4.33</td></tr>
-              <tr><td>期初可售</td><td>FBA + 下架 + 海外仓 + 挪用（第 0 周）</td></tr>
-              <tr><td>期末可售</td><td>期初 + 到货 − 需求</td></tr>
-              <tr><td>缺货</td><td>max(0, 需求 − 可用)</td></tr>
-              <tr><td>安全线</td><td>周需求 × 安全库存周数</td></tr>
-              <tr><td>备货量</td><td><b>按下单频率 = maxBatchSize</b>（不再叠加窗口需求 + 安全线 − 可用量，也不叠加缺货补偿/保底）</td></tr>
+        <div class="algo-block" data-page-node-id="hzr1kFln3bss982KocTjG5">
+          <div class="algo-step" data-page-node-id="f9qf6r8KhGc2MjwxrX7nMe"><b data-page-node-id="7XqV7l4clytzSmGWYXV53W">核心公式速记</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="z1Wsd5YTgysO2TV3bk225r">
+            <thead data-page-node-id="dRx92whA5xdCeXlvESPiKK"><tr data-page-node-id="V4sTo6o5X5eopQkSS6FC0l"><th style="width:160px;" data-page-node-id="xF9zEdKEk1UgkT2GC46tin">指标</th><th data-page-node-id="hbzNYCSu0JdY1Dl0pPUiLk">公式</th></tr></thead>
+            <tbody data-page-node-id="cbtXuMBKd7prNqsQmObwg5">
+              <tr data-page-node-id="KasESkNSQRXHEcL7VKbNVB"><td data-page-node-id="MVrrKlWxLFq28FUSUn9peU">周需求</td><td data-page-node-id="EuBH1jkH3IWRmnCLZ9UdkH">月预测 ÷ 4.33</td></tr>
+              <tr data-page-node-id="U49qd5ODsvLZGzLlFYmKFS"><td data-page-node-id="ptIIrsbCqxpaEf1XlgX8lK">期初可售</td><td data-page-node-id="tbuTgEzLYbxV3dyv9nGHGX">FBA + 下架 + 海外仓 + 挪用（第 0 周）</td></tr>
+              <tr data-page-node-id="PFLbNCx7frlLy5rzmRJo5O"><td data-page-node-id="DcEXNA9GYIEKwREnfDWm5i">期末可售</td><td data-page-node-id="l0omFzHTmS0OeCpocdSzVy">期初 + 到货 − 需求</td></tr>
+              <tr data-page-node-id="eLVcupiImyfZieMlFVQY5r"><td data-page-node-id="lDq9HKQiug5LwuCtM4cHEw">缺货</td><td data-page-node-id="Q1IddsC7BAYAzZDNEuLHZm">max(0, 需求 − 可用)</td></tr>
+              <tr data-page-node-id="UERpZJFebleJM8MSopxl2e"><td data-page-node-id="3w1bAdA3iK0o9wOXlChpyY">安全线</td><td data-page-node-id="5URCnfJg7jGbDjkdPXJGHU">周需求 × 安全库存周数</td></tr>
+              <tr data-page-node-id="D5GDyAuBocCO3BAqqhGhMM"><td data-page-node-id="2tAPUkNCyr8OZkAsKm0oFR">备货量</td><td data-page-node-id="16K8e9Zcf6fAEYDG7U9Bv0"><b data-page-node-id="ANA1AGVGmWqsK2Q0i98Z1J">按下单频率 = maxBatchSize</b>（不再叠加窗口需求 + 安全线 − 可用量，也不叠加缺货补偿/保底）</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="algo-block">
-          <div class="algo-step"><b>备货透视表（Page 4）口径</b></div>
-          <table class="result-table" style="width:100%;">
-            <thead><tr><th style="width:160px;">列</th><th>口径</th></tr></thead>
-            <tbody>
-              <tr><td>周需求</td><td>优先取自方案 <code>r.avgWeeklyDemand</code>（与 Page 1 结果表周均需求完全同源）；未生成方案的产品退回 <code>last4WeeksSales</code>（业务侧已确认字段语义=近四周平均周销量）</td></tr>
-              <tr><td>月均需求</td><td>以导入时按月预测计算为准：<code>monthlyAvgImport(p)</code>（fcM0~M5 中 &gt;0 的均值、取整）；与 备货清单 / 分析结果明细「月均需求」逐品同源；预测全空 = 0，不使用销量兜底（2026-09-03 用户确认）</td></tr>
-              <tr><td>近四周平均销量</td><td>近四周平均周销量：与 Page 1 结果表「近四周平均销量」同源（<code>last4WeeksSales</code>，兼容旧字段 <code>actualWeeklySales</code>）；组内逐品求和（v4.10 新增列，供「实际可售时间」分母用）</td></tr>
-              <tr><td>当前库存可售时间(月)</td><td>当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图；v4.10 由「可售时间(月)」更名）</td></tr>
-              <tr><td>含在制总数可售时间(月)</td><td>含在制总数 ÷ 月均需求（v4.10 新增：全部库存+在途/在制 入库后视角）</td></tr>
-              <tr><td>含本周下单量可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ 月均需求（v4.10 起分子从「当前库存」改为「含在制总数」——本周下单入库 + 全部在途/在制 后视角）</td></tr>
-              <tr><td>含本周下单量实际可售时间(月)</td><td>(含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)（v4.10 新增：分母用近期实际销量月速度，非预测月均，反映按当前销售速度能卖几个月）</td></tr>
-              <tr><td>本次备货量 / 本周下单量</td><td>取自方案 <code>r.actualRec</code> / 本周下单量 = orderWeek &lt; 释放周数 的批次合计（v4.17 预放单后含未来提前释放批）</td></tr>
+        <div class="algo-block" data-page-node-id="nuPMFEWO4ynjWVQjYAk1wb">
+          <div class="algo-step" data-page-node-id="gDVyomz6BGBPTTbqj9dKbx"><b data-page-node-id="3iiHgBl00qtNGTmsgiyRxH">备货透视表（Page 4）口径</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="gpjNgujxHqmZZr3rZMs3rd">
+            <thead data-page-node-id="FwruEUgzusnIDTKTDQpoME"><tr data-page-node-id="C38YGYdxnW5j0t7bTGYkRE"><th style="width:160px;" data-page-node-id="97AWesodsm9enViMCKUR0W">列</th><th data-page-node-id="pCNwGTuWrbXBZuGVaMjbCL">口径</th></tr></thead>
+            <tbody data-page-node-id="AC36zUqKOHqAP23iE3i13U">
+              <tr data-page-node-id="IjrABQdmQ7LSFYATgnOLuM"><td data-page-node-id="i2A7vL7cTxeXMKhtheZ9B6">周需求</td><td data-page-node-id="EoozDomXFmFAWaHiC3nYBr">优先取自方案 <code data-page-node-id="UkUsuEQ9XKkRnY2DnSNw8b">r.avgWeeklyDemand</code>（与 Page 1 结果表周均需求完全同源）；未生成方案的产品退回 <code data-page-node-id="FatDWURBE2roLbtpOH1M2E">last4WeeksSales</code>（业务侧已确认字段语义=近四周平均周销量）</td></tr>
+              <tr data-page-node-id="B1PjWXdoQEp3npkQZK0NPC"><td data-page-node-id="Ea6RTQWeanH73Rzrocvc0R">月均需求</td><td data-page-node-id="C37l9Rhs5chNHEFQETS795">以导入时按月预测计算为准：<code data-page-node-id="e9IyLmHH4Fjxtl2eCp4Vcr">monthlyAvgImport(p)</code>（fcM0~M5 中 &gt;0 的均值、取整）；与 备货清单 / 分析结果明细「月均需求」逐品同源；预测全空 = 0，不使用销量兜底（2026-09-03 用户确认）</td></tr>
+              <tr data-page-node-id="0ILrRDngizTnuMcbJE84h2"><td data-page-node-id="HbGZKeFt24s4SxPzSe1nPe">近四周平均销量</td><td data-page-node-id="FAFQRycy5XlBiP5spC9p4n">近四周平均周销量：与 Page 1 结果表「近四周平均销量」同源（<code data-page-node-id="ZPLJrRiEjuo9r92Iw3bfcE">last4WeeksSales</code>，兼容旧字段 <code data-page-node-id="FNkQtEMY8HqgBTeouwS4aP">actualWeeklySales</code>）；组内逐品求和（v4.10 新增列，供「实际可售时间」分母用）</td></tr>
+              <tr data-page-node-id="riqkGh6JuA7GyG9Ac4hDiq"><td data-page-node-id="7mwJKeYvsZmr6L8OR54uMU">当前库存可售时间(月)</td><td data-page-node-id="kHUnWiihlVP6Q69h54mTOM">当前库存 ÷ 月均需求（与 Page 1 库存可售(周) 互为月度/周度视图；v4.10 由「可售时间(月)」更名）</td></tr>
+              <tr data-page-node-id="AdebLljBYy4pmsxaGhu1nX"><td data-page-node-id="AcKzrB12Hz1P3PhBvSFb2J">含在制总数可售时间(月)</td><td data-page-node-id="qAAX6WCnEJ3noVUlirWlZi">含在制总数 ÷ 月均需求（v4.10 新增：全部库存+在途/在制 入库后视角）</td></tr>
+              <tr data-page-node-id="JMYqn2l3YDeomhGovKAUoP"><td data-page-node-id="Z0JAigubDkYeGBa6gdAvcE">含本周下单量可售时间(月)</td><td data-page-node-id="Etw56gcpRxnOvNhjfntoLG">(含在制总数 + 本周下单量) ÷ 月均需求（v4.10 起分子从「当前库存」改为「含在制总数」——本周下单入库 + 全部在途/在制 后视角）</td></tr>
+              <tr data-page-node-id="xywm5cvfS8xIkGR2YNSHBW"><td data-page-node-id="xmBUFm6Mr4uERcBXMiszvW">含本周下单量实际可售时间(月)</td><td data-page-node-id="qJgrQEcLfHYmNC2ppH5nr5">(含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)（v4.10 新增：分母用近期实际销量月速度，非预测月均，反映按当前销售速度能卖几个月）</td></tr>
+              <tr data-page-node-id="HOzroAecXHL9SYslQgX95i"><td data-page-node-id="qzoIgxpEQ0JOBZS5HWK6nd">本次备货量 / 本周下单量</td><td data-page-node-id="bbSJdq8YX7pmBUsEuH3iaz">取自方案 <code data-page-node-id="E8LbyHpSg8qQaEJB3ZXVZf">r.actualRec</code> / 本周下单量 = orderWeek &lt; 释放周数 的批次合计（v4.17 预放单后含未来提前释放批）</td></tr>
             </tbody>
           </table>
         </div>
@@ -1324,67 +1336,67 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
 </div>
 
 <!-- Float actions -->
-<div class="float-actions">
-  <button class="float-btn" id="fullscreenBtn" title="全屏切换" onclick="toggleFullscreen()">⛶</button>
-  <button class="float-btn" title="一键置顶" onclick="scrollToTop()">⬆</button>
+<div class="float-actions" data-page-node-id="sw44mbePmwWBfxsOfGohqB">
+  <button class="float-btn" id="fullscreenBtn" title="全屏切换" onclick="toggleFullscreen()" data-page-node-id="ZInxsgMEAGjm6Z0dbLwKjo">⛶</button>
+  <button class="float-btn" title="一键置顶" onclick="scrollToTop()" data-page-node-id="iLsGhBFmOEI1zqzJWZ6yEb">⬆</button>
 </div>
 
 <!-- Progress overlay -->
-<div class="progress-overlay" id="progressOverlay">
-  <div class="progress-box">
-    <h4 id="progressTitle">正在计算...</h4>
-    <div class="bar"><div id="progressBar"></div></div>
-    <div class="ptext" id="progressText">0 / 0</div>
+<div class="progress-overlay" id="progressOverlay" data-page-node-id="Lki1S7pTvFAhyHvOAIBWjP">
+  <div class="progress-box" data-page-node-id="FMHETOqPYg9nafedItWhh9">
+    <h4 id="progressTitle" data-page-node-id="nCjkeCZYjVUsJmrj7SokLs">正在计算...</h4>
+    <div class="bar" data-page-node-id="9oHfl4qiR1mQV9XxhDcBpu"><div id="progressBar" data-page-node-id="KUTrZoGD56sqiTCVVbHZt3"></div></div>
+    <div class="ptext" id="progressText" data-page-node-id="KWWw1hPhKcgEzkCihpKB8P">0 / 0</div>
   </div>
 </div>
 
 <!-- Detail modal -->
-<div class="modal-mask" id="detailModal" onclick="if(event.target===this)closeDetail()">
-  <div class="modal-content">
-    <h3>
-      <span id="detailTitle">单品详情</span>
-      <span id="detailSpecBadge" class="detail-spec-badge" style="display:none;"></span>
-      <span class="close" onclick="closeDetail()">×</span>
+<div class="modal-mask" id="detailModal" onclick="if(event.target===this)closeDetail()" data-page-node-id="VwZaEAZZC4jXf8TRqUQOIc">
+  <div class="modal-content" data-page-node-id="9jXchvMsX4x3DMzAFZTrHQ">
+    <h3 data-page-node-id="D3oh6M9K2aABT7ovXqHXIM">
+      <span id="detailTitle" data-page-node-id="0YhY0szsQktScIi5Useumc">单品详情</span>
+      <span id="detailSpecBadge" class="detail-spec-badge" style="display:none;" data-page-node-id="FVX28zvQM5FEA3FeSgQyrR"></span>
+      <span class="close" onclick="closeDetail()" data-page-node-id="Xi0s1BruZNXF3LnJ7LMIG2">×</span>
     </h3>
-    <div id="detailBody"></div>
+    <div id="detailBody" data-page-node-id="cF7rH7VkUx0SbpC7ui6MQs"></div>
   </div>
 </div>
 
 <!-- User modal -->
-<div class="modal-mask" id="userModal" onclick="if(event.target===this)closeUserModal()">
-  <div class="modal-content" style="max-width:600px;">
-    <h3>
-      <span>新增用户</span>
-      <span class="close" onclick="closeUserModal()">×</span>
+<div class="modal-mask" id="userModal" onclick="if(event.target===this)closeUserModal()" data-page-node-id="wRF4H2DHZU4a0hYZv1GPLq">
+  <div class="modal-content" style="max-width:600px;" data-page-node-id="TEOzHy2aOf0bzGQW2CqVG7">
+    <h3 data-page-node-id="N5ERs3r1l5VozrKgUofDmI">
+      <span data-page-node-id="xeAfSm7NyDNLu1mmppGacx">新增用户</span>
+      <span class="close" onclick="closeUserModal()" data-page-node-id="GsIKq1CPVCguiG2FwW1cPA">×</span>
     </h3>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>姓名</label>
-        <input type="text" id="newUserName" placeholder="如 张三">
+    <div class="form-grid" data-page-node-id="D8bfgktJlS6UUCCmdWzZpS">
+      <div class="form-group" data-page-node-id="ygrFHYxHn0nEHkVsVb1our">
+        <label data-page-node-id="yxrZLnGfTHmHMR1nWI7MYC">姓名</label>
+        <input type="text" id="newUserName" placeholder="如 张三" data-page-node-id="Ck7A8kuZjptCeIai6UwKbA">
       </div>
-      <div class="form-group">
-        <label>角色</label>
-        <select id="newUserRole">
-          <option value="录入">录入</option>
-          <option value="管理员">管理员</option>
-          <option value="查看者">查看者</option>
+      <div class="form-group" data-page-node-id="B7KgYgBklVoHUa3RK3Qsrx">
+        <label data-page-node-id="y6wAsFUhmKF9vqeSUB2hHh">角色</label>
+        <select id="newUserRole" data-page-node-id="qVtqFQdLYLVu6k6MNM3jGA">
+          <option value="录入" data-page-node-id="WzULdNfkjq6TIwRl3BaeBP">录入</option>
+          <option value="管理员" data-page-node-id="TvKqJfa7eLs0zkitLLaYki">管理员</option>
+          <option value="查看者" data-page-node-id="MrYrnSbH2Hs9n9E5wgLxrR">查看者</option>
         </select>
       </div>
     </div>
-    <div style="margin-top:14px;text-align:right;">
-      <button class="btn btn-primary" onclick="addUser()">添加</button>
+    <div style="margin-top:14px;text-align:right;" data-page-node-id="9hxaSZZwjyHSBIBJVQeYwA">
+      <button class="btn btn-primary" onclick="addUser()" data-page-node-id="BzkHD6ChW0gbrt9UdGORvM">添加</button>
     </div>
   </div>
 </div>
 
 <!-- v4.20 增：眼睛按钮弹出的在途/在制票据清单 modal -->
-<div class="modal-mask" id="pipelineModal" onclick="if(event.target===this)closePipelineModal()">
-  <div class="modal-content" style="max-width:760px;">
-    <h3>
-      <span id="pipelineModalTitle">在途/在制票据清单</span>
-      <span class="close" onclick="closePipelineModal()">×</span>
+<div class="modal-mask" id="pipelineModal" onclick="if(event.target===this)closePipelineModal()" data-page-node-id="G9B96goja9qvxN0QRsSDwq">
+  <div class="modal-content" style="max-width:760px;" data-page-node-id="VRyizlZ3wMVTpnivO9iIYT">
+    <h3 data-page-node-id="jh3nsF64Bd1kMkJQ3qIg3f">
+      <span id="pipelineModalTitle" data-page-node-id="Eu7KDgpYdvTcfFPHlhVvAo">在途/在制票据清单</span>
+      <span class="close" onclick="closePipelineModal()" data-page-node-id="eBnLBP8F0CYog5b1wYAzXj">×</span>
     </h3>
-    <div id="pipelineModalBody"></div>
+    <div id="pipelineModalBody" data-page-node-id="oQXHFiUADfa6eRrwDDhu9m"></div>
   </div>
 </div>
 
@@ -2141,13 +2153,96 @@ function fcStartEditor(p){
   const val = fs ? (fs.getFullYear() + '-' + pad2(fs.getMonth()+1)) : '';
   return `<input type="month" class="cell-date-input" style="width:122px;" value="${val}" min="2000-01" max="2100-12" data-pcode="${esc((p&&p.materialCode)||'')}" onchange="onForecastStartEdit(this)" title="修改后立即重算该产品的备货方案（手动调过的批次量会还原为算法结果）" />`;
 }
-/* v4.21 预测起始月份缺失/无法识别 → 头部红色警告条（解释周需求为何整体被推迟） */
+/* v4.21 预测起始月份缺失/无法识别 → 详情头部红色警告条（解释周需求为何整体被推迟）
+   v4.22 改为引导「修正导入文件后重新导入」为主，详情内临时修正仅作备选 */
 function fcStartWarn(r){
   const p = r && r.p;
   if(!hasMonthlyForecast(p) || parseForecastStart(p.forecastStartMonth)) return '';
   const raw = p.forecastStartMonth;
   const desc = (raw == null || String(raw).trim() === '') ? '为空' : `为「${esc(String(raw).trim())}」，无法识别`;
-  return `<div class="fc-warn-tip" style="margin:0 0 12px;">⚠️ 预测起始月份${desc} —— 月预测 M0~M5 已按「计划起始月 = M0」兜底展开：前导为 0 的月份会占满约 1 个月，之后月份的需求整体被推迟（例：8月=0、9月=200 时，9月的需求要到第 6 周才出现）。请在右侧「预测起始」直接修正，或检查导入文件该列（规范写法 2026-08）。</div>`;
+  return `<div class="fc-warn-tip" style="margin:0 0 12px;">⚠️ 预测起始月份${desc}，程序不做猜测 —— 月预测 M0~M5 已按「计划起始月 = M0」兜底展开：前导为 0 的月份会占满约 1 个月，之后月份的需求整体被推迟（例：8月=0、9月=200 时，9月的需求要到第 6 周才出现）。<br><b>处理方式</b>：在导入文件里把该列写成 <code>2026-08</code>（年-月）格式后<b>重新导入</b>；也可在「备货清单」顶部提示条里查看待修正产品，或在单品详情弹窗的「预测起始」处临时修正单个产品（会按算法重算该产品批次量）。</div>`;
+}
+/* v4.22 收集「月预测有值、但预测起始月份为空/无法识别」的产品（全量扫描，随数据实时变化） */
+function fcStartIssues(){
+  const out = [];
+  Object.values(importedProducts).forEach(p => {
+    if(!p || !hasMonthlyForecast(p)) return;
+    if(parseForecastStart(p.forecastStartMonth)) return;
+    const raw = p.forecastStartMonth;
+    const isEmpty = (raw == null || String(raw).trim() === '');
+    out.push({
+      code: (p.materialCode || '(无料品编码)'),
+      name: p.materialName || '',
+      raw: isEmpty ? '' : String(raw).trim(),
+      kind: isEmpty ? '空（未填）' : '无法识别'
+    });
+  });
+  out.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+  return out;
+}
+/* v4.22 无法判断时的提示弹窗：说明后果 + 待修正明细 + 明确的「改正后重新导入」指引 */
+function showFcStartPrompt(){
+  const list = fcStartIssues();
+  if(list.length === 0){ toast('所有产品的「预测起始月份」均可识别，无需处理'); return; }
+  const rows = list.map((it, i) => `<tr>
+      <td style="text-align:right;">${i + 1}</td>
+      <td>${esc(it.code)}</td>
+      <td>${esc(it.name || '--')}</td>
+      <td class="raw">${it.raw ? esc(it.raw) : '（空）'}</td>
+      <td>${esc(it.kind)}</td>
+    </tr>`).join('');
+  const body = `
+    <div class="fc-warn-tip" style="margin:0 0 12px;">
+      ⚠️ 有 <b>${list.length}</b> 个产品的「预测起始月份」程序无法判断（为空或格式认不出）——<b>程序不做猜测</b>。
+      这些产品的月预测 M0~M5 会按「计划起始月 = M0」兜底展开：前导为 0 的月份会占满约 1 个月，
+      之后月份的需求整体被推迟（例：8月=0、9月=200 时，9月的需求要到第 6 周才出现）。
+    </div>
+    <div style="font-size:12.5px;line-height:1.9;color:var(--text-secondary);margin-bottom:10px;">
+      <b style="color:var(--text);">处理方式（两步）：</b><br>
+      ① 打开导入文件，把「预测起始月份」这一列统一改成 <code>2026-08</code> 这种「年-月」写法并保存；<br>
+      ② 回到本页点上面的「📤 导入 XLSX」，<b>重新导入同一份文件</b>即可（重新导入为覆盖更新，不会影响其它数据）。
+    </div>
+    <div style="max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:6px;">
+      <table class="fc-issue-table">
+        <thead><tr><th style="width:44px;">#</th><th style="width:170px;">料品编码</th><th>产品名称</th><th style="width:150px;">该列当前值</th><th style="width:90px;">问题</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="fc-modal-actions">
+      <button class="btn btn-sm btn-outline" onclick="copyFcStartCodes()">📋 复制料品编码</button>
+      <button class="btn btn-sm btn-primary" onclick="closePipelineModal()">知道了</button>
+    </div>`;
+  showModal('预测起始月份无法判断（' + list.length + ' 个产品）', body, { maxWidth: 820 });
+}
+/* v4.22 复制待修正产品的料品编码（便于对照导入文件批量改） */
+function copyFcStartCodes(){
+  const text = fcStartIssues().map(it => it.code).join('\n');
+  const done = () => toast('已复制 ' + text.split('\n').length + ' 个料品编码');
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(() => { fcFallbackCopy(text, done); });
+      return;
+    }
+  } catch(e){ /* 落到兜底 */ }
+  fcFallbackCopy(text, done);
+}
+function fcFallbackCopy(text, done){
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    done();
+  } catch(e){ alert('复制失败，请手动记录以下料品编码：\n' + text); }
+}
+/* v4.22 备货清单常驻提示条：导入弹窗关掉后，仍能看到待修正数量并再次打开明细 */
+function renderFcStartBanner(){
+  const el = $('fcStartBanner'); if(!el) return;
+  const list = fcStartIssues();
+  if(list.length === 0){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = `<span>⚠️ <b>${list.length}</b> 个产品的「预测起始月份」程序无法判断（为空或格式认不出），周需求月份会整体推迟约 1 个月 —— 请修正导入文件该列后<b>重新导入</b>。</span>
+    <button class="btn btn-sm btn-outline" style="margin-left:auto;flex:none;background:#fff;" onclick="showFcStartPrompt()">查看待修正产品</button>`;
 }
 /* v4.21 详情内修正「预测起始月份」：写回产品档案 + 重算该产品方案 */
 function onForecastStartEdit(input){
@@ -3868,6 +3963,7 @@ function clearListFilters(){
 function renderProductList(){
   const all = Object.values(importedProducts);
   $('listCount').textContent = '共 ' + all.length + ' 个产品';
+  renderFcStartBanner();   // v4.22 常驻提示条（弹窗关掉后仍可见，可再次打开明细）
   const f = getListFilter();
   const filtered = all.filter(p => matchListFilter(p, f));
   if(filtered.length === 0){
@@ -3909,10 +4005,14 @@ function renderProductList(){
     if(idx < startIdx || idx >= endIdx) return;
     const tier = p.priorityTier || '99';
     const safeKey = esc(p.materialCode||'');
+    // v4.22 预测起始月份无法判断 → 料品编码旁红色角标（提示修正导入文件后重新导入）
+    const fcBad = (hasMonthlyForecast(p) && !parseForecastStart(p.forecastStartMonth))
+      ? `<span class="fc-bad-badge" title="「预测起始月份」${String(p.forecastStartMonth==null?'':p.forecastStartMonth).trim() ? ('为「' + esc(String(p.forecastStartMonth).trim()) + '」，无法识别') : '未填'} —— 周需求月份会整体推迟约 1 个月，请在导入文件中改写为 2026-08 格式后重新导入">起</span>`
+      : '';
     html += `<tr>
       <td class="cell-num">${idx+1}</td>
       <td>${esc(p.categoryLevel3||'--')}</td>
-      <td>${esc(p.materialCode||'--')}</td>
+      <td>${esc(p.materialCode||'--')}${fcBad}</td>
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.colorSet||'--')}</td>
