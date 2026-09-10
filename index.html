@@ -328,6 +328,8 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .ship-transit { background:#fdecec; color:#d9534f; }
 /* 常规运输方式停用/失效自动回退提示（2026-09-03 v4.7） */
 .route-fallback-tip { background:#fff7e6; border:1px solid #f0c27b; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#7a4b00; }
+/* v4.21 预测起始月份缺失/无法识别提示（红，与 .route-fallback-tip 橙 / .tail-defer-tip 灰蓝区分） */
+.fc-warn-tip { background:#fff1f0; border:1px solid #ffa39e; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#a8071a; }
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
 .tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
@@ -1488,6 +1490,7 @@ const FIELD_ID = {
   '海外仓目的仓库【可选】':'osDestWarehouse',
   '备注':'note',
   /* 列名别名兼容：用户模板可能用不同写法 */
+  '预测起始月':'forecastStartMonth','起始月份':'forecastStartMonth','预测开始月份':'forecastStartMonth','预测起始日期':'forecastStartMonth',
   '发货方式':'shipMode','发货类型':'shipMode','直发/中转':'shipMode',
   '海外仓保底(天)':'osBufferDays','海外仓保底天数(天)':'osBufferDays',
   /* 旧模板兼容（已废弃，但旧数据可能含这些字段） */
@@ -1550,14 +1553,27 @@ function normalizeCell(v, id){
     return fmtDate(v);
   }
   if(typeof v === 'number'){
-    // 数值型日期序列号 -> Date
+    if(DATE_IDS.includes(id)){
+      /* v4.21 统一走容错解析：兼容 Excel 日期序列号（46235）与 202608 形式 */
+      const fs = parseForecastStart(v);
+      return fs ? (fs.getFullYear() + '-' + pad2(fs.getMonth()+1)) : v;
+    }
     if(v > 25569 && v < 80000 && DATE_IDS.includes(id)){
       const d = new Date(Math.round((v - 25569) * 86400 * 1000));
       return d.getFullYear() + '-' + pad2(d.getMonth()+1);
     }
     if(NUMERIC_IDS.includes(id)) return v;
   }
-  return String(v).trim();
+  const s = String(v).trim();
+  /* v4.21 DATE_IDS 文本归一为 YYYY-MM：导入时 raw:false 会把日期单元格读成
+     "2026/8/1" / "2026年8月" 等文本，不归一会让 parseForecastStart 认不出来，
+     从而静默退回"无起始月份"兜底分支、月预测整体错位。
+     无法识别时保留原值，便于单品详情红字提示用户。 */
+  if(DATE_IDS.includes(id)){
+    const fs = parseForecastStart(s);
+    if(fs) return fs.getFullYear() + '-' + pad2(fs.getMonth()+1);
+  }
+  return s;
 }
 /* 发货模式宽松判定：包含「中转」即视为中转（兼容 中转/中转仓/中轉 等写法） */
 function isTransitShip(p){
@@ -2070,12 +2086,103 @@ function onReleaseOrderWeeksChange(v){
  * 模式3 计算核心（adapted for 备货）
  * ============================================================ */
 
-// 解析 forecastStartMonth 字符串 → Date（支持 "2026-09"/"2026-9"/"2026/09"/"2026/9" 等）
+/* v4.21 预测起始月份解析（容错增强）→ Date（该月 1 号），无法识别返回 null。
+   背景：导入用 sheet_to_json({raw:false})，日期单元格会读成「格式化文本」，
+   老写法只认严格 "YYYY-MM"，于是「2026/8/1」「2026年8月」「2026-08-01」或
+   Excel 序列号 46235 一律解析失败 → 静默退回"无起始月份"兜底分支 →
+   月预测整体错位（前导为 0 的月份占满约 1 个月，后面月份的需求被推迟）。
+   现统一兼容：Date 对象 / Excel 序列号 / 202608 / 2026-08 / 2026/8 / 2026.8
+             / 2026年8月 / 2026-08-01 / 2026/8/1 / 前后空格。 */
 function parseForecastStart(fsm){
-  if(!fsm) return null;
-  const m = String(fsm).match(/^(\d{4})[-/](\d{1,2})$/);
-  if(!m) return null;
-  return new Date(parseInt(m[1]), parseInt(m[2]) - 1, 1);
+  if(fsm == null) return null;
+  if(fsm instanceof Date){
+    return isNaN(fsm.getTime()) ? null : new Date(fsm.getFullYear(), fsm.getMonth(), 1);
+  }
+  const s = String(fsm).trim();
+  if(!s) return null;
+  // ① 2026-08 / 2026/8 / 2026.8 / 2026年8月 / 2026-08-01 / 2026/8/1 ...
+  const m = s.match(/(\d{4})\s*[-/.年]\s*(\d{1,2})/);
+  if(m){
+    const y = parseInt(m[1], 10), mo = parseInt(m[2], 10);
+    if(y >= 1990 && y <= 2100 && mo >= 1 && mo <= 12) return new Date(y, mo - 1, 1);
+  }
+  if(/^\d+(\.\d+)?$/.test(s)){
+    const n = Number(s);
+    // ② Excel 日期序列号（1970-01-01 = 25569，覆盖 1970~2090）
+    if(n > 25569 && n < 80000){
+      const d = new Date(Math.round((n - 25569) * 86400000));
+      if(!isNaN(d.getTime())) return new Date(d.getUTCFullYear(), d.getUTCMonth(), 1);
+    }
+    // ③ 202608
+    if(/^\d{6}$/.test(s)){
+      const y = parseInt(s.slice(0, 4), 10), mo = parseInt(s.slice(4, 6), 10);
+      if(y >= 1990 && y <= 2100 && mo >= 1 && mo <= 12) return new Date(y, mo - 1, 1);
+    }
+  }
+  return null;
+}
+/* v4.21 该产品是否填了有效的月预测 */
+function hasMonthlyForecast(p){
+  return !!p && [p.fcM0,p.fcM1,p.fcM2,p.fcM3,p.fcM4,p.fcM5].some(v => num(v) > 0);
+}
+/* v4.21 「预测起始」展示：可识别 → 绿色 YYYY-MM；空 → 红字「未填」；有值但认不出 → 红字原值 */
+function fcStartBadge(p){
+  const raw = p ? p.forecastStartMonth : '';
+  const fs = parseForecastStart(raw);
+  if(fs) return `<span style="color:#16a34a;font-weight:600;">${fs.getFullYear()}-${pad2(fs.getMonth()+1)}</span>`;
+  const isEmpty = (raw == null || String(raw).trim() === '');
+  return isEmpty
+    ? '<span style="color:var(--danger);font-weight:600;">未填</span>'
+    : `<span style="color:var(--danger);font-weight:600;">无法识别：${esc(String(raw).trim())}</span>`;
+}
+/* v4.21 「预测起始」可编辑控件（单品详情弹窗内直接修正，改完即重算该产品） */
+function fcStartEditor(p){
+  const fs = parseForecastStart(p ? p.forecastStartMonth : '');
+  const val = fs ? (fs.getFullYear() + '-' + pad2(fs.getMonth()+1)) : '';
+  return `<input type="month" class="cell-date-input" style="width:122px;" value="${val}" min="2000-01" max="2100-12" data-pcode="${esc((p&&p.materialCode)||'')}" onchange="onForecastStartEdit(this)" title="修改后立即重算该产品的备货方案（手动调过的批次量会还原为算法结果）" />`;
+}
+/* v4.21 预测起始月份缺失/无法识别 → 头部红色警告条（解释周需求为何整体被推迟） */
+function fcStartWarn(r){
+  const p = r && r.p;
+  if(!hasMonthlyForecast(p) || parseForecastStart(p.forecastStartMonth)) return '';
+  const raw = p.forecastStartMonth;
+  const desc = (raw == null || String(raw).trim() === '') ? '为空' : `为「${esc(String(raw).trim())}」，无法识别`;
+  return `<div class="fc-warn-tip" style="margin:0 0 12px;">⚠️ 预测起始月份${desc} —— 月预测 M0~M5 已按「计划起始月 = M0」兜底展开：前导为 0 的月份会占满约 1 个月，之后月份的需求整体被推迟（例：8月=0、9月=200 时，9月的需求要到第 6 周才出现）。请在右侧「预测起始」直接修正，或检查导入文件该列（规范写法 2026-08）。</div>`;
+}
+/* v4.21 详情内修正「预测起始月份」：写回产品档案 + 重算该产品方案 */
+function onForecastStartEdit(input){
+  const pcode = input.dataset.pcode;
+  const key = Object.keys(importedProducts).find(k => (importedProducts[k].materialCode||'') === pcode);
+  const p = key ? importedProducts[key] : null;
+  if(!p){ toast('未找到产品：' + pcode); return; }
+  const val = String(input.value || '').trim();
+  const oldFs = parseForecastStart(p.forecastStartMonth);
+  if(val){
+    const ok = confirm('将「' + (p.materialName || pcode) + '」的预测起始月份改为 ' + val + '？\n\n将重新计算该产品的备货方案，手动调整过的批次数量会被算法结果覆盖。');
+    if(!ok){
+      input.value = oldFs ? (oldFs.getFullYear() + '-' + pad2(oldFs.getMonth()+1)) : '';
+      return;
+    }
+  }
+  p.forecastStartMonth = val;
+  saveProducts();
+  replanOneProduct(pcode);
+  toast(val ? ('预测起始月份已更新为 ' + val + '，已重算该产品方案') : '预测起始月份已清空，已重算该产品方案');
+}
+/* v4.21 单产品重算 + 全量刷新（详情内修正数据后即时生效，无需整批重新生成） */
+function replanOneProduct(pcode){
+  const idx = results.findIndex(r => r && r.p && (r.p.materialCode||'') === pcode);
+  if(idx < 0){ renderProductList(); return; }
+  const key = Object.keys(importedProducts).find(k => (importedProducts[k].materialCode||'') === pcode);
+  results[idx] = planProduct(key ? importedProducts[key] : results[idx].p);
+  try {
+    renderMetricCards();
+    renderResultTable();
+    renderOrderTable();
+    renderDetailTable();
+    renderPerspective();
+  } catch(err){ console.error('[replanOneProduct 渲染失败]', err); }
+  refreshCurrentDetail(pcode);
 }
 // 返回预测起始周索引（W0=今天的第几周开始有预测）
 function getForecastStartWeek(p, weeks){
@@ -2821,11 +2928,23 @@ function importXlsx(event){
         newProds[key] = importedProducts[key];
         success++;
       }
+      /* v4.21 导入校验：月预测有值但「预测起始月份」为空/无法识别 → 周需求会整体推迟约 1 个月，
+         导入后立即提示（这是「9月预测却从 W6 才出需求」类问题的根因），并写入操作日志。 */
+      const badFc = [];
+      Object.keys(newProds).forEach(k => {
+        const q = newProds[k];
+        if(hasMonthlyForecast(q) && !parseForecastStart(q.forecastStartMonth)) badFc.push(q.materialCode || k);
+      });
       saveProducts();
       renderProductList();
       renderPerspective();
       setDataStatus('已导入');
       addLog({ action: '导入 XLSX', rows: rows.length-1, success, fail, note: file.name });
+      if(badFc.length > 0){
+        const sample = badFc.slice(0, 5).join('、') + (badFc.length > 5 ? ' 等' : '');
+        addLog({ action: '导入校验', rows: badFc.length, success: 0, fail: badFc.length, note: '预测起始月份缺失/无法识别：' + sample });
+        setTimeout(() => alert('⚠ 有 ' + badFc.length + ' 个产品的「预测起始月份」为空或格式无法识别：\n' + sample + '\n\n这些产品的月预测会整体错位（周需求被推迟约 1 个月）。\n请把该列写成 YYYY-MM（如 2026-08）后重新导入，或导入后在单品详情头部「预测起始」处直接修正。'), 60);
+      }
     } catch(err){ alert('导入失败: ' + err.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -5056,7 +5175,9 @@ function buildDetailContent(r){
     <div><b>安全库存：</b>${fmt(r.safetyStock)}</div>
     <div><b>单箱数量：</b>${fmt(p.casesPerUnit)||DEFAULT_CARTON}</div>
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
+    <div><b>预测起始：</b>${fcStartBadge(p)}</div>
   </div>
+  ${fcStartWarn(r)}
   ${r.regFallbackNote ? `<div class="route-fallback-tip" style="margin:0 0 12px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>` : ''}
   ${r.tailDeferThisWeekQty > 0 ? `<div class="tail-defer-tip" style="margin:0 0 12px;">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</div>` : ''}
   <div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
@@ -5681,6 +5802,7 @@ function openDetailBuild(r, p, methods){
     <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}</div>
     <div><b>安全库存：</b>${fmt(r.safetyStock)}</div>
     <div><b>常规运输：</b>${r.regM ? `<span style="color:#16a34a;font-weight:600;">${esc(r.regM.name)}</span><span style="color:var(--text-muted);font-size:11px;margin-left:6px;">(dom=${r.regM.domToFbaDays != null ? r.regM.domToFbaDays : (r.regM.transportDays || '?')})</span>${r.regFallbackNote ? `<span style="color:#d97706;font-size:11px;margin-left:6px;">[回退]</span>` : ''}` : (p.regularMethod ? `${esc(p.regularMethod)} <span style="color:var(--danger);font-size:11px;">(未在启用池)</span>` : '<span style="color:var(--text-muted);">--</span>')}</div>
+    <div><b>预测起始：</b>${fcStartBadge(p)} ${fcStartEditor(p)}</div>
     <div><b>单箱数量：</b>${fmt(p.casesPerUnit)||DEFAULT_CARTON}</div>
     <div><b>缺货周数：</b><span class="${r.stockoutWeeks>0?'cell-danger':'cell-ok'}">${r.stockoutWeeks}</span></div>
   </div>`;
@@ -5688,6 +5810,8 @@ function openDetailBuild(r, p, methods){
      - r.regM 存在（resolveRegularMethod 命中启用池）→ 显示 name + dom + 回退标记
      - r.regM 为空但 p.regularMethod 非空（被启用池过滤）→ 显示 name + 红色"未在启用池"
      - 都没填 → --。配合 planProduct 暴露 r.regM/r.regMName 字段（line 2604/2169） */
+  /* v4.21 预测起始月份未识别 → 红字警告条（周需求整体推迟的根因提示 + 就地修正入口） */
+  html += fcStartWarn(r);
   if(r.regFallbackNote) html += `<div class="route-fallback-tip" style="margin:0 0 14px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>`;
   /* v4.13 临时调试面板：显示每个 cadence 的选方式决策明细（firstStockout / awReg / subMethod / qty / split），
      默认折叠。定位「升舱直接选最快」问题时用，定位完移除。 */
