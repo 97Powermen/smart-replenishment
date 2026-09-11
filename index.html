@@ -347,6 +347,8 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 tr.adj-row > td { background:#fbf9ff !important; }
 tr.adj-row:hover > td { background:#f4eeff !important; }
 tr.adj-row > td:first-child { box-shadow: inset 3px 0 0 0 #7c3aed; }
+/* v4.24 售完即止等 row-disabled 行同时带 adj-row 时，保留禁用态灰底（否则 adj-row 的 !important 会盖掉） */
+tr.adj-row.row-disabled > td { background:#f4f2f8 !important; color:var(--text-muted); }
 .adj-tip { background:#f7f3ff; border:1px solid #d8c8fb; border-left:4px solid #7c3aed; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.7; color:#5b21b6; }
 .adj-tip b { color:#5b21b6; }
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
@@ -703,6 +705,8 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
       <div class="icon" data-page-node-id="nWcWYD5izMMnfGIZRka7n1">📊</div>
       <h2 data-page-node-id="eS5va1fpJ6FrpA5aHz4593">备货分析结果</h2>
       <div class="right" data-page-node-id="WH8Czst7dljHjyQWls6Jn0">
+        <!-- v4.24 已手工调整产品数（与明细页同款）：点击 = 一键只看已调整 -->
+        <span class="adj-count-badge" id="resultAdjustedInfo" style="display:none;margin-right:8px;" onclick="filterResultAdjustedOnly()" title="点击只看已手工调整的产品（数量 / 运输方式 / 需求出货日期 / 放单周次 / 新增批次）"></span>
         <div class="btn-group" data-page-node-id="B03alPtJMWF8rlZXjAw9A6">
           <button class="btn btn-sm btn-outline" onclick="exportResultCSV()" data-page-node-id="hULDIYiqFukDvOUe5jOP23">📄 CSV</button>
           <button class="btn btn-sm btn-outline" onclick="exportResultXLSX()" data-page-node-id="6tHjz06MJWcaqLjIDpyJoM">📊 Excel</button>
@@ -767,10 +771,20 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
             <option value="销呆滞不备货" data-page-node-id="Cd2ZQCuNzYOyFpSdeKwRxO">销呆滞不备货</option>
           </select>
         </div>
+        <div class="form-group" style="margin:0;" data-page-node-id="ResAdjFilterGroup">
+          <!-- v4.24 调整状态筛选（与明细页同款）：主表排序后也能一键只看自己改过的产品 -->
+          <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ResAdjFilterLabel">调整状态</label>
+          <select id="resultFilterAdjusted" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:130px;color:#6d28d9;font-weight:600;" onchange="pageState.result=1;renderResultTable()" data-page-node-id="ResAdjFilterSelect">
+            <option value="">全部</option>
+            <option value="yes">✏️ 已调整</option>
+            <option value="no">未调整</option>
+          </select>
+        </div>
         <div class="form-group" style="margin:0;" data-page-node-id="i9Janr9GHPv2Dafh1Pqwuw">
           <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ArqdXhaksq23wMK4ZTKGFq">排序</label>
           <select id="resultSortBy" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;" onchange="pageState.result=1;renderResultTable()" data-page-node-id="qlUxEmiLtaH2rFRIpt561x">
             <option value="default" data-page-node-id="ByXPkwurtGMWUBmH8jx7xX">默认（原顺序）</option>
+            <option value="adjustedFirst" data-page-node-id="ResAdjSortOpt">✏️ 已调整优先</option>
             <option value="lv3" data-page-node-id="xdz3PrrsxQ1UiJd6EAFMuB">三级（分组）</option>
             <option value="codeAsc" data-page-node-id="UGTNLEDRaEQEy0NsC2WJXn">料品编码 ↑</option>
             <option value="weeklyDesc" data-page-node-id="sLnE0vDVAJ0FbolhyXJuDT">周均需求 ↓</option>
@@ -4183,6 +4197,13 @@ function renderResultTable(){
   const rCode = ($('resultFilterCode')?.value || '').trim().toLowerCase();
   const rSpec = ($('resultFilterSpec')?.value || '').trim().toLowerCase();
   const rStatus = ($('resultFilterStatus')?.value || '').trim();
+  const rAdj = ($('resultFilterAdjusted')?.value || '').trim();   // v4.24 调整状态：'' / 'yes' / 'no'
+  /* v4.24 每个产品只算一次「手工调整」信息，筛选 / 排序 / 渲染三处共用（口径与明细页同源） */
+  const _adjCache = {};
+  const adjOf = (origIdx, r) => {
+    if(!_adjCache[origIdx]) _adjCache[origIdx] = manualAdjustInfo(r);
+    return _adjCache[origIdx];
+  };
   const filtered = [];
   results.forEach((r, origIdx) => {
     const p = r.p;
@@ -4190,6 +4211,11 @@ function renderResultTable(){
     if(rCode && !(p.materialCode||'').toLowerCase().includes(rCode)) return;
     if(rSpec && !(p.specCode||'').toLowerCase().includes(rSpec)) return;
     if(rStatus && (p.salesStatus||'').trim() !== rStatus) return;
+    if(rAdj){
+      const _adj = adjOf(origIdx, r).adjusted;
+      if(rAdj === 'yes' && !_adj) return;
+      if(rAdj === 'no' && _adj) return;
+    }
     filtered.push({ r, origIdx });
   });
   /* 排序（在筛选之后、分页之前） */
@@ -4203,7 +4229,9 @@ function renderResultTable(){
       recDesc: (a, b) => num(b.r.actualRec) - num(a.r.actualRec),
       thisWeekDesc: (a, b) => thisWeekOf(b.r) - thisWeekOf(a.r),
       stockoutDesc: (a, b) => num(b.r.stockoutWeeks) - num(a.r.stockoutWeeks),
-      sellableAsc: (a, b) => num(a.r.sellableWeeks) - num(b.r.sellableWeeks)
+      sellableAsc: (a, b) => num(a.r.sellableWeeks) - num(b.r.sellableWeeks),
+      /* v4.24 已调整优先：把手改过的产品顶到最前（与明细页同款） */
+      adjustedFirst: (a, b) => (adjOf(b.origIdx, b.r).adjusted ? 1 : 0) - (adjOf(a.origIdx, a.r).adjusted ? 1 : 0)
     }[rSort];
     if(cmp) filtered.sort(cmp);
   }
@@ -4211,6 +4239,7 @@ function renderResultTable(){
     $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
+    renderAdjustedCount();
     return;
   }
   const curPage = clampPage('result', filtered.length);
@@ -4284,10 +4313,12 @@ function renderResultTable(){
     else { statusLabel = '🔵 呆滞'; statusCls = 's-呆滞'; }
     const stockoutCls = r.stockoutWeeks > 0 ? 'cell-danger' : 'cell-ok';
     const safeKey = esc(p.materialCode||'');
-    html += `<tr class="${r.noStock?'row-disabled':''}">
+    /* v4.24 已手工调整标记：与明细页同源（manualAdjustInfo 与算法基线比对），料品编码旁紫色标签 + 整行淡紫底 */
+    const _adjInfo = adjOf(item.origIdx, r);
+    html += `<tr id="result-row-${item.origIdx}" class="${[r.noStock?'row-disabled':'', _adjInfo.adjusted?'adj-row':''].filter(Boolean).join(' ')}">
       <td class="cell-num">${idx+1}</td>
       <td>${esc(p.categoryLevel3||'--')}</td>
-      <td>${esc(p.materialCode||'--')}</td>
+      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(_adjInfo)}</td>
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.salesStatus||'--')}</td>
@@ -4338,6 +4369,7 @@ function renderResultTable(){
     <td colspan="2"></td>
   </tr>`;
   const rb = $('resultPageBar'); if(rb) rb.innerHTML = paginationBar(filtered.length, curPage, 'result');
+  renderAdjustedCount();   // v4.24 主表「已调整」计数胶囊同步
 }
 
 function toggleResultStock(key, btn){
@@ -5162,13 +5194,25 @@ function filterDetailAdjustedOnly(){
   pageState.detail = 1;
   renderDetailTable();
 }
+/* v4.24 结果主表头部胶囊：同款交互（与「调整状态」筛选下拉联动） */
+function filterResultAdjustedOnly(){
+  const sel = $('resultFilterAdjusted');
+  if(!sel) return;
+  sel.value = (sel.value === 'yes') ? '' : 'yes';
+  pageState.result = 1;
+  renderResultTable();
+}
+/* v4.23/v4.24 「已调整」计数胶囊：明细页 + 结果主表共用同一口径与样式 */
 function renderAdjustedCount(){
-  const el = $('detailAdjustedInfo'); if(!el) return;
   let n = 0;
   results.forEach(r => { if(manualAdjustInfo(r).adjusted) n++; });
-  if(n === 0 || results.length === 0){ el.style.display = 'none'; el.textContent = ''; return; }
-  el.style.display = 'inline-flex';
-  el.textContent = `✏️ 已调整 ${n} / ${results.length}`;
+  const txt = (n > 0 && results.length > 0) ? `✏️ 已调整 ${n} / ${results.length}` : '';
+  ['detailAdjustedInfo', 'resultAdjustedInfo'].forEach(id => {
+    const el = $(id); if(!el) return;
+    if(!txt){ el.style.display = 'none'; el.textContent = ''; return; }
+    el.style.display = 'inline-flex';
+    el.textContent = txt;
+  });
 }
 /* 单行刷新：只更新该产品在明细表里的「已调整」类名与标签。
    为什么不用 renderDetailTable()：编辑多发生在行内展开的子表里，整表重建会把展开的子行
@@ -5585,6 +5629,7 @@ function clearResultFilters(){
     const el = $(id); if(el) el.value = '';
   });
   const rs = $('resultFilterStatus'); if(rs) rs.value = '';
+  const rsAdj = $('resultFilterAdjusted'); if(rsAdj) rsAdj.value = '';   // v4.24 调整状态
   const rs2 = $('resultSortBy'); if(rs2) rs2.value = 'default';
   pageState.result = 1;
   renderResultTable();
