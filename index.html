@@ -955,7 +955,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearResultFilters()" data-page-node-id="4IEZb2wBtVjiR4qN28TCez">🔄 清空筛选</button>
       </div>
       <div class="result-table-wrap is-resizable" data-page-node-id="Uj2ac6b5Olv17UICdL3BUM">
-        <table class="result-table" id="resultTable" style="min-width:2560px;" data-page-node-id="BPdbrN1ML6Cf0niC7KAjZD">
+        <table class="result-table" id="resultTable" style="min-width:2620px;" data-page-node-id="BPdbrN1ML6Cf0niC7KAjZD">
           <thead data-page-node-id="1EHDYU2qCf03UH00vkm3QD">
             <tr data-page-node-id="GvUDEz0XfXt5drLXxPVELU">
               <th data-page-node-id="BxlmKnaRBM1cxYgRXrVbgl">#</th>
@@ -971,6 +971,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th data-page-node-id="TALOddpXw2K01QE5ii1x0e">近四周平均销量</th>
               <th data-page-node-id="AZN21LKO10egpwvNTOBjcO">近30天销量</th>
               <th data-page-node-id="1bl445ccyB8y2YJrMmrbom">周均需求</th>
+              /*__MARK_V429_RES_MONTH__*/<th style="width:95px;" title="导入预测（fcM0~M5）均值口径，与备货清单 / 明细页同源；不乘达成率系数 —— 修正后月均看「周均需求 × 4.33」，本列始终显示导入原值">月均需求</th>
               <th style="width:110px;" title="达成率 = 近四周平均周销量 ÷ 原始周均需求；低于阈值时系统按档给需求系数 k，周需求/安全库存/批次量/建议下单全链路按修正后需求计算。点击表头右上方「⚖ 达成率调节」胶囊可打开清单撤销" data-page-node-id="ResAchTh">达成率 / 调节</th>
               <th data-page-node-id="PShnlSLEB92LtLFzymHO88">FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）" data-page-node-id="nt6240GWhOEZUbMbtGET1b">▾</button></th>
               <th class="fold-col" data-page-node-id="gihk5weNOmjIIlcsED44KC">海外仓库存</th>
@@ -5074,7 +5075,7 @@ function renderMetricCards(){
 function renderResultTable(){
   const canEdit = can('edit');   /* v4.25 权限：决定行内可编辑控件是否放行 */
   if(results.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="29" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="30" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     return;
@@ -5123,7 +5124,7 @@ function renderResultTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="29" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="30" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     renderAdjustedCount(); renderAchieveCount();
@@ -5135,14 +5136,14 @@ function renderResultTable(){
   let html = '';
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
-  let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0;
+  let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0, totalMonthAvg=0;   /* v4.29 月均需求合计（monthlyAvgImport 同口径） */
   let totalAchTuned=0, totalAchStop=0;   // v4.26 达成率调节：已调节产品数 / 其中停备数  // 2026-09-09 增 totalLast30：近30天销量合计（last4WeeksSales÷7×30 之累计）
   filtered.forEach((item, idx) => {
     const r = item.r;
     const p = r.p;
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
-    totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalLast30 += Math.round(num(p.last4WeeksSales) / 7 * 30); totalAvgDemand += num(r.avgWeeklyDemand);
+    totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalLast30 += Math.round(num(p.last4WeeksSales) / 7 * 30); totalAvgDemand += num(r.avgWeeklyDemand); totalMonthAvg += num(monthlyAvgImport(r.p));
     if(num(r.achieveK) !== 1) totalAchTuned++;
     if(r.achieveStop) totalAchStop++;
     /* 本周下单量：本次放单窗口（orderWeek < 释放周数）的批次合计 —— v4.17 预放单后含未来 N-1 周的提前释放批 */
@@ -5230,6 +5231,7 @@ function renderResultTable(){
       <td class="cell-num">${fmt(p.last4WeeksSales)}</td>
       <td class="cell-num" title="近四周平均销量 ÷ 7 × 30（按近期实际销售速度折算的月销量）">${fmt(Math.round(num(p.last4WeeksSales) / 7 * 30))}</td>
       <td class="cell-num">${fmt(r.avgWeeklyDemand.toFixed(1))}${achieveChipHtml(r)}</td>
+      <td class="cell-num" title="导入预测 fcM0~M5 均值（与备货清单/明细页同口径），不乘达成率系数">${fmt(monthlyAvgImport(r.p))}</td>
       <td class="cell-num">${achieveRateCellHtml(r)}</td>
       <td class="cell-num">${fmt(fbaV)}</td>
       <td class="cell-num fold-col">${fmt(osStockV)}</td>
@@ -5246,7 +5248,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="29" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="29" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="29" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="30" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="30" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="30" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -5255,6 +5257,7 @@ function renderResultTable(){
     <td class="cell-num">${fmt(totalLast4)}</td>
     <td class="cell-num" title="近四周平均销量合计 ÷ 7 × 30（按近期实际销售速度折算的月销量合计）">${fmt(totalLast30)}</td>
     <td class="cell-num">${fmt(totalAvgDemand.toFixed(1))}</td>
+    <td class="cell-num" title="导入预测月均合计（monthlyAvgImport 口径）">${fmt(totalMonthAvg)}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num" title="已按达成率调节的产品数（含停备）；点上方「⚖ 达成率调节」胶囊可看清单">${totalAchTuned > 0 ? ('已调节 ' + totalAchTuned + (totalAchStop > 0 ? '（停备 ' + totalAchStop + '）' : '')) : '—'}</td>
     <td class="cell-num fold-col">${fmt(totalOS)}</td>
