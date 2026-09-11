@@ -351,6 +351,25 @@ tr.adj-row > td:first-child { box-shadow: inset 3px 0 0 0 #7c3aed; }
 tr.adj-row.row-disabled > td { background:#f4f2f8 !important; color:var(--text-muted); }
 .adj-tip { background:#f7f3ff; border:1px solid #d8c8fb; border-left:4px solid #7c3aed; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.7; color:#5b21b6; }
 .adj-tip b { color:#5b21b6; }
+/* v4.26 达成率调节（青绿系：与 橙运输回退 / 灰蓝尾数顺延 / 绿预放单 / 红数据待修 / 紫手工调整 / 蓝身份权限 全部分开）
+   低达成率产品由系统给一个需求系数 k（减少备货 / k=0 完全不备货），全链路按修正后需求计算；清单可撤销 */
+.ach-badge { display:inline-block; margin-left:5px; padding:0 5px; border-radius:3px; background:#e6f7f4; color:#0f766e; border:1px solid #a7ded4; font-size:10.5px; line-height:15px; vertical-align:1px; font-weight:600; cursor:help; white-space:nowrap; }
+.ach-count-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; background:#e6f7f4; color:#0f766e; border:1px solid #a7ded4; font-size:12px; font-weight:600; cursor:pointer; }
+.ach-count-badge:hover { background:#d5f2ec; }
+.ach-chip { display:inline-block; margin-left:4px; padding:0 4px; border-radius:3px; background:#e6f7f4; color:#0f766e; border:1px solid #a7ded4; font-size:10px; line-height:13px; vertical-align:1px; font-weight:600; cursor:help; }
+.ach-tip { background:#f2fbf8; border:1px solid #a7ded4; border-left:4px solid #0d9488; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.7; color:#0f766e; }
+.ach-tip b { color:#0f766e; }
+tr.ach-tuned-row > td { background:#f6fdfb !important; }
+tr.ach-tuned-row > td:first-child { box-shadow: inset 3px 0 0 0 #0d9488; }
+/* 与其它行态叠加时保留各自语义底色（写在 adj-row / row-disabled 之后） */
+tr.ach-tuned-row.adj-row > td { background:#f5f9f9 !important; }
+tr.ach-tuned-row.row-disabled > td, tr.ach-stop-row > td { background:#f4f6f6 !important; }
+tr.ach-stop-row > td { color:var(--text-muted); }
+tr.ach-stop-row > td:first-child { box-shadow: inset 3px 0 0 0 #94a3b8; }
+.ach-rate-ok { color:#15803d; }
+.ach-rate-warn { color:#b45309; }
+.ach-rate-bad { color:#b91c1c; }
+
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
 .tail-defer-tip { background:#eef4fb; border:1px solid #b9cdea; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#2d5a8e; }
@@ -401,9 +420,8 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
 .pipe-fold-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:4px; padding:0; border:1px solid var(--border); border-radius:4px; background:#fff; font-size:11px; color:var(--text-muted); cursor:pointer; vertical-align:middle; transition: all .15s; }
 .pipe-fold-btn:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary-deep); }
 /* 调整2：折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交），基于 nth-child 隐藏特定列 */
-.result-table-wrap.pipe-collapsed #resultTable thead th:nth-child(n+13):nth-child(-n+17),
-.result-table-wrap.pipe-collapsed #resultTable tbody td:nth-child(n+13):nth-child(-n+17),
-.result-table-wrap.pipe-collapsed #resultTable tfoot td:nth-child(n+5):nth-child(-n+9) { display: none; }
+/* v4.26：改用显式 .fold-col 标记，弃用 nth-child（每次插列都会整体漂移，曾误藏「周均需求」「达成率/调节」） */
+.result-table-wrap.pipe-collapsed #resultTable .fold-col { display: none; }
 
 /* 调整3：透视表「当前库存」列头折叠按钮 —— 切换 FBA库存/海外仓库存/海外仓在途/挪用库存 4 列明细
    v4.10 新增「近四周平均销量」列后明细列整体右移一位：thead/tbody 隐藏 9~12 位；
@@ -626,6 +644,89 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
     </div>
   </div>
 
+  <!-- Section 1.7: 达成率调节（v4.26 起） -->
+  <div class="card" id="sec-achieve" data-page-node-id="SecAchieveCard">
+    <div class="card-header" data-page-node-id="AchCardHeader">
+      <div class="icon" data-page-node-id="AchCardIcon">⚖</div>
+      <h2 data-page-node-id="AchCardTitle">达成率调节</h2>
+    </div>
+    <div class="warn-box" data-page-node-id="AchCardWarn">达成率低的产品，实际计划里通常要<b>减少备货</b>甚至<b>不备货</b>（预测虚高，按预测跑出来的建议量偏大）。
+      <b>达成率调节</b>把这一步交给系统：按「<b>近四周平均周销量 ÷ 原始周均需求</b>」算出达成率，低于阈值就给该产品一个<b>需求系数 k</b>，
+      <b>周需求 / 安全库存 / 批次量 / 建议下单全链路都按修正后的需求计算</b>（不是只在某一列打补丁，也不会改你导入的原始数据）。
+      生成方案后可在结果页「⚖ 达成率调节」清单里逐条撤销、改系数或批量恢复。</div>
+    <div class="ach-tip" data-page-node-id="AchCardValve"><b>安全阀（不会误砍缺货品）</b>：达成率低有两种原因 —— ①真的卖不动；②没货可卖（断货 / 上架慢）。
+      第 ② 种砍备货会雪上加霜。所以当<b>现有可售库存不足 N 周需求</b>、或<b>前 M 周内出现断货</b>时，系统判为「缺货型低达成」，<b>不降备货</b>，只在清单里提示。</div>
+    <div class="cfg-row" data-page-node-id="AchRowToggle">
+      <div class="cfg-label" data-page-node-id="AchLabelToggle">启用达成率调节</div>
+      <div class="cfg-control" data-page-node-id="AchCtrlToggle">
+        <label class="cfg-switch-line" data-page-node-id="AchSwitchLine">
+          <input type="checkbox" id="achieveToggle" data-perm-readonly="sys" checked onchange="onAchieveToggle(this.checked)" data-page-node-id="AchToggleInput">
+          <span data-page-node-id="AchToggleText">低达成率产品按档自动减少备货（默认开启）</span>
+        </label>
+        <div class="hint" data-page-node-id="AchToggleHint">关闭后所有产品都按原始预测需求备货（等价于旧行为）</div>
+      </div>
+    </div>
+    <div class="cfg-row" data-page-node-id="AchRowTiers">
+      <div class="cfg-label" data-page-node-id="AchLabelTiers">档位阈值 / 需求系数</div>
+      <div class="cfg-control" data-page-node-id="AchCtrlTiers">
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--text-secondary);">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            <b style="color:var(--text);min-width:104px;">A 正常</b>达成率 ≥
+            <input type="number" id="achieveT1" step="0.05" min="0.01" max="2" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveT1', this.value)" style="width:74px;">
+            → 需求系数 <input type="number" id="achieveK1" step="0.05" min="0" max="1" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveK1', this.value)" style="width:74px;">
+            <span style="color:var(--text-muted);">按算法全量备货</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            <b style="color:var(--text);min-width:104px;">B 观察</b>达成率 ≥
+            <input type="number" id="achieveT2" step="0.05" min="0.01" max="2" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveT2', this.value)" style="width:74px;">
+            → 需求系数 <input type="number" id="achieveK2" step="0.05" min="0" max="1" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveK2', this.value)" style="width:74px;">
+            <span style="color:var(--text-muted);">全量下单，进调节清单观察</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            <b style="color:var(--text);min-width:104px;">C 收缩</b>达成率 ≥
+            <input type="number" id="achieveT3" step="0.05" min="0.01" max="2" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveT3', this.value)" style="width:74px;">
+            → 需求系数 <input type="number" id="achieveK3" step="0.05" min="0" max="1" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveK3', this.value)" style="width:74px;">
+            <span style="color:var(--text-muted);">需求对折一类，行内会标「⚖ ×k」</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            <b style="color:var(--text);min-width:104px;">D 停备</b>低于 C 档阈值 →
+            需求系数 <input type="number" id="achieveK4" step="0.05" min="0" max="1" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveK4', this.value)" style="width:74px;">
+            <span style="color:var(--text-muted);">默认 0 = 完全不备货（等同销售状态「售完即止」，只消耗现有库存）</span>
+          </div>
+        </div>
+        <div class="hint" data-page-node-id="AchTierHint">阈值请填 0~1 之间的小数（0.8 = 80%）；三项阈值会自动保证从高到低。改完参数后请重新点「🚀 生成备货方案」；已生成过方案时系统会自动按新参数重算。</div>
+      </div>
+    </div>
+    <div class="cfg-row" data-page-node-id="AchRowValve">
+      <div class="cfg-label" data-page-node-id="AchLabelValve">安全阀阈值</div>
+      <div class="cfg-control" data-page-node-id="AchCtrlValve">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary);">
+          现有可售库存不足 <input type="number" id="achieveValveStock" step="0.5" min="0" max="20" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveValveStock', this.value)" style="width:74px;"> 周需求
+          <span style="color:var(--text-muted);margin:0 6px;">|</span>
+          前 <input type="number" id="achieveValveWindow" step="1" min="0" max="26" data-perm-readonly="sys" onchange="onAchieveFieldChange('achieveValveWindow', this.value)" style="width:74px;"> 周内出现断货
+        </div>
+        <div class="hint" data-page-node-id="AchValveHint">满足任一条 → 判为「缺货型低达成」，需求系数强制为 1（不降备货）。设为 0 = 关闭该条安全阀</div>
+      </div>
+    </div>
+    <div class="cfg-row" data-page-node-id="AchRowZero">
+      <div class="cfg-label" data-page-node-id="AchLabelZero">0 销量产品</div>
+      <div class="cfg-control" data-page-node-id="AchCtrlZero">
+        <label class="cfg-switch-line" data-page-node-id="AchSwitchZero">
+          <input type="checkbox" id="achieveZeroSales" data-perm-readonly="sys" onchange="onAchieveZeroSalesToggle(this.checked)" data-page-node-id="AchZeroInput">
+          <span data-page-node-id="AchZeroText">近四周销量为 0 的产品也参与自动调节（直接按 D 档停备）</span>
+        </label>
+        <div class="hint" data-page-node-id="AchZeroHint">默认<b>关闭</b>：0 销量语义有歧义（真卖不动 / 新品刚上架 / 该列没填），只在清单里列出待人工判断，不自动停备。确认要连 0 销量一起停，再打开本开关并重新生成方案。</div>
+      </div>
+    </div>
+    <div class="cfg-row" data-page-node-id="AchRowReset">
+      <div class="cfg-label" data-page-node-id="AchLabelReset">恢复默认</div>
+      <div class="cfg-control" data-page-node-id="AchCtrlReset">
+        <button class="btn btn-sm btn-outline" data-perm="sys" onclick="onAchieveResetDefault()" data-page-node-id="AchResetBtn">↩ 恢复默认档位</button>
+        <div class="hint" data-page-node-id="AchResetHint">≥80% 正常 / 60~80% ×0.8 / 40~60% ×0.5 / &lt;40% 不备货；安全阀 2 周库存 &amp; 前 4 周断货</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Section 4: 已导入产品列表（备货清单） -->
   <div class="card" id="sec-product-list" data-page-node-id="3yy6Yn3ynsbjPzt4akCX0Z">
     <div class="card-header" data-page-node-id="Y2WCCeFCApKZgQvVavD4hv">
@@ -736,6 +837,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="right" data-page-node-id="WH8Czst7dljHjyQWls6Jn0">
         <!-- v4.24 已手工调整产品数（与明细页同款）：点击 = 一键只看已调整 -->
         <span class="adj-count-badge" id="resultAdjustedInfo" style="display:none;margin-right:8px;" onclick="filterResultAdjustedOnly()" title="点击只看已手工调整的产品（数量 / 运输方式 / 需求出货日期 / 放单周次 / 新增批次）"></span>
+        <span class="ach-count-badge" id="resultAchieveInfo" style="display:none;margin-right:8px;" onclick="showAchieveList()" title="点击打开「达成率调节清单」：低达成率产品已按档减少备货 / 不备货，可逐条撤销或改系数"></span>
         <div class="btn-group" data-page-node-id="B03alPtJMWF8rlZXjAw9A6">
           <button class="btn btn-sm btn-outline" onclick="exportResultCSV()" data-page-node-id="hULDIYiqFukDvOUe5jOP23">📄 CSV</button>
           <button class="btn btn-sm btn-outline" onclick="exportResultXLSX()" data-page-node-id="6tHjz06MJWcaqLjIDpyJoM">📊 Excel</button>
@@ -842,12 +944,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th data-page-node-id="TALOddpXw2K01QE5ii1x0e">近四周平均销量</th>
               <th data-page-node-id="AZN21LKO10egpwvNTOBjcO">近30天销量</th>
               <th data-page-node-id="1bl445ccyB8y2YJrMmrbom">周均需求</th>
+              <th style="width:110px;" title="达成率 = 近四周平均周销量 ÷ 原始周均需求；低于阈值时系统按档给需求系数 k，周需求/安全库存/批次量/建议下单全链路按修正后需求计算。点击表头右上方「⚖ 达成率调节」胶囊可打开清单撤销" data-page-node-id="ResAchTh">达成率 / 调节</th>
               <th data-page-node-id="PShnlSLEB92LtLFzymHO88">FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）" data-page-node-id="nt6240GWhOEZUbMbtGET1b">▾</button></th>
-              <th data-page-node-id="gihk5weNOmjIIlcsED44KC">海外仓库存</th>
-              <th data-page-node-id="JInA3tr4TZqbcHGkyXwvPm">可挪用库存</th>
-              <th data-page-node-id="ANSY8u7AjSTAhYNPRjhmnF">海外仓在途</th>
-              <th data-page-node-id="nEdhHiGha1uD5wO2icnb6d">国内在途</th>
-              <th data-page-node-id="0hLCHStApprISYTXcjOhPq">在制未交</th>
+              <th class="fold-col" data-page-node-id="gihk5weNOmjIIlcsED44KC">海外仓库存</th>
+              <th class="fold-col" data-page-node-id="JInA3tr4TZqbcHGkyXwvPm">可挪用库存</th>
+              <th class="fold-col" data-page-node-id="ANSY8u7AjSTAhYNPRjhmnF">海外仓在途</th>
+              <th class="fold-col" data-page-node-id="nEdhHiGha1uD5wO2icnb6d">国内在途</th>
+              <th class="fold-col" data-page-node-id="0hLCHStApprISYTXcjOhPq">在制未交</th>
               <th data-page-node-id="U9c4QmWTaDVCQSw3ovpL8h">含在制总数</th>
               <th data-page-node-id="CiuG8QGYAV4HMjA9Kah6OX">目标库存</th>
               <th data-page-node-id="cI4uNWH7DG9legwHM4xUqG">建议备货量</th>
@@ -875,6 +978,8 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <div class="right" data-page-node-id="z7VGZH58leyoB1hVqZRQWp">
           <!-- v4.23 已手工调整产品数：点击 = 一键只看已调整（与「调整状态」筛选联动） -->
           <span class="adj-count-badge" id="detailAdjustedInfo" style="display:none;" onclick="filterDetailAdjustedOnly()" title="点击只看已手工调整的产品（数量 / 运输方式 / 需求出货日期 / 新增批次）"></span>
+          <!-- v4.26 达成率调节：点击打开调节清单 -->
+          <span class="ach-count-badge" id="detailAchieveInfo" style="display:none;" onclick="showAchieveList()" title="点击打开「达成率调节清单」：低达成率产品已按档减少备货 / 不备货，可逐条撤销或改系数"></span>
           <span class="count-badge" id="detailCount" data-page-node-id="hv3307RIxaYyeFoEnmScls">共 0 个产品</span>
           <button class="btn btn-sm btn-outline" onclick="toggleExpandAllDetail(this)" data-page-node-id="QvEcYDaN7ghKpDHn9h07qE">📂 全部展开</button>
         </div>
@@ -963,6 +1068,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th style="width:95px;" data-page-node-id="RKf0XuUE81GtDMCcvMqJl8">周均需求</th>
               <th style="width:95px;" data-page-node-id="pikVenWZPwxdyfMtbbrbO2">月均需求</th>
               <th style="width:95px;" data-page-node-id="BPxs6ItFDDfyEZQmeWhedv">最新周达成</th>
+              <th style="width:118px;" title="近四周达成 = 近四周平均周销量 ÷ 原始周均需求（达成率调节就用这个口径）；达标即按档给需求系数 k，全链路按修正后需求计算">近四周达成 / 调节</th>
               <th style="width:95px;" data-page-node-id="Sr5Y6UmXeodHFRSZ3tZGUl">含在制总数</th>
               <th style="width:95px;" data-page-node-id="fYduvMgBTm5A1RPkIFNzOC">建议下单量</th>
               <th style="width:95px;" data-page-node-id="mrZBeMABfBi3QNb0BKseH3">本周下单量</th>
@@ -1374,12 +1480,31 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
           <div class="algo-note" data-page-node-id="4c46B3wZfNIi318VC3Scyt">放完长假恢复每周放单：把释放周数改回 1 并重新生成即可。长按「一次性放一个月量的单」可用 4 周。</div>
         </div>
 
+        <div class="algo-block" data-page-node-id="AchAlgoBlock">
+          <div class="algo-step" data-page-node-id="AchAlgoStep"><b data-page-node-id="AchAlgoStepB">⑩ 达成率调节（2026-09-11 v4.26）</b></div>
+          <table class="result-table" style="width:100%;" data-page-node-id="AchAlgoTable">
+            <thead data-page-node-id="AchAlgoThead"><tr data-page-node-id="AchAlgoTheadTr"><th style="width:160px;" data-page-node-id="AchAlgoTh1">项</th><th data-page-node-id="AchAlgoTh2">规则</th></tr></thead>
+            <tbody data-page-node-id="AchAlgoTbody">
+              <tr data-page-node-id="AchAlgoR1"><td data-page-node-id="AchAlgoR1a">解决什么</td><td data-page-node-id="AchAlgoR1b">达成率低的产品，实际计划里要<b>减少备货 / 不备货</b>（预测虚高 → 按预测跑出来的建议量偏大）。过去只能系统跑完再由人工二次判断逐个改量；现在由系统按档自动给<b>需求系数 k</b>，一次生成即到位</td></tr>
+              <tr data-page-node-id="AchAlgoR2"><td data-page-node-id="AchAlgoR2a">达成率口径</td><td data-page-node-id="AchAlgoR2b"><code>近四周平均周销量 ÷ 原始周均需求</code>（<code>last4WeeksSales ÷ 原始 avgWeeklyDemand</code>）。用近四周而不是最新单周，抗单周促销/断货抖动；分母一律用<b>未经修正的</b>原始需求</td></tr>
+              <tr data-page-node-id="AchAlgoR3"><td data-page-node-id="AchAlgoR3a">分档与系数</td><td data-page-node-id="AchAlgoR3b">默认：≥80% → ×1（A 正常）；60~80% → ×0.8（B 观察）；40~60% → ×0.5（C 收缩）；&lt;40% → ×0（D 停备，等同「售完即止」，只消耗现有库存）。阈值/系数在「基础数据 → 达成率调节」可改</td></tr>
+              <tr data-page-node-id="AchAlgoR4"><td data-page-node-id="AchAlgoR4a">作用范围</td><td data-page-node-id="AchAlgoR4b">k 在 <code>planProduct</code> 内乘到周需求上，因此<b>周需求 / 安全库存 / 目标库存 / 最大批次量 / 尾数顺延阈值 / 缺口与批次量 / 建议下单 / 备货下单表 / 透视表</b>全部同源生效；<b>不改导入的原始数据</b>，导出另附「近四周达成 / 达成率档位 / 需求系数」三列。库存可售周数、可售月数、状态判定仍用<b>原始需求</b>做分母（否则会被算成呆滞）</td></tr>
+              <tr data-page-node-id="AchAlgoR5"><td data-page-node-id="AchAlgoR5a">安全阀（关键）</td><td data-page-node-id="AchAlgoR5b">达成率低有两种原因：①真的卖不动 ②没货可卖（断货/上架慢）。第 ② 种砍备货会雪上加霜 → 当<b>现有可售库存 &lt; N 周需求</b>或<b>前 M 周内出现断货</b>（默认 2 周 / 前 4 周）时判为「缺货型低达成」，<b>强制 k=1 不降备货</b>，只在清单里提示原因</td></tr>
+              <tr data-page-node-id="AchAlgoR6"><td data-page-node-id="AchAlgoR6a">撤销与追溯</td><td data-page-node-id="AchAlgoR6b">结果页 / 明细页头部「⚖ 达成率调节 N / 总数」胶囊 → 打开清单：逐条「🚫 不调节」或「⛔ 停备」、批量「全部恢复自动 / 全部不调节」、复制清单。撤销记在产品档案 <code>achieveOverride</code>（<code>'off'</code> 或指定系数数字），重新导入产品会覆盖</td></tr>
+              <tr data-page-node-id="AchAlgoR7"><td data-page-node-id="AchAlgoR7a">醒目标注</td><td data-page-node-id="AchAlgoR7b">青绿系（与橙运输回退 / 灰蓝尾数顺延 / 绿预放单 / 红数据待修 / 紫手工调整 / 蓝身份权限区分）：料品编码旁 <b>⚖ ×k / ⛔ 停备 / ⚖ 安全阀</b> 角标 + 行底色 + 周均需求格小角标 + 单品详情头部提示条</td></tr>
+              <tr data-page-node-id="AchAlgoR8"><td data-page-node-id="AchAlgoR8a">数据缺失 / 0 销量</td><td data-page-node-id="AchAlgoR8b">「近四周销量」未导入、或「原始周均需求」为 0 → 视为数据不可判定，<b>不参与调节（k=1）</b>。近四周销量等于 0 时<b>默认也不自动停备</b>（0 销量可能是新品 / 该列没填，语义有歧义），只在清单里列出「0 销量 · 待判断」；要连 0 销量一起停，在「达成率调节 → 0 销量产品」打开开关</td></tr>
+            </tbody>
+          </table>
+          <div class="algo-note" data-page-node-id="AchAlgoNote">口径已与业务确认（2026-09-11）：近四周口径 / 默认按档自动生效 / 四档含 k=0 完全不备货。改「达成率调节」参数后系统会按新参数重算已生成的方案，无需重新导入。</div>
+        </div>
+
         <div class="algo-block" data-page-node-id="hzr1kFln3bss982KocTjG5">
           <div class="algo-step" data-page-node-id="f9qf6r8KhGc2MjwxrX7nMe"><b data-page-node-id="7XqV7l4clytzSmGWYXV53W">核心公式速记</b></div>
           <table class="result-table" style="width:100%;" data-page-node-id="z1Wsd5YTgysO2TV3bk225r">
             <thead data-page-node-id="dRx92whA5xdCeXlvESPiKK"><tr data-page-node-id="V4sTo6o5X5eopQkSS6FC0l"><th style="width:160px;" data-page-node-id="xF9zEdKEk1UgkT2GC46tin">指标</th><th data-page-node-id="hbzNYCSu0JdY1Dl0pPUiLk">公式</th></tr></thead>
             <tbody data-page-node-id="cbtXuMBKd7prNqsQmObwg5">
               <tr data-page-node-id="KasESkNSQRXHEcL7VKbNVB"><td data-page-node-id="MVrrKlWxLFq28FUSUn9peU">周需求</td><td data-page-node-id="EuBH1jkH3IWRmnCLZ9UdkH">月预测 ÷ 4.33</td></tr>
+              <tr data-page-node-id="AchFormulaRow"><td data-page-node-id="AchFormulaRowA">周需求（参与备货计算）</td><td data-page-node-id="AchFormulaRowB">月预测 ÷ 4.33 × <b data-page-node-id="AchFormulaRowC">达成率系数 k</b>（v4.26；k 由近四周达成率分档得到，安全阀命中时强制 1）</td></tr>
               <tr data-page-node-id="U49qd5ODsvLZGzLlFYmKFS"><td data-page-node-id="ptIIrsbCqxpaEf1XlgX8lK">期初可售</td><td data-page-node-id="tbuTgEzLYbxV3dyv9nGHGX">FBA + 下架 + 海外仓 + 挪用（第 0 周）</td></tr>
               <tr data-page-node-id="PFLbNCx7frlLy5rzmRJo5O"><td data-page-node-id="DcEXNA9GYIEKwREnfDWm5i">期末可售</td><td data-page-node-id="l0omFzHTmS0OeCpocdSzVy">期初 + 到货 − 需求</td></tr>
               <tr data-page-node-id="eLVcupiImyfZieMlFVQY5r"><td data-page-node-id="lDq9HKQiug5LwuCtM4cHEw">缺货</td><td data-page-node-id="Q1IddsC7BAYAzZDNEuLHZm">max(0, 需求 − 可用)</td></tr>
@@ -1501,7 +1626,8 @@ const STORAGE_KEYS = {
   IMPORT_REC_DATA: 'stockImportRec_',   // prefix + id
   FBA_SHELF_DAYS: 'stockFbaShelfDays',
   TAIL_DEFER: 'stockTailDefer',          /* v4.8+ 尾数顺延配置 { enabled, thresholdWeeks, absQty } */
-  RELEASE_WEEKS: 'stockReleaseWeeks'     /* v4.17 提前释放订单周数（预放单）：默认 1 = 本周只放当周批；2/3 = 本周连同未来 N-1 周该放的批一起放（PO 提前下，出货/到货节奏不变） */
+  RELEASE_WEEKS: 'stockReleaseWeeks',    /* v4.17 提前释放订单周数（预放单）：默认 1 = 本周只放当周批；2/3 = 本周连同未来 N-1 周该放的批一起放（PO 提前下，出货/到货节奏不变） */
+  ACHIEVE: 'stockAchieveCfg'             /* v4.26 达成率调节配置 { enabled, t1,k1, t2,k2, t3,k3, k4, valveStockWeeks, valveWindowWeeks } */
 };
 const LOG_MAX = 50;
 const LOG_SHOW = 10;
@@ -1854,6 +1980,17 @@ let tailDeferCfg = { enabled: true, thresholdWeeks: 1, absQty: 30 };
    （PO 提前下发，各批的需求出货日期/到货周不变 —— 不是把两三周的量合并成一单集中出货）。
    实现：凡涉及「本周下单量」的统计/编辑口径从 orderWeek===0 放宽为 orderWeek < releaseOrderWeeks。 */
 let releaseOrderWeeks = 1;
+/* v4.26 达成率调节全局配置（业务口径 2026-09-11 确认：近四周口径 + 默认按档自动生效 + 四档含 k=0 完全不备货）
+   - enabled=false：整体关闭（所有产品 k=1，等价于旧行为）
+   - t1~t3 / k1~k4：达成率分档阈值与需求系数。默认 ≥80% → 1.0；60~80% → 0.8；40~60% → 0.5；<40% → 0（不备货）
+   - valveStockWeeks / valveWindowWeeks：安全阀。现有可售库存 < N 周需求，或前 M 周内出现断货
+     → 判为「缺货型低达成」，k 强制 1（缺货不是卖不动，砍备货会雪上加霜）
+   产品级覆盖：p.achieveOverride = 'off'（本产品不调节）| 数字（手工指定 k）| 未设置（按档自动） */
+let achieveCfg = { enabled: true, t1: 0.80, k1: 1.00, t2: 0.60, k2: 0.80, t3: 0.40, k3: 0.50, k4: 0.00,
+                   valveStockWeeks: 2, valveWindowWeeks: 4,
+                   /* 近四周销量为 0 时是否也参与自动调节。默认 false = 保护（0 销量语义歧义：可能新品/该列没填），
+                      只在清单里列出待人工判断；置 true = 0 销量直接按 D 档停备 */
+                   zeroSalesStop: false };
 /* v4.17 helper：某批次(orderWeek)是否属于「本次放单窗口」（本周要放出去的单） */
 function isRelOrder(ow){
   const rw = Math.max(1, Math.min(4, num(releaseOrderWeeks) || 1));
@@ -1928,6 +2065,9 @@ function loadAllState(){
   if(tailDeferTh) tailDeferTh.value = tailDeferCfg.thresholdWeeks;
   const tailDeferAbs = $('tailDeferAbsQty');
   if(tailDeferAbs) tailDeferAbs.value = tailDeferCfg.absQty;
+  /* v4.26 加载达成率调节配置 + 回填设置 UI */
+  achieveCfg = normalizeAchieveCfg(lsGet(STORAGE_KEYS.ACHIEVE, null));
+  fillAchieveUI();
   /* v4.17 加载提前释放订单周数（预放单）配置 */
   releaseOrderWeeks = Math.max(1, Math.min(4, num(lsGet(STORAGE_KEYS.RELEASE_WEEKS, 1)) || 1));
   const relInput = $('releaseOrderWeeksInput');
@@ -2423,6 +2563,61 @@ function onTailDeferAbsQtyChange(v){
     : '绝对数量阈值已关闭（仅按周均倍数阈值判定）');
 }
 
+/* v4.26 达成率调节：配置读写 + UI 回填（阈值 / 系数 / 安全阀） */
+function saveAchieveCfg(){ lsSet(STORAGE_KEYS.ACHIEVE, achieveCfg); }
+function fillAchieveUI(){
+  const map = { achieveToggle: achieveCfg.enabled, achieveT1: achieveCfg.t1, achieveK1: achieveCfg.k1,
+                achieveT2: achieveCfg.t2, achieveK2: achieveCfg.k2, achieveT3: achieveCfg.t3, achieveK3: achieveCfg.k3,
+                achieveK4: achieveCfg.k4, achieveValveStock: achieveCfg.valveStockWeeks, achieveValveWindow: achieveCfg.valveWindowWeeks,
+                achieveZeroSales: achieveCfg.zeroSalesStop };
+  Object.keys(map).forEach(id => {
+    const el = $(id); if(!el) return;
+    if(el.type === 'checkbox') el.checked = !!map[id]; else el.value = map[id];
+  });
+}
+function onAchieveToggle(on){
+  if(!guard('sys','系统参数')){ fillAchieveUI(); return; }
+  achieveCfg.enabled = !!on; saveAchieveCfg();
+  toast(on ? '达成率调节已启用（低达成产品自动减少备货）' : '达成率调节已关闭（所有产品按原始需求备货）');
+  refreshAchieveAfterCfgChange();
+}
+const ACHIEVE_FIELD_MAP = {
+  achieveT1:['t1',0.01,2], achieveK1:['k1',0,1], achieveT2:['t2',0.01,2], achieveK2:['k2',0,1],
+  achieveT3:['t3',0.01,2], achieveK3:['k3',0,1], achieveK4:['k4',0,1],
+  achieveValveStock:['valveStockWeeks',0,20], achieveValveWindow:['valveWindowWeeks',0,26]
+};
+function onAchieveFieldChange(id, v){
+  if(!guard('sys','系统参数')){ fillAchieveUI(); return; }
+  const f = ACHIEVE_FIELD_MAP[id]; if(!f) return;
+  achieveCfg[f[0]] = Math.max(f[1], Math.min(f[2], num(v)));
+  achieveCfg = normalizeAchieveCfg(achieveCfg);
+  saveAchieveCfg(); fillAchieveUI();
+  refreshAchieveAfterCfgChange();   /* 已生成过方案则按新参数重算，避免读数与配置不符 */
+  toast('达成率调节参数已更新' + (Array.isArray(results) && results.length ? '，已按新参数重算当前方案' : '，请点击「🚀 生成备货方案」后生效'));
+}
+function onAchieveZeroSalesToggle(on){
+  if(!guard('sys','系统参数')){ fillAchieveUI(); return; }
+  achieveCfg.zeroSalesStop = !!on; saveAchieveCfg();
+  toast(on ? '近四周销量为 0 的产品将直接按 D 档停备（不备货）' : '近四周销量为 0 的产品改为「待人工判断」，不自动停备');
+  refreshAchieveAfterCfgChange();
+}
+function onAchieveResetDefault(){
+  if(!guard('sys','系统参数')) return;
+  achieveCfg = normalizeAchieveCfg(null); saveAchieveCfg(); fillAchieveUI();
+  refreshAchieveAfterCfgChange();
+  toast('达成率调节已恢复默认（≥80% 正常 / 60~80% ×0.8 / 40~60% ×0.5 / <40% 不备货）');
+}
+/* 改配置后：已生成过方案则按新配置重算全部产品（系数变了必须重跑，否则读数与配置不符） */
+function refreshAchieveAfterCfgChange(){
+  if(!Array.isArray(results) || results.length === 0) return;
+  for(let i = 0; i < results.length; i++){
+    if(results[i] && results[i].p) results[i] = planProduct(results[i].p);
+  }
+  try {
+    renderMetricCards(); renderResultTable(); renderOrderTable(); renderDetailTable(); renderPerspective();
+  } catch(e){ console.error('[达成率调节重算渲染失败]', e); }
+  renderAchieveCount();
+}
 /* v4.17 提前释放订单周数（预放单）：改配置后仅存配置，提示用户重新生成方案生效 */
 function onReleaseOrderWeeksChange(v){
   if(!guard('sys','系统参数')){ loadAllState(); return; }
@@ -2776,6 +2971,128 @@ function simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, extraArriv
 }
 
 // 计算一个产品的备货计划（模式3 算法）
+/* ============================================================
+ * v4.26 达成率调节（低达成产品自动减少备货 / 不备货）
+ * 业务口径（2026-09-11 用户确认）：
+ *   · 达成率 = 近四周平均周销量 ÷ 原始周均需求（近四周比最新单周稳，且工具已有 last4WeeksSales）
+ *   · 默认按档自动生效；跑完方案在「达成率调节清单」里可逐条撤销 / 改系数
+ *   · 四档，含 k=0（完全不备货，等同「售完即止」，只消耗现有库存）
+ * 安全阀（关键，不能省）：达成率低有两种原因 —— ①真的卖不动 ②没货可卖（断货 / 上架慢）。
+ *   第②种砍备货会雪上加霜，所以「现有可售库存 < N 周需求」或「前 M 周出现断货」时
+ *   强制 k=1，只在清单里提示「缺货型低达成」。判据由原始需求跑一次基线模拟得出。
+ * ============================================================ */
+function normalizeAchieveCfg(raw){
+  const o = (raw && typeof raw === 'object') ? raw : {};
+  const pick = (key, def, min, max) => {
+    const v = (o[key] === undefined || o[key] === null || o[key] === '') ? def : num(o[key]);
+    return Math.max(min, Math.min(max, v));
+  };
+  const c = {
+    enabled: o.enabled !== false,
+    t1: pick('t1', 0.80, 0.01, 2), k1: pick('k1', 1.00, 0, 1),
+    t2: pick('t2', 0.60, 0.01, 2), k2: pick('k2', 0.80, 0, 1),
+    t3: pick('t3', 0.40, 0.01, 2), k3: pick('k3', 0.50, 0, 1),
+    k4: pick('k4', 0.00, 0, 1),
+    valveStockWeeks: pick('valveStockWeeks', 2, 0, 20),
+    valveWindowWeeks: pick('valveWindowWeeks', 4, 0, 26),
+    zeroSalesStop: o.zeroSalesStop === true
+  };
+  /* 阈值必须严格递减，否则分档会互相吞掉；容错修正（不提示、只静默纠正顺序） */
+  c.t3 = Math.min(c.t3, 1.99);
+  c.t2 = Math.max(c.t2, c.t3 + 0.01);
+  c.t1 = Math.max(c.t1, c.t2 + 0.01);
+  return c;
+}
+/* 分档：返回 { tier, k, idx } */
+function achieveTierOf(rate){
+  const c = achieveCfg;
+  if(rate === null || rate === undefined) return { tier:'—', k:1, idx:-1 };
+  if(rate >= c.t1) return { tier:'A 正常', k:c.k1, idx:0 };
+  if(rate >= c.t2) return { tier:'B 观察', k:c.k2, idx:1 };
+  if(rate >= c.t3) return { tier:'C 收缩', k:c.k3, idx:2 };
+  return { tier:'D 停备', k:c.k4, idx:3 };
+}
+/* 近四周销量（周均口径）：返回 null = 该列未导入（数据缺失，与"填了 0"不同） */
+function achieveSales4(p){
+  const raw4 = p.last4WeeksSales, rawA = p.actualWeeklySales;
+  const has4 = raw4 !== undefined && raw4 !== null && String(raw4).trim() !== '';
+  const hasA = rawA !== undefined && rawA !== null && String(rawA).trim() !== '';
+  if(!has4 && !hasA) return null;
+  return num(raw4) || num(rawA) || 0;
+}
+/* 达成率：返回 null = 分母/分子无效 → 不参与调节 */
+function achieveRateOf(p, rawAvgWeeklyDemand){
+  if(!(num(rawAvgWeeklyDemand) > 0)) return null;
+  const s4 = achieveSales4(p);
+  if(s4 === null) return null;
+  /* 0 销量语义歧义（真的卖不动 / 新品刚上架 / 该列没填）→ 默认不自动停备，只列进清单待人工判断。
+     想让它直接按 D 档停备，把「达成率调节 → 近四周销量为 0 也参与」打开即可。 */
+  if(s4 <= 0 && !achieveCfg.zeroSalesStop) return null;
+  return s4 / num(rawAvgWeeklyDemand);
+}
+/* 安全阀：返回非空字符串 = 命中（缺货型低达成 → 不降备货） */
+function achieveValveReason(p, rawAvgWeeklyDemand, rawSim){
+  const w = num(achieveCfg.valveStockWeeks);
+  if(w > 0 && num(rawAvgWeeklyDemand) > 0){
+    const onHand = computeInitialStock(p);
+    if(onHand < rawAvgWeeklyDemand * w){
+      return `现有可售 ${fmt(Math.round(onHand))} 套不足 ${w} 周需求（${fmt(Math.round(rawAvgWeeklyDemand * w))} 套）`;
+    }
+  }
+  const win = num(achieveCfg.valveWindowWeeks);
+  if(win > 0 && rawSim && Array.isArray(rawSim.plan)){
+    const n = rawSim.plan.filter(x => x.stockout > 0 && x.week <= win).length;
+    if(n > 0) return `前 ${win} 周内已有 ${n} 周断货`;
+  }
+  return '';
+}
+/* 主判定：返回 { rate, rawAvg, k, tier, reason, valid, valve, manual, stop, override } */
+function achieveAdjust(p, rawAvgWeeklyDemand, rawSim){
+  const s4 = achieveSales4(p);
+  const rate = achieveRateOf(p, rawAvgWeeklyDemand);
+  const ov = (p.achieveOverride === undefined) ? null : p.achieveOverride;
+  const base = { rate, rawAvg: num(rawAvgWeeklyDemand), override: ov, sales4: s4,
+                 k: 1, tier: '—', reason: '', valid: rate !== null, zeroSales: false,
+                 valve: false, manual: false, stop: false };
+  if(rate === null){
+    if(!(num(rawAvgWeeklyDemand) > 0)){
+      base.reason = '无预测需求，不参与调节';
+    } else if(s4 === null){
+      base.reason = '「近四周销量」未导入，数据不足，不参与调节';
+    } else {
+      base.zeroSales = true;
+      base.reason = achieveCfg.zeroSalesStop
+        ? '近四周销量为 0'
+        : '近四周销量为 0（可能是新品 / 该列没填），按保护规则不自动停备；确认卖不动可点「⛔ 停备」';
+    }
+    return base;
+  }
+  if(ov === 'off'){
+    base.manual = true; base.tier = '已撤销';
+    base.reason = '本产品已撤销调节（按原始需求备货）';
+    return base;
+  }
+  if(achieveCfg.enabled === false){ base.reason = '达成率调节未启用（全局）'; return base; }
+  if(typeof ov === 'number' && isFinite(ov)){
+    base.manual = true;
+    base.k = Math.max(0, Math.min(1, ov));
+    base.tier = '手动 ×' + base.k;
+    base.stop = base.k === 0;
+    base.reason = base.stop ? '手工指定：不备货' : '手工指定的需求系数';
+    return base;
+  }
+  const valve = achieveValveReason(p, rawAvgWeeklyDemand, rawSim);
+  if(valve){
+    base.valve = true; base.tier = '安全阀';
+    base.reason = valve + '，达成率低可能是缺货而不是卖不动 → 不降备货';
+    return base;
+  }
+  const t = achieveTierOf(rate);
+  base.tier = t.tier; base.k = t.k; base.stop = t.k === 0;
+  base.reason = '近四周达成 ' + (rate * 100).toFixed(0) + '% → 需求 ×' + t.k
+              + (base.stop ? '（不备货，仅消耗现有库存）' : '');
+  return base;
+}
 function planProduct(p){
   // 安全库存周数、生产周期、计划周期优先使用产品级（从导入模板），否则用默认值
   const safetyWeeks = num(p.safetyStockWeeks) || 2;
@@ -2804,17 +3121,28 @@ function planProduct(p){
   const noStockStatuses = ['售完即止','销呆滞','销呆滞不备货'];
   const noStock = noStockStatuses.includes((p.salesStatus||'').trim());
 
-  const weeklyDemand = buildWeeklyDemand(p, weeks);
+  /* v4.26 达成率调节：先按「原始需求」算周均 + 跑一次基线模拟（安全阀要靠它看断货情况），
+     再决定需求系数 k，最后把 k 乘到需求上 —— 后续安全库存 / 缺口判定 / 批次量 / 建议下单
+     全部基于修正后的需求，保证全链路一致（不是只在某一列打补丁）。 */
+  const rawWeeklyDemand = buildWeeklyDemand(p, weeks);
   const pipelineArrivals = buildPipelineArrivals(p, weeks);
   // 周均需求：只跳过预测起始月前的零需求周，保留预测期内的 0 值
   const avgStartWeek = getForecastStartWeek(p, weeks);
+  const rawAvgArr = rawWeeklyDemand.slice(avgStartWeek);
+  const rawAvgWeeklyDemand = rawAvgArr.length > 0 ? rawAvgArr.reduce((a,b)=>a+b,0) / rawAvgArr.length : 0;
+  const rawSim = simulate(rawWeeklyDemand, pipelineArrivals, safetyWeeks, weeks, null, avgStartWeek, computeInitialStock(p));
+  const achieveInfo = achieveAdjust(p, rawAvgWeeklyDemand, rawSim);
+  const achieveK = num(achieveInfo.k);
+  const weeklyDemand = achieveK === 1 ? rawWeeklyDemand : rawWeeklyDemand.map(v => v * achieveK);
   const avgArr = weeklyDemand.slice(avgStartWeek);
   const avgWeeklyDemand = avgArr.length > 0 ? avgArr.reduce((a,b)=>a+b,0) / avgArr.length : 0;
   const safetyStock = Math.round(avgWeeklyDemand * safetyWeeks);
 
   // 月均需求 = 用于 maxBatchSize
   const fcs = [num(p.fcM0), num(p.fcM1), num(p.fcM2), num(p.fcM3), num(p.fcM4), num(p.fcM5)].filter(v => v > 0);
-  const monthlyAvg = fcs.length > 0 ? fcs.reduce((a,b)=>a+b,0)/fcs.length : avgWeeklyDemand * 4.33;
+  const monthlyAvgRaw = fcs.length > 0 ? fcs.reduce((a,b)=>a+b,0)/fcs.length : rawAvgWeeklyDemand * 4.33;
+  /* v4.26 最大批次量口径必须跟着修正后的需求走，否则出现「需求降了、批次还按原月度跑」的半截生效 */
+  const monthlyAvg = monthlyAvgRaw * achieveK;
   /* 调整2：备货下单频率（天）→ 覆盖窗口 & 最大批次量按频率动态调整
      7天 → 按周下单（coverageWeeks=1, maxBatch≈周需求）
      15天 → 按半月下单（coverageWeeks≈2, maxBatch≈半月需求）
@@ -2827,13 +3155,16 @@ function planProduct(p){
      （如周需求 1201、箱 24 → floor→1200），每周到货净 -1 → 库存永不恢复、残留 0.x 断货周。 */
   let maxBatchSize = Math.max(cartonSize, Math.ceil(maxBatchSizeRaw / cartonSize) * cartonSize);
 
-  if(noStock){
-    // 不备货（售完即止）
-    const sim = simulate(weeklyDemand, pipelineArrivals, safetyWeeks, weeks, null, avgStartWeek, computeInitialStock(p));
+  if(noStock || achieveK === 0){
+    /* 不备货：①销售状态=售完即止/销呆滞；②v4.26 达成率不足被停备（k=0）。
+       两种都仍按「原始需求」推演，方便看出"若不备货，计划期内会有几周断货"。 */
+    const sim = simulate(rawWeeklyDemand, pipelineArrivals, safetyWeeks, weeks, null, avgStartWeek, computeInitialStock(p));
     const stockoutWeeks = sim.plan.filter(w => w.stockout > 0).length;
     return {
-      p, weeks, noStock: true, avgWeeklyDemand, safetyStock, cartonSize,
-      weeklyDemand, pipelineArrivals, weeklyPlan: sim.plan,
+      p, weeks, noStock: !!noStock, achieveStop: !noStock && achieveK === 0,
+      achieveK, achieveInfo, rawAvgWeeklyDemand,
+      avgWeeklyDemand: rawAvgWeeklyDemand, safetyStock: Math.round(rawAvgWeeklyDemand * safetyWeeks), cartonSize,
+      weeklyDemand: rawWeeklyDemand, rawWeeklyDemand, pipelineArrivals, weeklyPlan: sim.plan,
       replenishments: [], rec: 0, actualRec: 0, totalCost: 0,
       coverageWeeks, maxBatchSize, orderFreqDays, stockoutWeeks,
       sellableWeeks: 0, earliestArrive: '--',
@@ -3275,17 +3606,19 @@ function planProduct(p){
   });
 
   // 库存可售周数 = 所有可用库存 + 计划补货 / 周均需求
+  /* v4.26 分母用「原始需求」：达成率调节是"少备货"的手段，不能因此把可售周数算大而误判成呆滞 */
   const onHandNow = num(p.fbaStock) + num(p.unsellableStock) + num(p.osStock) + num(p.divertStock);
-  const sellableWeeks = avgWeeklyDemand > 0 ? Math.round((onHandNow + totalRec) / avgWeeklyDemand) : 0;
+  const sellableWeeks = rawAvgWeeklyDemand > 0 ? Math.round((onHandNow + totalRec) / rawAvgWeeklyDemand) : 0;
 
   // 预计到仓 = 最早一批的到货日期；用生产周期天数估算下单前置时间
   const leadEstimateDays = prodCycleDays > 0 ? prodCycleDays : 42; // 默认 6 周 = 42 天
   const earliestArrive = replenishments.length > 0 ? replenishments[0].arriveDate : addWeeks(new Date(), Math.round(leadEstimateDays/7));
 
   return {
-    p, weeks, noStock: false,
+    p, weeks, noStock: false, achieveStop: false,
+    achieveK, achieveInfo, rawAvgWeeklyDemand,
     avgWeeklyDemand, safetyStock, cartonSize, monthlyAvg, maxBatchSize, coverageWeeks, orderFreqDays,
-    weeklyDemand, pipelineArrivals, weeklyPlan: finalSim.plan,
+    weeklyDemand, rawWeeklyDemand, pipelineArrivals, weeklyPlan: finalSim.plan,
     replenishments,
     rec: totalRec,
     actualRec: totalRec,
@@ -4499,7 +4832,7 @@ function renderMetricCards(){
 function renderResultTable(){
   const canEdit = can('edit');   /* v4.25 权限：决定行内可编辑控件是否放行 */
   if(results.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="29" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     return;
@@ -4548,10 +4881,10 @@ function renderResultTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="29" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
-    renderAdjustedCount();
+    renderAdjustedCount(); renderAchieveCount();
     return;
   }
   const curPage = clampPage('result', filtered.length);
@@ -4560,13 +4893,16 @@ function renderResultTable(){
   let html = '';
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
-  let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0;  // 2026-09-09 增 totalLast30：近30天销量合计（last4WeeksSales÷7×30 之累计）
+  let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0;
+  let totalAchTuned=0, totalAchStop=0;   // v4.26 达成率调节：已调节产品数 / 其中停备数  // 2026-09-09 增 totalLast30：近30天销量合计（last4WeeksSales÷7×30 之累计）
   filtered.forEach((item, idx) => {
     const r = item.r;
     const p = r.p;
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
     totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalLast30 += Math.round(num(p.last4WeeksSales) / 7 * 30); totalAvgDemand += num(r.avgWeeklyDemand);
+    if(num(r.achieveK) !== 1) totalAchTuned++;
+    if(r.achieveStop) totalAchStop++;
     /* 本周下单量：本次放单窗口（orderWeek < 释放周数）的批次合计 —— v4.17 预放单后含未来 N-1 周的提前释放批 */
     const thisWeekQty = (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     /* v4.17 预放单提示：仅当释放周数 >1 且存在「提前释放的未来批」（orderWeek>0 且在窗口内）时显示 */
@@ -4599,17 +4935,24 @@ function renderResultTable(){
     totalWithProd += withProdTotal;
     // 只渲染当前页
     if(idx < startIdx || idx >= endIdx) return;
-    const monthlyAvg = r.avgWeeklyDemand * 4.33;
+    /* v4.26 可售月数分母用「原始需求」：达成率调节是少备货的手段，不能因此把库存算大而误判成呆滞 */
+    const rawWk = num(r.rawAvgWeeklyDemand) || num(r.avgWeeklyDemand);
+    const monthlyAvg = rawWk * 4.33;
     const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
     let statusLabel, statusCls;
     /* 状态判断优先级
+       0. v4.26 达成率不足被停备（k=0）
        1. 售完即止（含销呆滞/销呆滞不备货）：显示「售完即止」
        2. 无需求：周均需求<=0 且非售完即止，显示「无需求」
        3. 紧急/紧张/健康/预呆滞/呆滞（基于库存可售月数）
        调整3：sellNow < 1 显示紧急的前提是「本周需要下单」（thisWeekQty > 0）；
              否则即使 sellNow<1，本周不下单也只是库存量低，标"紧张"
     */
-    if(r.noStock){
+    if(r.achieveStop){
+      statusLabel = '⛔ 达成率停备';
+      statusCls = 's-无需求';
+    }
+    else if(r.noStock){
       statusLabel = '🔴 售完即止';
       statusCls = 's-售完即止';
     }
@@ -4627,10 +4970,14 @@ function renderResultTable(){
     const safeKey = esc(p.materialCode||'');
     /* v4.24 已手工调整标记：与明细页同源（manualAdjustInfo 与算法基线比对），料品编码旁紫色标签 + 整行淡紫底 */
     const _adjInfo = adjOf(item.origIdx, r);
-    html += `<tr id="result-row-${item.origIdx}" class="${[r.noStock?'row-disabled':'', _adjInfo.adjusted?'adj-row':''].filter(Boolean).join(' ')}">
+    /* v4.26 达成率调节标记（青绿）：k≠1（含停备 / 安全阀 / 已撤销）时打标 + 整行淡青底 */
+    const _achInfo = r.achieveInfo || null;
+    const _achOn = !!(_achInfo && _achInfo.valid && (num(r.achieveK) !== 1 || _achInfo.valve));
+    const _achCls = r.achieveStop ? 'ach-stop-row' : (_achOn ? 'ach-tuned-row' : '');
+    html += `<tr id="result-row-${item.origIdx}" class="${[r.noStock?'row-disabled':'', _adjInfo.adjusted?'adj-row':'', _achCls].filter(Boolean).join(' ')}">
       <td class="cell-num">${idx+1}</td>
       <td>${esc(p.categoryLevel3||'--')}</td>
-      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(_adjInfo)}</td>
+      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(_adjInfo)}${achieveBadgeHtml(r)}</td>
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.salesStatus||'--')}</td>
@@ -4640,13 +4987,14 @@ function renderResultTable(){
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
       <td class="cell-num">${fmt(p.last4WeeksSales)}</td>
       <td class="cell-num" title="近四周平均销量 ÷ 7 × 30（按近期实际销售速度折算的月销量）">${fmt(Math.round(num(p.last4WeeksSales) / 7 * 30))}</td>
-      <td class="cell-num">${fmt(r.avgWeeklyDemand.toFixed(1))}</td>
+      <td class="cell-num">${fmt(r.avgWeeklyDemand.toFixed(1))}${achieveChipHtml(r)}</td>
+      <td class="cell-num">${achieveRateCellHtml(r)}</td>
       <td class="cell-num">${fmt(fbaV)}</td>
-      <td class="cell-num">${fmt(osStockV)}</td>
-      <td class="cell-num">${fmt(divertV)}</td>
-      <td class="cell-num">${fmt(osInTrV)}</td>
-      <td class="cell-num">${fmt(domT)}</td>
-      <td class="cell-num">${fmt(domP)}</td>
+      <td class="cell-num fold-col">${fmt(osStockV)}</td>
+      <td class="cell-num fold-col">${fmt(divertV)}</td>
+      <td class="cell-num fold-col">${fmt(osInTrV)}</td>
+      <td class="cell-num fold-col">${fmt(domT)}</td>
+      <td class="cell-num fold-col">${fmt(domP)}</td>
       <td class="cell-num cell-plan">${fmt(withProdTotal)}</td>
       <td class="cell-num">${fmt(targetInv)}</td>
       <td class="cell-num cell-plan">${fmt(r.rec)}</td>
@@ -4656,7 +5004,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="28" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="28" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="28" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="29" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="29" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="29" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -4666,11 +5014,12 @@ function renderResultTable(){
     <td class="cell-num" title="近四周平均销量合计 ÷ 7 × 30（按近期实际销售速度折算的月销量合计）">${fmt(totalLast30)}</td>
     <td class="cell-num">${fmt(totalAvgDemand.toFixed(1))}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
-    <td class="cell-num">${fmt(totalOS)}</td>
-    <td class="cell-num">${fmt(totalDivert)}</td>
-    <td class="cell-num">${fmt(totalOSTr)}</td>
-    <td class="cell-num">${fmt(totalDomT)}</td>
-    <td class="cell-num">${fmt(totalDomP)}</td>
+    <td class="cell-num" title="已按达成率调节的产品数（含停备）；点上方「⚖ 达成率调节」胶囊可看清单">${totalAchTuned > 0 ? ('已调节 ' + totalAchTuned + (totalAchStop > 0 ? '（停备 ' + totalAchStop + '）' : '')) : '—'}</td>
+    <td class="cell-num fold-col">${fmt(totalOS)}</td>
+    <td class="cell-num fold-col">${fmt(totalDivert)}</td>
+    <td class="cell-num fold-col">${fmt(totalOSTr)}</td>
+    <td class="cell-num fold-col">${fmt(totalDomT)}</td>
+    <td class="cell-num fold-col">${fmt(totalDomP)}</td>
     <td class="cell-num">${fmt(totalWithProd)}</td>
     <td colspan="1"></td>
     <td class="cell-num cell-plan">${fmt(totalRec)}</td>
@@ -5233,7 +5582,7 @@ function exportResultCSV(){ exportResult('csv'); }
 function exportResultXLSX(){ exportResult('xlsx'); }
 function exportResult(format){
   if(results.length === 0){ alert('暂无结果'); return; }
-  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','近30天销量','周均需求','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退','尾数顺延'];  /* v4.7 末列=常规方式停用回退提示；v4.8 再末列=本周缺口不足阈值被顺延的量 */
+  const head = ['#','三级','料品编码','存货名称','规格型号','销售状态','发货模式','梯队','下单频率','最新周销量','近四周平均销量','近30天销量','周均需求','近四周达成','达成率档位','需求系数','FBA库存','海外仓库存','可挪用库存','海外仓在途','国内在途','在制未交','含在制总数','目标库存','建议备货量','实际下单量','本周下单量','库存可售(周)','缺货周数','状态','运输方式回退','尾数顺延'];  /* v4.7 末列=常规方式停用回退提示；v4.8 再末列=本周缺口不足阈值被顺延的量；v4.26 新增近四周达成 / 达成率档位 / 需求系数 */
   const rows = [head];
   results.forEach((r, idx) => {
     const p = r.p;
@@ -5256,11 +5605,12 @@ function exportResult(format){
     /* 优先级：售完即止 > 无需求 > 紧急/紧张/健康/预呆滞/呆滞
        调整3：sellNow < 1 显示紧急的前提是「本周需要下单」(thisWeekQty>0)
     */
-    if(r.noStock) status = '售完即止';
+    if(r.achieveStop) status = '达成率停备';
+    else if(r.noStock) status = '售完即止';
     else if(num(r.avgWeeklyDemand) <= 0) status = '无需求';
     else if(r.stockoutWeeks > 0) status = '紧急';
     else {
-      const monthlyAvg = r.avgWeeklyDemand * 4.33;
+      const monthlyAvg = (num(r.rawAvgWeeklyDemand) || num(r.avgWeeklyDemand)) * 4.33;   /* v4.26 用原始需求算可售月数 */
       const sellNow = monthlyAvg > 0 ? currentStock / monthlyAvg : (currentStock > 0 ? 999 : 0);
       if(sellNow < 1 && thisWeekQty > 0) status = '紧急';
       else if(sellNow < 1) status = '紧张';
@@ -5269,10 +5619,13 @@ function exportResult(format){
       else if(sellNow < 4) status = '预呆滞';
       else status = '呆滞';
     }
+    const achInfo = r.achieveInfo || null;
+    const achRate = (achInfo && achInfo.valid && achInfo.rate != null) ? (achInfo.rate * 100).toFixed(0) + '%' : '--';
     rows.push([idx+1, p.categoryLevel3, p.materialCode, p.materialName, p.specCode, p.salesStatus,
       r.isTransit ? '中转' : '直发', p.priorityTier,
       r.orderFreqDays ? r.orderFreqDays + '天' : '7天',
       p.currentWeekSales, p.last4WeeksSales, Math.round(num(p.last4WeeksSales) / 7 * 30), r.avgWeeklyDemand.toFixed(1),
+      achRate, (achInfo ? achInfo.tier : '--'), num(r.achieveK),
       fbaV, osStockV, divertV, osInTrV, domT, domP, withProdTotal,
       Math.round(r.avgWeeklyDemand * (Math.round((num(p.prodCycleDays)||42)/7) + (num(p.safetyStockWeeks)||2))),
       r.rec, r.actualRec, thisWeekQty, r.sellableWeeks,
@@ -5501,6 +5854,219 @@ function adjTipHtml(r){
   const more = info.rows.length > 8 ? ` …共 ${info.rows.length} 处` : '';
   return `<div class="adj-tip" style="margin:0 0 12px;">✏️ <b>本产品已被手工调整</b>（${esc(info.kinds.join(' / '))}）——${list}${more}。<br>如要恢复算法结果，重新点击「🚀 生成备货方案」即可（标记会一并清空）。</div>`;
 }
+/* ============================================================
+ * v4.26 达成率调节：标记 / 提示 / 计数 / 清单弹窗（撤销、改系数）
+ * ============================================================ */
+/* 料品编码旁标记：只在"确实做了什么"或"被撤销过"时出现，避免满屏噪声 */
+function achieveBadgeHtml(r){
+  const a = r && r.achieveInfo;
+  if(!a || !a.valid) return '';
+  const k = num(r.achieveK);
+  let label = '';
+  if(a.stop) label = '⛔ 停备';
+  else if(a.valve) label = '⚖ 安全阀';
+  else if(a.manual && a.override === 'off') label = '⚖ 未调节';
+  else if(k !== 1) label = '⚖ ×' + k;
+  if(!label) return '';
+  const rateTxt = (a.rate != null) ? (a.rate * 100).toFixed(0) + '%' : '--';
+  const tip = '达成率调节：' + a.tier
+    + '\n近四周达成 ' + rateTxt + '（近四周销量 ' + fmt(num(r.p && r.p.last4WeeksSales)) + ' ÷ 原始周均需求 ' + fmt(a.rawAvg.toFixed(1)) + '）'
+    + '\n需求系数 ×' + k + '（需求/安全库存/批次量/建议下单全链路按修正后需求计算）'
+    + '\n' + a.reason
+    + '\n可在「⚖ 达成率调节」清单里撤销或改系数';
+  return `<span class="ach-badge" title="${esc(tip)}">${label}</span>`;
+}
+/* 主表「达成率 / 调节」单元格：达成率（按档位配色）+ 系数/停备/安全阀小角标 */
+function achieveRateCellHtml(r){
+  const a = r && r.achieveInfo;
+  if(!a || !a.valid) return '<span style="color:var(--text-muted);">--</span>';
+  const rate = num(a.rate);
+  const cls = (rate >= achieveCfg.t1) ? 'ach-rate-ok' : (rate >= achieveCfg.t3 ? 'ach-rate-warn' : 'ach-rate-bad');
+  const k = num(r.achieveK);
+  let chip = '';
+  if(a.stop) chip = '<span class="ach-chip" style="color:#b91c1c;border-color:#f09595;background:#fdecec;" title="达成率不足，已停备（不备货，只消耗现有库存）">停备</span>';
+  else if(a.valve) chip = '<span class="ach-chip" title="' + esc(a.reason) + '">安全阀</span>';
+  else if(k !== 1) chip = '<span class="ach-chip" title="需求系数 ×' + k + '：周需求 / 安全库存 / 批次量 / 建议下单均按修正后需求计算">×' + k + '</span>';
+  else if(a.manual && a.override === 'off') chip = '<span class="ach-chip" title="本产品已撤销达成率调节，按原始需求备货">未调节</span>';
+  const tip = '达成率 ' + (rate * 100).toFixed(0) + '%（近四周平均周销量 ' + fmt(num(r.p && r.p.last4WeeksSales)) + ' ÷ 原始周均需求 ' + fmt(a.rawAvg.toFixed(1)) + '）'
+            + '\n' + a.tier + '：' + a.reason;
+  return '<span class="' + cls + '" style="font-weight:600;" title="' + esc(tip) + '">' + (rate * 100).toFixed(0) + '%</span>' + chip;
+}
+/* 「周均需求」单元格旁的小系数角标（k≠1 时才有） */
+function achieveChipHtml(r){
+  if(!r || r.achieveStop) return '';
+  const k = num(r.achieveK);
+  if(k === 1) return '';
+  return `<span class="ach-chip" title="达成率调节：原始周均需求 ${fmt(num(r.rawAvgWeeklyDemand).toFixed(1))} × 系数 ${k} = 参与备货计算的周均需求">×${k}</span>`;
+}
+/* 单品详情头部提示条 */
+function achieveTipHtml(r){
+  const a = r && r.achieveInfo;
+  if(!a || !a.valid) return '';
+  const k = num(r.achieveK);
+  if(!a.valve && !a.manual && k === 1) return '';
+  const rateTxt = (a.rate != null) ? (a.rate * 100).toFixed(0) + '%' : '--';
+  return `<div class="ach-tip" style="margin:0 0 12px;">⚖ <b>达成率调节 · ${esc(a.tier)}</b> —— 近四周达成 <b>${rateTxt}</b>`
+    + `（近四周销量 ${fmt(num(r.p && r.p.last4WeeksSales))} ÷ 原始周均需求 ${fmt(a.rawAvg.toFixed(1))}），需求系数 <b>×${k}</b>：${esc(a.reason)}。`
+    + `<br>周需求 / 安全库存 / 批次量 / 建议下单均已按修正后需求计算；如不认可，可在结果页「⚖ 达成率调节」清单里撤销本产品。</div>`;
+}
+/* 头部计数胶囊：明细页 + 结果主表共用（口径与 planProduct 的 achieveK 同源） */
+function renderAchieveCount(){
+  if(typeof results === 'undefined' || !Array.isArray(results)) return;
+  let n = 0, stop = 0;
+  results.forEach(r => {
+    if(!r) return;
+    if(num(r.achieveK) !== 1) n++;
+    if(r.achieveStop) stop++;
+  });
+  const txt = (n > 0 && results.length > 0) ? ('⚖ 达成率调节 ' + n + ' / ' + results.length + (stop > 0 ? '（停备 ' + stop + '）' : '')) : '';
+  ['detailAchieveInfo', 'resultAchieveInfo'].forEach(id => {
+    const el = $(id); if(!el) return;
+    if(!txt){ el.style.display = 'none'; el.textContent = ''; return; }
+    el.style.display = 'inline-flex';
+    el.textContent = txt;
+  });
+}
+function achieveRowsData(){
+  const list = [];
+  if(typeof results === 'undefined' || !Array.isArray(results)) return list;
+  results.forEach((r, idx) => {
+    const a = r && r.achieveInfo;
+    if(!a || (!a.valid && !a.zeroSales)) return;   /* v4.26 0 销量产品也列出来（待人工判断） */
+    list.push({ idx, r, p: r.p, a, k: num(r.achieveK) });
+  });
+  list.sort((x, y) => ((x.a.rate == null ? 2 : num(x.a.rate)) - (y.a.rate == null ? 2 : num(y.a.rate)))
+    || String(x.p.materialCode||'').localeCompare(String(y.p.materialCode||''), 'zh'));
+  return list;
+}
+function achievePct(v){ return (v * 100).toFixed(0) + '%'; }
+function showAchieveList(){
+  if(typeof results === 'undefined' || !Array.isArray(results) || results.length === 0){
+    toast('尚未生成方案，请先点击「🚀 生成备货方案」');
+    return;
+  }
+  showModal('⚖ 达成率调节清单（近四周口径）', achieveListHtml(), { maxWidth: 1080 });
+}
+function achieveListHtml(){
+  const all = achieveRowsData();
+  const c = achieveCfg;
+  const tuned = all.filter(x => x.k !== 1);
+  const stopped = all.filter(x => x.k === 0);
+  const valved = all.filter(x => x.a.valve);
+  const zeroN = all.filter(x => x.a.zeroSales).length;
+  const rateCls = v => (v == null ? '' : (v >= c.t1 ? 'ach-rate-ok' : v >= c.t3 ? 'ach-rate-warn' : 'ach-rate-bad'));
+  const rows = all.map((x, i) => {
+    const p = x.p, a = x.a;
+    const off = (a.override === 'off');
+    const ops = [];
+    if(off) ops.push(`<button class="btn btn-sm btn-outline" onclick="setAchieveOverrideByIndex(${x.idx}, null)">↩ 恢复自动</button>`);
+    else {
+      ops.push(`<button class="btn btn-sm btn-outline" onclick="setAchieveOverrideByIndex(${x.idx}, 'off')" title="本产品不参与达成率调节，按原始需求备货">🚫 不调节</button>`);
+      if(x.k !== 0) ops.push(`<button class="btn btn-sm btn-outline" onclick="setAchieveOverrideByIndex(${x.idx}, 0)" title="本产品改为不备货（等同销售状态「售完即止」）">⛔ 停备</button>`);
+    }
+    const kTxt = x.k === 1 ? '×1' : (x.k === 0 ? '<b style="color:#b91c1c;">×0 不备货</b>' : '<b>×' + x.k + '</b>');
+    return `<tr>
+      <td style="text-align:right;">${i + 1}</td>
+      <td>${esc(p.materialCode || '--')}</td>
+      <td>${esc(p.materialName || '--')}</td>
+      <td style="text-align:right;">${fmt(num(p.last4WeeksSales))}</td>
+      <td style="text-align:right;">${fmt(a.rawAvg.toFixed(1))}</td>
+      <td style="text-align:right;" class="${rateCls(num(a.rate))}"><b>${a.rate == null ? '--' : achievePct(num(a.rate))}</b></td>
+      <td>${a.zeroSales ? '<span style="color:#b45309;">0 销量 · 待判断</span>' : esc(a.tier)}</td>
+      <td style="text-align:right;">${kTxt}</td>
+      <td style="font-size:11.5px;color:var(--text-secondary);">${esc(a.reason)}</td>
+      <td style="white-space:nowrap;">${ops.join(' ')}</td>
+    </tr>`;
+  }).join('');
+  const empty = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:18px;">没有可判定的产品（需要「月预测」与「近四周销量」同时有值）</td></tr>';
+  const tierTxt = `≥${achievePct(c.t1)} → ×${c.k1}；${achievePct(c.t2)}~${achievePct(c.t1)} → ×${c.k2}；${achievePct(c.t3)}~${achievePct(c.t2)} → ×${c.k3}；&lt;${achievePct(c.t3)} → ×${c.k4}${c.k4 === 0 ? '（不备货）' : ''}`;
+  return `
+    <div class="ach-tip" style="margin:0 0 10px;">
+      ⚖ <b>达成率 = 近四周平均周销量 ÷ 原始周均需求</b>（近四周比最新单周稳）。低于阈值时按档给需求系数 k，
+      <b>周需求 / 安全库存 / 批次量 / 建议下单全链路按修正后的需求计算</b>，不是只在某一列打补丁。<br>
+      当前档位（「基础数据 → 达成率调节」可改）：${tierTxt}<br>
+      <b>安全阀</b>：现有可售库存不足 ${c.valveStockWeeks} 周需求、或前 ${c.valveWindowWeeks} 周内出现断货 → 判为「缺货型低达成」，<b>不降备货</b>（缺货 ≠ 卖不动）。<br>
+      合计 <b>${all.length}</b> 个产品：已调节 <b>${tuned.length}</b> 个${stopped.length ? '（其中停备 <b>' + stopped.length + '</b> 个）' : ''}，安全阀豁免 <b>${valved.length}</b> 个，0 销量待判断 <b>${zeroN}</b> 个。
+    </div>
+    <div style="max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:6px;">
+      <table class="fc-issue-table">
+        <thead><tr>
+          <th style="width:40px;">#</th><th style="width:130px;">料品编码</th><th>存货名称</th>
+          <th style="width:88px;">近四周销量</th><th style="width:96px;">原始周均需求</th><th style="width:74px;">达成率</th>
+          <th style="width:78px;">档位</th><th style="width:84px;">需求系数</th><th style="width:280px;">判定说明</th><th style="width:170px;">操作</th>
+        </tr></thead>
+        <tbody>${rows || empty}</tbody>
+      </table>
+    </div>
+    <div class="fc-modal-actions" style="justify-content:space-between;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-outline" onclick="setAchieveOverrideAll(null)">↩ 全部恢复自动</button>
+        <button class="btn btn-sm btn-outline" onclick="setAchieveOverrideAll('off')">🚫 全部不调节</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-outline" onclick="copyAchieveList()">📋 复制清单</button>
+        <button class="btn btn-sm btn-primary" onclick="closePipelineModal()">关闭</button>
+      </div>
+    </div>`;
+}
+function setAchieveOverrideByIndex(idx, val){
+  if(!guard('edit','调整备货')) return;
+  const r = results[idx];
+  if(!r || !r.p){ toast('该行数据已变化，请重新打开清单'); return; }
+  const code = r.p.materialCode || '';
+  const key = Object.keys(importedProducts).find(k => (importedProducts[k].materialCode||'') === code);
+  if(!key){ toast('未在产品档案中找到「' + code + '」，无法修改'); return; }
+  if(val === null || val === undefined) delete importedProducts[key].achieveOverride;
+  else importedProducts[key].achieveOverride = val;
+  saveProducts();
+  results[idx] = planProduct(importedProducts[key]);
+  refreshAfterAchieveChange();
+  showAchieveList();   /* showModal 复用同一弹窗 → 原地刷新清单 */
+}
+function setAchieveOverrideAll(val){
+  if(!guard('edit','调整备货')) return;
+  if(!Array.isArray(results) || results.length === 0){ toast('尚未生成方案'); return; }
+  const what = (val === null || val === undefined) ? '恢复自动（按达成率档位）' : '不调节（全部按原始需求备货）';
+  if(!confirm('将把「达成率调节」应用到全部 ' + results.length + ' 个产品：' + what + '。继续？')) return;
+  let done = 0;
+  results.forEach((r, i) => {
+    if(!r || !r.p) return;
+    const key = Object.keys(importedProducts).find(k => (importedProducts[k].materialCode||'') === (r.p.materialCode||''));
+    if(!key) return;
+    if(val === null || val === undefined) delete importedProducts[key].achieveOverride;
+    else importedProducts[key].achieveOverride = val;
+    results[i] = planProduct(importedProducts[key]);
+    done++;
+  });
+  saveProducts();
+  refreshAfterAchieveChange();
+  toast('已更新 ' + done + ' 个产品：' + what);
+  showAchieveList();
+}
+function refreshAfterAchieveChange(){
+  try {
+    renderMetricCards(); renderResultTable(); renderOrderTable(); renderDetailTable(); renderPerspective();
+  } catch(e){ console.error('[达成率调节刷新失败]', e); }
+  renderAchieveCount();
+}
+function copyAchieveList(){
+  const rows = achieveRowsData();
+  if(rows.length === 0){ toast('没有可复制的清单'); return; }
+  const lines = [['料品编码','存货名称','近四周销量','原始周均需求','达成率','档位','需求系数','判定说明'].join('\t')];
+  rows.forEach(x => lines.push([
+    x.p.materialCode || '', x.p.materialName || '', num(x.p.last4WeeksSales), x.a.rawAvg.toFixed(1),
+    x.a.rate == null ? '--' : achievePct(num(x.a.rate)), x.a.tier, x.k, String(x.a.reason || '').replace(/\t|\n/g, ' ')
+  ].join('\t')));
+  const text = lines.join('\n');
+  const done = () => toast('已复制 ' + rows.length + ' 条达成率调节明细');
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(() => { fcFallbackCopy(text, done); });
+      return;
+    }
+  } catch(e){ /* 落到兜底 */ }
+  fcFallbackCopy(text, done);
+}
 /* 明细页头部胶囊：点击 = 在「全部 / 仅已调整」之间切换（与筛选下拉联动） */
 function filterDetailAdjustedOnly(){
   const sel = $('detailFilterAdjusted');
@@ -5553,11 +6119,11 @@ function renderDetailTable(){
   const tbody = $('detailTbody');
   if(!tbody) return;
   if(results.length === 0){
-    tbody.innerHTML = '<tr><td colspan="17" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「🚀 生成备货方案」。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「🚀 生成备货方案」。</td></tr>';
     const dtf0 = $('detailTfoot'); if(dtf0) dtf0.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品';
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
-    renderAdjustedCount();   // v4.23 无结果时隐藏「已调整」胶囊
+    renderAdjustedCount(); renderAchieveCount();   // v4.23 无结果时隐藏「已调整」胶囊
     return;
   }
   // 筛选 + 记录原始索引（用于懒加载时查找 results[idx]）
@@ -5636,15 +6202,16 @@ function renderDetailTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    tbody.innerHTML = '<tr><td colspan="17" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     const dtf1 = $('detailTfoot'); if(dtf1) dtf1.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品（筛选后）/ 总 ' + results.length;
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
-    renderAdjustedCount();
+    renderAdjustedCount(); renderAchieveCount();
     return;
   }
   /* 2026-09-03 合计行：遍历全量 filtered（含跨页），与 body 单元格同口径累计 */
   let tCurSales = 0, tAvgDemand = 0, tMonthAvg = 0, tWithProd = 0, tRec = 0, tThisWeek = 0, tStockout = 0;
+  let tAchTuned = 0, tAchStop = 0;   // v4.26 明细合计行：已按达成率调节 / 其中停备
   filtered.forEach(({ r }) => {
     const p = r.p;
     const wkDemand = num(r.avgWeeklyDemand);
@@ -5667,6 +6234,8 @@ function renderDetailTable(){
     tRec += num(r.actualRec);
     tThisWeek += (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
     tStockout += num(r.stockoutWeeks);
+    if(num(r.achieveK) !== 1) tAchTuned++;   // 与主表合计行同口径
+    if(r.achieveStop) tAchStop++;
   });
 
   // 分页
@@ -5683,16 +6252,17 @@ function renderDetailTable(){
     const detailId = 'detail-sub-' + origIdx;
     /* 新增展示字段 */
     const curWeekSales = num(p.currentWeekSales);
-    const weeklyDemand = num(r.avgWeeklyDemand);
+    const weeklyDemand = num(r.avgWeeklyDemand);                 /* v4.26 已按达成率系数修正后的需求（参与备货计算的口径） */
+    const rawWkDmd = num(r.rawAvgWeeklyDemand) || weeklyDemand;   /* 原始周均需求：达成率 / 可售月数一律用它，避免系数把小问题放大 */
     /* 2026-09-03 口径统一：月均需求列 = 备货清单同源（monthlyAvgImport：fcM0~M5 >0 均值取整，全空=0）；
        可售月数估算仍以「月均>0 用月均，否则周均需求×4.33」兜底，避免空预测产品被误判为库存呆滞 */
     const monthDisp = monthlyAvgImport(p);
-    const monthSell = monthDisp || (weeklyDemand * 4.33);
+    const monthSell = monthDisp || (rawWkDmd * 4.33);
     const monthlyForecast = monthDisp;
     /* 最新周达成 = 最新周销量 / 周均需求（预测），体现最新一周实际销售与预测的达成情况 */
-    const rate = weeklyDemand > 0 ? (curWeekSales / weeklyDemand) : 0;
-    const rateTxt = weeklyDemand > 0 ? (rate * 100).toFixed(0) + '%' : '--';
-    const rateCls = weeklyDemand > 0 ? (rate >= 1 ? 'cell-ok' : rate >= 0.6 ? 'cell-warn' : 'cell-danger') : '';
+    const rate = rawWkDmd > 0 ? (curWeekSales / rawWkDmd) : 0;
+    const rateTxt = rawWkDmd > 0 ? (rate * 100).toFixed(0) + '%' : '--';
+    const rateCls = rawWkDmd > 0 ? (rate >= 1 ? 'cell-ok' : rate >= 0.6 ? 'cell-warn' : 'cell-danger') : '';
     /* 库存 */
     const fbaV = num(p.fbaStock), osV = num(p.osStock), divertV = num(p.divertStock), osInV = num(p.osInTransit);
     let domT = num(p.domInTransit), domP = num(p.domInProd);
@@ -5711,24 +6281,30 @@ function renderDetailTable(){
     /* 备货建议 */
     const sellNowMonths = monthSell > 0 ? ((fbaV + osV + divertV + osInV) / monthSell) : (fbaV + osV + divertV + osInV > 0 ? 999 : 0);
     let advice, adviceCls;
-    if(r.noStock){ advice = '售完即止·不备货'; adviceCls = 's-售完即止'; }
+    if(r.achieveStop){ advice = '达成率不足·不备货'; adviceCls = 's-无需求'; }
+    else if(r.noStock){ advice = '售完即止·不备货'; adviceCls = 's-售完即止'; }
     else if(weeklyDemand <= 0){ advice = '无需求·不备货'; adviceCls = 's-无需求'; }
+    else if(num(r.achieveK) < 1){ advice = '达成率不足·已降备货'; adviceCls = 's-预呆滞'; }
     else if(rate < 0.6){ advice = '销量低迷·谨慎备货'; adviceCls = 's-预呆滞'; }
     else if(r.stockoutWeeks > 0 || sellNowMonths < 1){ advice = '缺货·紧急补货'; adviceCls = 's-紧急'; }
     else if(sellNowMonths >= 4){ advice = '库存充足·慎备货'; adviceCls = 's-呆滞'; }
     else { advice = '正常·建议备货'; adviceCls = 's-健康'; }
-    html += `<tr id="detail-row-${origIdx}" class="${adjOf(origIdx, r).adjusted ? 'adj-row' : ''}" onclick="toggleDetailRowLazy(${origIdx}, this)" style="cursor:pointer;">
+    /* v4.26 达成率调节行态：k≠1（含停备 / 安全阀提示）时淡青底 */
+    const _achOn2 = !!(r.achieveInfo && r.achieveInfo.valid && (num(r.achieveK) !== 1 || r.achieveInfo.valve));
+    const _achCls2 = r.achieveStop ? 'ach-stop-row' : (_achOn2 ? 'ach-tuned-row' : '');
+    html += `<tr id="detail-row-${origIdx}" class="${adjOf(origIdx, r).adjusted ? 'adj-row' : ''} ${_achCls2}" onclick="toggleDetailRowLazy(${origIdx}, this)" style="cursor:pointer;">
       <td class="cell-num">${pi+1}</td>
       <td>${esc(p.categoryLevel3||'--')}</td>
-      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(adjOf(origIdx, r))}</td>
+      <td>${esc(p.materialCode||'--')}${adjBadgeHtml(adjOf(origIdx, r))}${achieveBadgeHtml(r)}</td>
       <td>${esc(p.materialName||'--')}</td>
       <td>${esc(p.specCode||'--')}</td>
       <td>${esc(p.salesStatus||'--')}</td>
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td class="cell-num">${fmt(curWeekSales)}</td>
-      <td class="cell-num">${fmt(weeklyDemand.toFixed(1))}</td>
+      <td class="cell-num">${fmt(weeklyDemand.toFixed(1))}${achieveChipHtml(r)}</td>
       <td class="cell-num">${fmt(monthlyForecast)}</td>
-      <td class="cell-num ${rateCls}" title="最新周销量 ${fmt(curWeekSales)} ÷ 周均需求 ${fmt(weeklyDemand.toFixed(1))}">${rateTxt}</td>
+      <td class="cell-num ${rateCls}" title="最新周销量 ${fmt(curWeekSales)} ÷ 周均需求 ${fmt(rawWkDmd.toFixed(1))}">${rateTxt}</td>
+      <td class="cell-num">${achieveRateCellHtml(r)}</td>
       <td class="cell-num">${fmt(withProdTotal)}</td>
       <td class="cell-num cell-plan">${fmt(r.actualRec)}</td>
       <td class="cell-num cell-plan" style="color:var(--primary);font-weight:600;">${thisWeekQty > 0 ? fmt(thisWeekQty) : '—'}</td>
@@ -5740,7 +6316,7 @@ function renderDetailTable(){
       </td>
     </tr>
     <tr id="${detailId}" class="stock-detail-row" data-loaded="0" style="display:none;">
-      <td colspan="17" style="padding:14px 18px;">
+      <td colspan="18" style="padding:14px 18px;">
         <span style="color:var(--text-muted);font-size:13px;">⏳ 加载中...</span>
       </td>
     </tr>`;
@@ -5754,6 +6330,7 @@ function renderDetailTable(){
       <td class="cell-num">${fmt(tAvgDemand.toFixed(1))}</td>
       <td class="cell-num">${fmt(tMonthAvg)}</td>
       <td>--</td>
+      <td class="cell-num" title="已按达成率调节的产品数（含停备）">${tAchTuned > 0 ? ('已调节 ' + tAchTuned + (tAchStop > 0 ? '（停备 ' + tAchStop + '）' : '')) : '—'}</td>
       <td class="cell-num">${fmt(tWithProd)}</td>
       <td class="cell-num cell-plan">${fmt(tRec)}</td>
       <td class="cell-num cell-plan" style="color:var(--primary);font-weight:600;">${tThisWeek > 0 ? fmt(tThisWeek) : '—'}</td>
@@ -5764,6 +6341,7 @@ function renderDetailTable(){
   }
   const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 ' + filtered.length + ' 个产品（筛选后）/ 总 ' + results.length;
   renderAdjustedCount();   // v4.23 头部「✏️ 已调整 N / 总数」胶囊
+  renderAchieveCount();    // v4.26 头部「⚖ 达成率调节 N / 总数」胶囊
   const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = paginationBar(filtered.length, curPage, 'detail');
 }
 
@@ -5781,6 +6359,7 @@ function buildDetailContent(r){
     ${specBadgeHtml}
   </div>
   ${adjTipHtml(r)}
+  ${achieveTipHtml(r)}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;font-size:12.5px;">
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${tier}">${tier}</span></div>
@@ -6413,6 +6992,7 @@ function openDetailBuild(r, p, methods){
     }
   }
   let html = `${adjTipHtml(r)}
+  ${achieveTipHtml(r)}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;font-size:12.5px;">
     <div><b>三级：</b>${esc(p.categoryLevel3||'--')}</div>
     <div><b>梯队：</b><span class="tier-badge tier-${p.priorityTier||99}">${p.priorityTier||'--'}</span></div>
@@ -6420,7 +7000,7 @@ function openDetailBuild(r, p, methods){
     <div><b>发货模式：</b>${r.isMixed ? `<span class="ship-badge ship-transit">🚚 混合(直发${r.directRatio}%)</span>` : (r.isTransit ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}${(r.isTransit || r.isMixed) && r.osBufferDays ? ` <span style="color:var(--text-muted);font-size:11px;">海外仓保底 ${r.osBufferDays} 天</span>` : ''}</div>
     <div><b>计划周期：</b>${r.weeks} 周</div>
     <div><b>下单频率：</b>${r.orderFreqDays ? r.orderFreqDays + ' 天' : '7 天（默认）'}</div>
-    <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}</div>
+    <div><b>周均需求：</b>${fmt(r.avgWeeklyDemand.toFixed(1))}${achieveChipHtml(r)}${num(r.achieveK) !== 1 && !r.achieveStop ? `<span style="color:var(--text-muted);font-size:11px;margin-left:4px;">(原始 ${fmt(num(r.rawAvgWeeklyDemand).toFixed(1))})</span>` : ''}</div>
     <div><b>安全库存：</b>${fmt(r.safetyStock)}</div>
     <div><b>常规运输：</b>${r.regM ? `<span style="color:#16a34a;font-weight:600;">${esc(r.regM.name)}</span><span style="color:var(--text-muted);font-size:11px;margin-left:6px;">(dom=${r.regM.domToFbaDays != null ? r.regM.domToFbaDays : (r.regM.transportDays || '?')})</span>${r.regFallbackNote ? `<span style="color:#d97706;font-size:11px;margin-left:6px;">[回退]</span>` : ''}` : (p.regularMethod ? `${esc(p.regularMethod)} <span style="color:var(--danger);font-size:11px;">(未在启用池)</span>` : '<span style="color:var(--text-muted);">--</span>')}</div>
     <div><b>预测起始：</b>${fcStartBadge(p)} ${fcStartEditor(p)}</div>
