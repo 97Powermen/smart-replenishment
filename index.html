@@ -369,6 +369,14 @@ tr.ach-stop-row > td:first-child { box-shadow: inset 3px 0 0 0 #94a3b8; }
 .ach-rate-ok { color:#15803d; }
 .ach-rate-warn { color:#b45309; }
 .ach-rate-bad { color:#b91c1c; }
+/* v4.27 已导入产品列表「运输方式」列（常规运输方式 · 与启用池匹配状态自查） */
+.rm-cell { white-space: nowrap; }
+.rm-ok   { color: var(--text-primary); }
+.rm-warn { color:#b45309; font-weight:600; }
+.rm-bad  { color: var(--danger); font-weight:600; }
+.rm-dom  { color: var(--text-muted); font-size:11px; margin-left:4px; }
+/* v4.27 导入工具栏「工作表」下拉（文件含多个工作表时才显示） */
+#importSheetSelect { font-size:12px; padding:2px 6px; border:1px solid var(--border-light); border-radius:6px; background:var(--bg-card,#fff); color:var(--text-primary); max-width:300px; }
 
 tr.route-fallback-row td { background:#fffaf0 !important; border-bottom:1px dashed #f0c27b !important; padding-top:3px !important; padding-bottom:3px !important; color:#7a4b00; }
 /* v4.8 尾数顺延提示（灰蓝色系，与橙色「运输方式回退」区分） */
@@ -746,6 +754,11 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <button class="btn btn-outline" onclick="downloadTemplate()" data-page-node-id="Xym1T2EmYlvQUpUT5qLAJR">📥 下载导入模板</button>
       <button class="btn btn-outline" data-perm="import" onclick="document.getElementById('xlsxInput').click()" title="导入 XLSX（需权限）" data-page-node-id="wVTeWBACdMS3cuSC6EEeII">📤 导入 XLSX</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none;" onchange="importXlsx(event)" data-page-node-id="eNni5yMKRfXmo1PQ3lrJQ6">
+      <!-- v4.27 文件含多个工作表时出现：显示实际读取的是哪张表，可切换后重导 -->
+      <label class="pipeline-mode-toggle" id="importSheetWrap" style="display:none;" data-page-node-id="ImportSheetWrap">
+        <span style="font-size:12px;color:var(--text-secondary);">工作表</span>
+        <select id="importSheetSelect" onchange="onImportSheetChange()" title="切换后以所选工作表内容重新导入"></select>
+      </label>
       <div class="divider-v" data-page-node-id="jTgPPKeZDDJe3T1uiHeiqW"></div>
       <button class="btn btn-outline" data-perm="import" onclick="document.getElementById('pipelineInput').click()" title="导入在途/在制（需权限）" data-page-node-id="kBajgRcjxKu6JORZqhq56K">📦 导入在途/在制</button>
       <input type="file" id="pipelineInput" accept=".xlsx,.xls" style="display:none;" onchange="importPipelineXlsx(event)" data-page-node-id="hv1SEXC7wEnMlmlWEkJLNF">
@@ -781,7 +794,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
     </div>
 
     <div class="result-table-wrap is-resizable" data-page-node-id="48gwpXydMZqgbpDOiNSlBo">
-      <table class="result-table" id="productTable" style="min-width:2000px;" data-page-node-id="vlm6yahCrlrLcjLif6dd8I">
+      <table class="result-table" id="productTable" style="min-width:2120px;" data-page-node-id="vlm6yahCrlrLcjLif6dd8I">
         <thead data-page-node-id="oG0QI5zY1o1MBB5295krJD">
           <tr data-page-node-id="Iz3b55UZ8yuT7fzZ5XDTQZ">
             <th data-page-node-id="uJvPdqW0iG03AT2SmXalkE">#</th>
@@ -792,6 +805,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
             <th data-page-node-id="OrwsMfy7R3eebKfPRv761C">颜色套装</th>
             <th data-page-node-id="dlN9qQV6qnFTumwE3bWlvA">梯队</th>
             <th data-page-node-id="pWLykAo0WxQhVBTLIX7fNK">销售状态</th>
+            <th data-page-node-id="ProdRegMTh">运输方式</th>
             <th data-page-node-id="UOoSeTxZFJoHR3KQs3si2G">发货模式</th>
             <th data-page-node-id="kv7dsNziaURg5QoRkijZlt">计划周期</th>
             <th data-page-node-id="IrmEZV4c5mbllUq3I3qowp">下单频率</th>
@@ -1437,6 +1451,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
           <div style="padding:6px 10px;font-size:13px;" data-page-node-id="48xD9LA5c5c82Bv89lUlxe">
             <b data-page-node-id="sSK3h5FDQVI1R1OnKfUFGi">候选方式池</b>：仅「基础数据 → 运输方式管理」中<b data-page-node-id="r7HRdBYOd1lv9GRI0hjMOH">已启用</b>的方式参与选方式与批次下拉（停用 = 临时移出候选池，无需删除；已排历史批次保留，重新生成方案后生效）。<b data-page-node-id="K810IJaZH6N9UthjZrkhUy">区域限制（v4.12）</b>：候选池再按产品<b data-page-node-id="J6UWmI5g6NeG3FcFAjnKnm">「区域」</b>过滤——方式区域须与产品区域<b data-page-node-id="DwxY5mFGmDuBU0ADMVibbO">精确相等</b>（支持 / 分隔多值），或方式标「通用/不限/空」；产品无区域则不限制。区域不匹配的线路（如美国产品对「美转加30」）不会进入常规方式解析、升舱候选、最快应急及任何批次下拉，杜绝跨区误选。<br data-page-node-id="ea1V5gBCt8E9ZpDxb0Uee9">
             <b data-page-node-id="2cYH5OQy1af2mGd8ZzrBca">常规方式停用自动回退（2026-09-03 v4.7）</b>：产品导入的「常规运输方式」若在管理中已被停用/改名 → 不再静默漏补（旧逻辑：库存中等无断货时 regM 匹配失败直接结束排单、期末库存跌破安全线；有断货时被迫连后续批次全走最快方式、运费高）。现自动就近回退到已启用池中的方式衔接：同档（时效相同，如 普船35→卡航35）→ 次慢档 → 最快档 → 最慢兜底；方案仍保持「常规滚动衔接 + 断货才升舱」语义，回退结果在 分析结果表（行下橙色提示条）/ 单品详情 / 导出（末列「运输方式回退」）醒目提示。<br data-page-node-id="GkfJ9FCSfIFs5EXYSwOYCK">
+            <b data-page-node-id="ImpSheetNote">导入工作表选取（2026-09-11 v4.27）</b>：导入文件里有多个工作表时，旧逻辑固定只读<b>第一个</b>表 —— 你在别的表里改的「常规运输方式」等数据会被静默忽略（不报错、不提示，看起来就像「改了没生效」）。现改为：先在全部工作表中筛出<b>表头可识别</b>的表，再按「<b>文件当前打开的表</b>（Excel 记住的最后编辑表）→ 名为「导入模板」的表 → 数据行最多的表」自动选取；实际读取了哪张表会写进<b>导入日志</b>，文件含多表时另外弹提示。文件含多个工作表时，导入工具栏会出现<b>「工作表」下拉</b>，可直接切换成另一张表重新导入（切换前会还原到本次导入前的状态，不会残留上一张表独有的产品）。<br data-page-node-id="ImpSheetNoteBr">
             下单周 <b data-page-node-id="6cdnY3GSpvKCZIYlhoqeP2">cadenceOrderWeek</b> = 批序(batchCount) × 频率周数(orderFreqWeeks)。<br data-page-node-id="Naxp7NRR8G6PZ6bXmea1SF">
             到货周 = floor((下单周×7 + 生产天数 + 运输天数 + 上架天数) ÷ 7)；<b data-page-node-id="Ds3D8PgIMtpbLA8hBmbm8h">到货周 ≥ 计划期(weeks) 的批次不生成</b>。<br data-page-node-id="FjWOCFqlDJVIGH8oDo9q5D">
             常规慢衔接（用户规则 1/3 主路径）：库存充足期不空下；一旦某 cadence 到货周将低于安全线，即下单反推量（v4.6 朴素公式，不含普适半安全线缓冲），
@@ -2418,6 +2433,27 @@ function resolveRegularMethod(p, methods){
     out.note = '常规运输方式「' + regName + '」' + reason + '，自动改走' + sameTier + '「' + fb.name + '」衔接';
   }
   return out;
+}
+/* v4.27 已导入产品列表「运输方式」列：显示导入的「常规运输方式」，并用颜色标注它与
+   「运输方式管理」启用池的匹配状态 —— 橙 = 会按 v4.7 规则就近回退，红 = 启用池里根本没有。
+   用途：改完导入文件的运输方式后，不用生成方案就能在列表里直接确认「改动有没有进来 / 名字对不对」。 */
+function regMethodCellHtml(p){
+  const raw = String((p && p.regularMethod) || '').trim();
+  if(!raw) return '<span style="color:var(--text-muted);">--</span>';
+  let res = { method: null, note: '' };
+  try { res = resolveRegularMethod(p, methodsForProduct(p)); } catch(e){}
+  if(res.method && !res.note){
+    const dom = (res.method.domToFbaDays != null) ? res.method.domToFbaDays : res.method.transportDays;
+    return '<span class="rm-cell"><span class="rm-ok">' + esc(raw) + '</span>' + (dom != null ? '<span class="rm-dom">' + dom + '天</span>' : '') + '</span>';
+  }
+  if(!res.method){
+    return '<span class="rm-cell" title="「运输方式管理」的启用池为空，生成方案时没有可用运输方式"><span class="rm-bad">' + esc(raw) + ' ⚠</span><span class="rm-dom">无可用方式</span></span>';
+  }
+  /* 有 note = 会走 v4.7 就近回退：名字被停用 → 橙；名字在配置里根本不存在（多半写错）→ 红 */
+  const fbDom = (res.method.domToFbaDays != null) ? res.method.domToFbaDays : res.method.transportDays;
+  const cls = (res.note.indexOf('已停用') >= 0) ? 'rm-warn' : 'rm-bad';
+  return '<span class="rm-cell" title="' + esc(res.note) + '（导入文件的「常规运输方式」与「运输方式管理」对不上时，系统会按 v4.7 规则自动就近回退衔接）">' +
+    '<span class="' + cls + '">' + esc(raw) + ' ⚠</span><span class="rm-dom">→ ' + esc(res.method.name) + (fbDom != null ? ' ' + fbDom + '天' : '') + '</span></span>';
 }
 function addMethodRow(){
   if(!guard('method','运输方式管理')) return;
@@ -3672,65 +3708,189 @@ function downloadTemplate(){
   addLog({ action: '下载模板', rows: 0, success: 1, fail: 0, note: 'XLSX' });
 }
 
+/* ============================================================
+ * v4.27 导入工作表选取（修复「改了常规运输方式，导入后却没变」）
+ * ------------------------------------------------------------
+ * 旧逻辑：const ws = wb.Sheets[wb.SheetNames[0]] —— 文件里有几个工作表都只读第一个表。
+ *         用户在第二张表里改的数据被静默忽略：不报错、不提示，导入结果看起来就是「没生效」。
+ * 新逻辑：① 先在全部工作表中筛出「表头可识别」的表（至少命中 2 个导入字段）
+ *         ② 多个可识别表时按下列优先级自动选（工具栏「工作表」下拉可随时切换重导）：
+ *            · 文件当前打开的工作表（Excel activeTab —— 通常就是用户最后编辑的那张）
+ *            · 名为「导入模板」的表
+ *            · 数据行最多的表
+ *         ③ 实际读取了哪张表写进导入日志；多表时弹提示，杜绝「默默读错表」
+ * ============================================================ */
+const SHEET_RULE_KEY = 'importSheetRule';   /* auto | first | most（预留，默认 auto） */
+const SHEET_MATCH_MIN = 2;                  /* 表头至少命中 2 个已知字段才算「可识别」 */
+let lastParsedImport = null;                /* { fileName, sheets[], chosen, base } 供下拉切换重导 */
+
+function getSheetRule(){
+  try { return lsGet(SHEET_RULE_KEY, 'auto') || 'auto'; } catch(e){ return 'auto'; }
+}
+
+/* 解析工作簿全部工作表：表头、命中字段数、数据行数、是否文件当前打开的表 */
+function readWorkbookSheets(wb, headerKeys){
+  const names = (wb && wb.SheetNames) ? wb.SheetNames : [];
+  const wbv = (wb && wb.Workbook && wb.Workbook.WBView) ? wb.Workbook.WBView : null;
+  const activeTab = (wbv && wbv[0] && wbv[0].activeTab != null) ? Number(wbv[0].activeTab) : -1;
+  return names.map((n, i) => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, raw:false, defval:'' });
+    const header = (rows[0] || []).map(h => String(h||'').trim());
+    let match = 0;
+    header.forEach(h => { if(headerKeys.indexOf(h) >= 0) match++; });
+    let dataRows = 0;
+    for(let r = 1; r < rows.length; r++){
+      const row = rows[r];
+      if(row && !row.every(c => c === '' || c == null)) dataRows++;
+    }
+    return { i, name: n, rows, header, match, dataRows, isActive: i === activeTab };
+  });
+}
+
+/* 自动选取要读取的工作表下标 */
+function pickSheetIndex(sheets){
+  if(!sheets.length) return -1;
+  const usable = sheets.filter(s => s.match >= SHEET_MATCH_MIN);
+  if(!usable.length) return 0;                 /* 全都不像导入表 → 退回第一个表，由调用方报错 */
+  if(usable.length === 1) return usable[0].i;
+  const rule = getSheetRule();
+  if(rule === 'first') return usable[0].i;
+  if(rule === 'most') return usable.reduce((a,b) => (b.dataRows > a.dataRows ? b : a), usable[0]).i;
+  const act = usable.find(s => s.isActive);
+  if(act) return act.i;
+  const tpl = usable.find(s => /^导入模板/.test(s.name));
+  if(tpl) return tpl.i;
+  return usable.reduce((a,b) => (b.dataRows > a.dataRows ? b : a), usable[0]).i;
+}
+
+/* 工具栏「工作表」下拉：文件含多个工作表时出现，显示实际读取的是哪张，可切换后重导 */
+function renderImportSheetSelect(sheets, chosenIdx){
+  const wrap = $('importSheetWrap'), sel = $('importSheetSelect');
+  if(!wrap || !sel) return;
+  const multi = !!(sheets && sheets.length > 1);
+  wrap.style.display = multi ? 'inline-flex' : 'none';
+  if(!multi){ sel.innerHTML = ''; wrap.removeAttribute('title'); return; }
+  sel.innerHTML = sheets.map(s => {
+    const ok = s.match >= SHEET_MATCH_MIN;
+    const label = s.name + '（' + s.dataRows + ' 行' + (ok ? '' : ' · 表头不匹配') + (s.isActive ? ' · 文件当前打开' : '') + '）';
+    return '<option value="' + s.i + '">' + esc(label) + '</option>';
+  }).join('');
+  sel.value = String(chosenIdx);
+  const cur = sheets[chosenIdx];
+  wrap.title = '本文件含 ' + sheets.length + ' 个工作表，当前读取「' + (cur ? cur.name : '--') + '」。切换后会以所选工作表内容重新导入。';
+}
+
+function onImportSheetChange(){
+  const st = lastParsedImport;
+  const sel = $('importSheetSelect');
+  if(!st || !sel) return;
+  if(!guard('import','切换导入工作表')){ renderImportSheetSelect(st.sheets, st.chosen); return; }
+  const idx = Number(sel.value);
+  const s = st.sheets[idx];
+  if(!s || idx === st.chosen) return;
+  if(!confirm('切换工作表将以「' + s.name + '」（' + s.dataRows + ' 行）重新导入产品。\n\n本次导入该文件所产生的产品数据会被替换（不是本文件导入的产品保留）。是否继续？')){
+    renderImportSheetSelect(st.sheets, st.chosen);
+    return;
+  }
+  applyImportSheet(idx, true);
+}
+
+/* 应用某张工作表（首次导入 isSwitch=false / 下拉切换 true） */
+function applyImportSheet(idx, isSwitch){
+  const st = lastParsedImport;
+  if(!st) return;
+  const s = st.sheets[idx];
+  if(!s) return;
+  if(isSwitch && st.base){
+    /* 切换工作表：先还原到「本文件首次导入前」的快照，避免 upsert 残留上一张表独有的产品 */
+    importedProducts = JSON.parse(JSON.stringify(st.base));
+  }
+  st.chosen = idx;
+  renderImportSheetSelect(st.sheets, idx);
+  applyImportRows(s.rows, st.fileName, s.name, st.sheets.length, s.header, isSwitch);
+}
+
 function importXlsx(event){
   if(!guard('import','导入产品')){ if(event&&event.target) event.target.value=''; return; }
   const file = event.target.files[0]; if(!file) return;
   lastImportFileName = file.name;
   const reader = new FileReader();
   reader.onload = function(e){
-    try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
-      const header = rows[0].map(h => String(h||'').trim());
-      const map = {};
-      header.forEach((h, i) => { if(FIELD_ID[h]) map[i] = FIELD_ID[h]; });
-      let success = 0, fail = 0;
-      const newProds = {};
-      for(let r=1; r<rows.length; r++){
-        const row = rows[r];
-        if(!row || row.every(c => c === '' || c == null)) continue;
-        const obj = {};
-        Object.keys(map).forEach(i => { obj[map[i]] = normalizeCell(row[i], map[i]); });
-        if(!obj.materialName && !obj.specCode) { fail++; continue; }
-        // numeric conversion (skip Date)
-        NUMERIC_IDS.forEach(id => {
-          const v = obj[id];
-          if(v === '' || v == null) return;
-          if(!(v instanceof Date)){
-            const n = Number(v); if(!isNaN(n)) obj[id] = n;
-          }
-        });
-        const key = obj.materialCode || (obj.materialName + '|' + obj.specCode);
-        if(!key){ fail++; continue; }
-        // upsert: keep new fields, preserve old ones not in this row
-        const old = importedProducts[key] || {};
-        importedProducts[key] = Object.assign({}, old, obj);
-        newProds[key] = importedProducts[key];
-        success++;
-      }
-      /* v4.21 导入校验：月预测有值但「预测起始月份」为空/无法识别 → 周需求会整体推迟约 1 个月，
-         导入后立即提示（这是「9月预测却从 W6 才出需求」类问题的根因），并写入操作日志。 */
-      const badFc = [];
-      Object.keys(newProds).forEach(k => {
-        const q = newProds[k];
-        if(hasMonthlyForecast(q) && !parseForecastStart(q.forecastStartMonth)) badFc.push(q.materialCode || k);
-      });
-      saveProducts();
-      renderProductList();
-      renderPerspective();
-      setDataStatus('已导入');
-      addLog({ action: '导入 XLSX', rows: rows.length-1, success, fail, note: file.name });
-      if(badFc.length > 0){
-        const sample = badFc.slice(0, 5).join('、') + (badFc.length > 5 ? ' 等' : '');
-        addLog({ action: '导入校验', rows: badFc.length, success: 0, fail: badFc.length, note: '预测起始月份缺失/无法识别：' + sample });
-        setTimeout(() => alert('⚠ 有 ' + badFc.length + ' 个产品的「预测起始月份」为空或格式无法识别：\n' + sample + '\n\n这些产品的月预测会整体错位（周需求被推迟约 1 个月）。\n请把该列写成 YYYY-MM（如 2026-08）后重新导入，或导入后在单品详情头部「预测起始」处直接修正。'), 60);
-      }
-    } catch(err){ alert('导入失败: ' + err.message); }
+    let wb;
+    try { wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates: true }); }
+    catch(err){ alert('导入失败: ' + err.message); return; }
+    const sheets = readWorkbookSheets(wb, IMPORT_FIELDS);
+    if(!sheets.length){ alert('导入失败：文件中没有工作表。'); return; }
+    const idx = pickSheetIndex(sheets);
+    if(idx < 0 || !sheets[idx]){ alert('导入失败：文件中没有可读取的工作表。'); return; }
+    const cur = sheets[idx];
+    if(cur.match < SHEET_MATCH_MIN){
+      alert('导入失败：在「' + cur.name + '」中检测不到产品导入模板表头（需包含「料品编码」「常规运输方式」等列）。\n\n检测到的列：' + (cur.header || []).join(', ').slice(0, 240) + '…\n\n若数据在其它工作表，请在 Excel 中把该表移到最前，或把它的表头改成模板格式后重新导入。');
+      return;
+    }
+    lastParsedImport = { fileName: file.name, sheets, chosen: idx, base: JSON.parse(JSON.stringify(importedProducts)) };
+    applyImportSheet(idx, false);
+    if(sheets.length > 1){
+      const others = sheets.filter(x => x.i !== idx).map(x => x.name).join('、');
+      addLog({ action: '导入工作表', rows: sheets.length, success: 1, fail: 0, note: '多工作表文件：已读取「' + cur.name + '」；未读取：' + others });
+      toast('📄 本文件含 ' + sheets.length + ' 个工作表，已读取「' + cur.name + '」；未读取『' + others + '』。若读错了，可在工具栏「工作表」下拉切换。');
+    }
   };
   reader.readAsArrayBuffer(file);
   event.target.value = '';
 }
+
+/* v4.27：从 importXlsx 拆出的正文（多工作表时只换数据来源，解析/落库逻辑完全不变）
+   rows=工作表二维数组（含表头行）、header=表头行、sheetName=实际读取的工作表名 */
+function applyImportRows(rows, fileName, sheetName, sheetCount, header, isSwitch){
+  try {
+    const map = {};
+    header.forEach((h, i) => { if(FIELD_ID[h]) map[i] = FIELD_ID[h]; });
+    let success = 0, fail = 0;
+    const newProds = {};
+    for(let r=1; r<rows.length; r++){
+      const row = rows[r];
+      if(!row || row.every(c => c === '' || c == null)) continue;
+      const obj = {};
+      Object.keys(map).forEach(i => { obj[map[i]] = normalizeCell(row[i], map[i]); });
+      if(!obj.materialName && !obj.specCode) { fail++; continue; }
+      // numeric conversion (skip Date)
+      NUMERIC_IDS.forEach(id => {
+        const v = obj[id];
+        if(v === '' || v == null) return;
+        if(!(v instanceof Date)){
+          const n = Number(v); if(!isNaN(n)) obj[id] = n;
+        }
+      });
+      const key = obj.materialCode || (obj.materialName + '|' + obj.specCode);
+      if(!key){ fail++; continue; }
+      // upsert: keep new fields, preserve old ones not in this row
+      const old = importedProducts[key] || {};
+      importedProducts[key] = Object.assign({}, old, obj);
+      newProds[key] = importedProducts[key];
+      success++;
+    }
+    /* v4.21 导入校验：月预测有值但「预测起始月份」为空/无法识别 → 周需求会整体推迟约 1 个月，
+       导入后立即提示（这是「9月预测却从 W6 才出需求」类问题的根因），并写入操作日志。 */
+    const badFc = [];
+    Object.keys(newProds).forEach(k => {
+      const q = newProds[k];
+      if(hasMonthlyForecast(q) && !parseForecastStart(q.forecastStartMonth)) badFc.push(q.materialCode || k);
+    });
+    saveProducts();
+    renderProductList();
+    renderPerspective();
+    setDataStatus('已导入');
+    addLog({ action: '导入 XLSX', rows: rows.length-1, success, fail, note: fileName + '（工作表：' + sheetName + (sheetCount > 1 ? '，共 ' + sheetCount + ' 个表' : '') + '）' + (isSwitch ? '［切换工作表重导］' : '') });
+    if(badFc.length > 0){
+      const sample = badFc.slice(0, 5).join('、') + (badFc.length > 5 ? ' 等' : '');
+      addLog({ action: '导入校验', rows: badFc.length, success: 0, fail: badFc.length, note: '预测起始月份缺失/无法识别：' + sample });
+      setTimeout(() => alert('⚠ 有 ' + badFc.length + ' 个产品的「预测起始月份」为空或格式无法识别：\n' + sample + '\n\n这些产品的月预测会整体错位（周需求被推迟约 1 个月）。\n请把该列写成 YYYY-MM（如 2026-08）后重新导入，或导入后在单品详情头部「预测起始」处直接修正。'), 60);
+    }
+  } catch(err){ alert('导入失败: ' + err.message); }
+}
+
+/*__MARK_427_IMPORTSHEET__*/
 
 // 下载在途/在制导入模板（含示例行 + 说明）
 function downloadPipelineTemplate(){
@@ -3786,185 +3946,200 @@ function _diffWeeksFromToday(targetDate){
   return Math.max(0, Math.ceil(ms / (7 * 86400000)));
 }
 
+/* ============================================================
+ * v4.27 在途/在制导入：同样不再默认只读第一个工作表
+ * ============================================================ */
+const PIPELINE_SHEET_KEYS = ['打单料品编码','打单料品规格','在途数量','未交数量','运输时效','回复出货日期','出货日期','预计入库时间','预计到货日期'];
 function importPipelineXlsx(event){
   if(!guard('import','导入在途/在制')){ if(event&&event.target) event.target.value=''; return; }
   const file = event.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
-    try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' });
-      const header = rows[0].map(h => String(h||'').trim());
-
-/* 列匹配（2026-08-19 精简）：编码只认「打单料品编码」、规格只认「打单料品规格」，
-          名称列不参与匹配；原料品编码/原料品规格一律不考虑。列名精确匹配。 */
-      function exactCol(names){
-        for(let i=0;i<header.length;i++){
-          if(names.indexOf(header[i]) >= 0) return i;
-        }
-        return -1;
+    let wb;
+    try { wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates: true }); }
+    catch(err){ alert('导入失败: ' + err.message); return; }
+    const sheets = readWorkbookSheets(wb, PIPELINE_SHEET_KEYS);
+    if(!sheets.length){ alert('导入失败：文件中没有工作表。'); return; }
+    const idx = pickSheetIndex(sheets);
+    if(idx < 0 || !sheets[idx]){ alert('导入失败：文件中没有可读取的工作表。'); return; }
+    if(sheets.length > 1){
+      const others = sheets.filter(x => x.i !== idx).map(x => x.name).join('、');
+      addLog({ action: '导入工作表', rows: sheets.length, success: 1, fail: 0, note: '在途/在制多工作表文件：已读取「' + sheets[idx].name + '」；未读取：' + others });
+      toast('📄 在途/在制文件含 ' + sheets.length + ' 个工作表，已读取「' + sheets[idx].name + '」；未读取『' + others + '』。');
+    }
+    applyPipelineRows(sheets[idx].rows, file.name, sheets[idx].name, sheets.length, sheets[idx].header);
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+/* v4.27：从 importPipelineXlsx 拆出的正文 */
+function applyPipelineRows(rows, fileName, sheetName, sheetCount, header){
+  try {
+    /* 列匹配（2026-08-19 精简）：编码只认「打单料品编码」、规格只认「打单料品规格」，
+        名称列不参与匹配；原料品编码/原料品规格一律不考虑。列名精确匹配。 */
+    function exactCol(names){
+      for(let i=0;i<header.length;i++){
+        if(names.indexOf(header[i]) >= 0) return i;
       }
-      let replyIdx=-1, codeIdx=-1, specIdx=-1, transitIdx=-1, prodIdx=-1, leadIdx=-1, arriveIdx=-1;
-      replyIdx   = exactCol(['回复出货日期','出货日期']);
-      codeIdx    = exactCol(['打单料品编码']);
-      specIdx    = exactCol(['打单料品规格']);
-      transitIdx = exactCol(['在途数量']);
-      prodIdx    = exactCol(['未交数量']);
-      leadIdx    = exactCol(['运输时效']);
-      arriveIdx  = exactCol(['预计入库时间','预计到货日期']);
+      return -1;
+    }
+    let replyIdx=-1, codeIdx=-1, specIdx=-1, transitIdx=-1, prodIdx=-1, leadIdx=-1, arriveIdx=-1;
+    replyIdx   = exactCol(['回复出货日期','出货日期']);
+    codeIdx    = exactCol(['打单料品编码']);
+    specIdx    = exactCol(['打单料品规格']);
+    transitIdx = exactCol(['在途数量']);
+    prodIdx    = exactCol(['未交数量']);
+    leadIdx    = exactCol(['运输时效']);
+    arriveIdx  = exactCol(['预计入库时间','预计到货日期']);
 
-      const miss = [];
-      if (codeIdx < 0) miss.push('打单料品编码');
-      if (transitIdx < 0) miss.push('在途数量');
-      if (prodIdx < 0) miss.push('未交数量');
-      if (miss.length){
-        alert('导入失败：在途/在制导入表头需包含「' + miss.join('、') + '」等列\n检测到的列：' + header.join(', '));
-        return;
-      }
+    const miss = [];
+    if (codeIdx < 0) miss.push('打单料品编码');
+    if (transitIdx < 0) miss.push('在途数量');
+    if (prodIdx < 0) miss.push('未交数量');
+    if (miss.length){
+      alert('导入失败：在途/在制导入表头需包含「' + miss.join('、') + '」等列\n检测到的列：' + header.join(', '));
+      return;
+    }
 
-      /* specCode → product 索引（fallback 用，按规格匹配更精确，避免名称重复的污染） */
-      const specIndex = {};
-      Object.values(importedProducts).forEach(p => {
-        const sp = String(p.specCode||'').trim();
-        if (sp) specIndex[sp.toLowerCase()] = p;
-      });
+    /* specCode → product 索引（fallback 用，按规格匹配更精确，避免名称重复的污染） */
+    const specIndex = {};
+    Object.values(importedProducts).forEach(p => {
+      const sp = String(p.specCode||'').trim();
+      if (sp) specIndex[sp.toLowerCase()] = p;
+    });
 
-      let success = 0, fail = 0;
-      const failDetails = [];
+    let success = 0, fail = 0;
+    const failDetails = [];
 
-      /* 行级黑名单：合计行才跳过——非空格子少 + 规格列含合计词（名称列不参与匹配） */
-      const SKIP_KW = ['合计','汇总','小计','总计','合  计','总计：','合计：','汇总：'];
-      let skippedSummary = 0;
-      for (let r=1; r<rows.length; r++){
-        const row = rows[r];
-        if (!row || row.every(c => c==='' || c==null)) continue;
-        const nonEmptyCount = row.filter(c => c !== '' && c != null).length;
-        const rowSpecRaw = String((specIdx>=0 ? row[specIdx] : '') || '');
-        /* 保守判定：只在"非空格子 ≤ 3"且规格列含合计词时才视为合计行（避免规格碰巧含"合计"被误跳） */
-        const isSummaryRow = nonEmptyCount <= 3 && SKIP_KW.some(kw => rowSpecRaw.indexOf(kw) >= 0);
-        if (isSummaryRow){ skippedSummary++; continue; }
-        const code = String(row[codeIdx]||'').trim();
-        if (!code){ fail++; failDetails.push({ code:'(空)', reason:'打单料品编码为空' }); continue; }
+    /* 行级黑名单：合计行才跳过——非空格子少 + 规格列含合计词（名称列不参与匹配） */
+    const SKIP_KW = ['合计','汇总','小计','总计','合  计','总计：','合计：','汇总：'];
+    let skippedSummary = 0;
+    for (let r=1; r<rows.length; r++){
+      const row = rows[r];
+      if (!row || row.every(c => c==='' || c==null)) continue;
+      const nonEmptyCount = row.filter(c => c !== '' && c != null).length;
+      const rowSpecRaw = String((specIdx>=0 ? row[specIdx] : '') || '');
+      /* 保守判定：只在"非空格子 ≤ 3"且规格列含合计词时才视为合计行（避免规格碰巧含"合计"被误跳） */
+      const isSummaryRow = nonEmptyCount <= 3 && SKIP_KW.some(kw => rowSpecRaw.indexOf(kw) >= 0);
+      if (isSummaryRow){ skippedSummary++; continue; }
+      const code = String(row[codeIdx]||'').trim();
+      if (!code){ fail++; failDetails.push({ code:'(空)', reason:'打单料品编码为空' }); continue; }
 
-        /* 查找产品：先按料品编码精确匹配，再 fallback 按料品规格（大小写不敏感） */
-        let p = importedProducts[code];
-        if (!p && specIdx >= 0){
-          const rowSpec = String(row[specIdx]||'').trim();
-          /* 关键保护：过短或黑名单词不进入 fallback，避免匹配到第一个产品 */
-          if (rowSpec.length >= 2 && !SKIP_KW.some(kw => rowSpec.indexOf(kw) >= 0)){
-            const direct = specIndex[rowSpec.toLowerCase()];
-            if (direct){ p = direct; }
-            else {
-              /* 关键修复：只允许 "Excel行规格包含产品规格"（行规格更"泛"、产品规格是子串） */
-              /* 禁止 "产品规格包含Excel行规格"——行规格过短时会污染所有产品 */
-              const rsl = rowSpec.toLowerCase();
-              for (const k in specIndex){
-                if (k && k.length >= 2 && rsl.indexOf(k) >= 0){
-                  p = specIndex[k]; break;
-                }
+      /* 查找产品：先按料品编码精确匹配，再 fallback 按料品规格（大小写不敏感） */
+      let p = importedProducts[code];
+      if (!p && specIdx >= 0){
+        const rowSpec = String(row[specIdx]||'').trim();
+        /* 关键保护：过短或黑名单词不进入 fallback，避免匹配到第一个产品 */
+        if (rowSpec.length >= 2 && !SKIP_KW.some(kw => rowSpec.indexOf(kw) >= 0)){
+          const direct = specIndex[rowSpec.toLowerCase()];
+          if (direct){ p = direct; }
+          else {
+            /* 关键修复：只允许 "Excel行规格包含产品规格"（行规格更"泛"、产品规格是子串） */
+            /* 禁止 "产品规格包含Excel行规格"——行规格过短时会污染所有产品 */
+            const rsl = rowSpec.toLowerCase();
+            for (const k in specIndex){
+              if (k && k.length >= 2 && rsl.indexOf(k) >= 0){
+                p = specIndex[k]; break;
               }
             }
           }
         }
-        if (!p){ fail++; failDetails.push({ code, reason:'未匹配到产品（打单料品编码/打单料品规格均未在已导入产品列表中找到）' }); continue; }
+      }
+      if (!p){ fail++; failDetails.push({ code, reason:'未匹配到产品（打单料品编码/打单料品规格均未在已导入产品列表中找到）' }); continue; }
 
-        const transitQty = Math.floor(Number(row[transitIdx]) || 0);
-        const prodQty = Math.floor(Number(row[prodIdx]) || 0);
-        if (transitQty <= 0 && prodQty <= 0){
-          fail++; failDetails.push({ code, reason:'在途数量 与 未交数量 均为 0' }); continue;
-        }
+      const transitQty = Math.floor(Number(row[transitIdx]) || 0);
+      const prodQty = Math.floor(Number(row[prodIdx]) || 0);
+      if (transitQty <= 0 && prodQty <= 0){
+        fail++; failDetails.push({ code, reason:'在途数量 与 未交数量 均为 0' }); continue;
+      }
 
-        const leadDays = Math.max(0, Number(row[leadIdx]) || 0);
+      const leadDays = Math.max(0, Number(row[leadIdx]) || 0);
 
-        if (!Array.isArray(p.pipelineTickets)) p.pipelineTickets = [];
+      if (!Array.isArray(p.pipelineTickets)) p.pipelineTickets = [];
 
-        /* 2026-09-02 覆盖模式（用户实测反馈："导入 vs 不导入结果一样"）：
-           若勾选「覆盖模式」，导入前先清空该产品的所有 pipeline-import 来源 tickets，
-           以及基础数据导入的单字段 domInProd/domInTransit/osInTransit + 对应周数字段——
-           否则二次测试场景下残留旧数据会让 planProduct 误判"已有在制在制补库"，两次结果一致。
-           默认追加模式（保留用户行为兼容），UI 提供切换。
-           覆盖模式不清手填的 pipelineTickets（如 source !== 'pipeline-import'），保留其他来源。 */
-        if ($ && $('pipelineOverwriteMode') && $('pipelineOverwriteMode').checked){
-          p.pipelineTickets = (p.pipelineTickets || []).filter(t => t.source !== 'pipeline-import');
-          if(!p._keepSingleFieldsOnOverwrite){
-            p.domInProd = 0; p.domInProdWeeks = 0;
-            p.domInTransit = 0; p.domInTransitWeeks = 0;
-            p.osInTransit = 0; p.osInTransitWeeks = 0;
-          }
-        }
-
-        /* 在途：预计入库时间 → 到货周数（≤ 今天 → 当前周 0）
-           预计入库时间为空时，默认 = 当前时间 + 运输时效 */
-        if (transitQty > 0){
-          let arrive = arriveIdx >= 0 ? _parseCellDate(row[arriveIdx]) : null;
-          let arrivalFrom = 'arrival';
-          if (!arrive){
-            /* 预计入库时间为空：用 当前时间 + 运输时效 作为预计入库时间 */
-            const fallbackDays = leadDays > 0 ? leadDays : 7;
-            arrive = new Date(Date.now() + fallbackDays * 86400000);
-            arrivalFrom = 'now+lead';
-          }
-          const today = new Date(); today.setHours(0,0,0,0);
-          const week = arrive.getTime() <= today.getTime() ? 0 : _diffWeeksFromToday(arrive);
-          p.pipelineTickets.push({
-            type: 'domInTransit',
-            qty: transitQty,
-            week,
-            arriveDate: arrive.toISOString().slice(0,10),
-            source: 'pipeline-import',
-            arrivalFrom
-          });
-          success++;
-        }
-
-        /* 未交：预计到仓时间 = 回复出货日期 + 运输时效；空 → 生产周期(天)+运输时效 */
-        if (prodQty > 0){
-          const replyDate = replyIdx >= 0 ? _parseCellDate(row[replyIdx]) : null;
-          let arrival, arrivalFrom;
-          if (replyDate){
-            arrival = new Date(replyDate.getTime() + leadDays * 86400000);
-            arrivalFrom = 'reply+lead';
-          } else {
-            const prodCycle = Number(p.prodCycleDays) || 0;
-            const fallbackDays = prodCycle > 0 ? (prodCycle + leadDays) : Math.max(7 + leadDays, 14);
-            arrival = new Date(Date.now() + fallbackDays * 86400000);
-            arrivalFrom = 'prodCycle+lead';
-          }
-          const week = _diffWeeksFromToday(arrival);
-          p.pipelineTickets.push({
-            type: 'domInProd',
-            qty: prodQty,
-            week,
-            arriveDate: arrival.toISOString().slice(0,10),
-            source: 'pipeline-import',
-            arrivalFrom
-          });
-          success++;
+      /* 2026-09-02 覆盖模式（用户实测反馈："导入 vs 不导入结果一样"）：
+         若勾选「覆盖模式」，导入前先清空该产品的所有 pipeline-import 来源 tickets，
+         以及基础数据导入的单字段 domInProd/domInTransit/osInTransit + 对应周数字段——
+         否则二次测试场景下残留旧数据会让 planProduct 误判"已有在制在制补库"，两次结果一致。
+         默认追加模式（保留用户行为兼容），UI 提供切换。
+         覆盖模式不清手填的 pipelineTickets（如 source !== 'pipeline-import'），保留其他来源。 */
+      if ($ && $('pipelineOverwriteMode') && $('pipelineOverwriteMode').checked){
+        p.pipelineTickets = (p.pipelineTickets || []).filter(t => t.source !== 'pipeline-import');
+        if(!p._keepSingleFieldsOnOverwrite){
+          p.domInProd = 0; p.domInProdWeeks = 0;
+          p.domInTransit = 0; p.domInTransitWeeks = 0;
+          p.osInTransit = 0; p.osInTransitWeeks = 0;
         }
       }
 
-      saveProducts();
-      renderProductList();
-      renderPerspective();
-      updatePipelineDataSummary();   /* 2026-09-02 增：导入后实时刷新当前在制在制数据摘要 */
-      addLog({ action: '导入在途/在制', rows: rows.length-1, success, fail, note: file.name });
-
-      const stats = { domInTransit:0, domInProd:0, osInTransit:0 };
-      Object.values(importedProducts).forEach(p => {
-        if (Array.isArray(p.pipelineTickets)){
-          p.pipelineTickets.forEach(t => { if (stats[t.type]!=null) stats[t.type] += (Number(t.qty)||0); });
+      /* 在途：预计入库时间 → 到货周数（≤ 今天 → 当前周 0）
+         预计入库时间为空时，默认 = 当前时间 + 运输时效 */
+      if (transitQty > 0){
+        let arrive = arriveIdx >= 0 ? _parseCellDate(row[arriveIdx]) : null;
+        let arrivalFrom = 'arrival';
+        if (!arrive){
+          /* 预计入库时间为空：用 当前时间 + 运输时效 作为预计入库时间 */
+          const fallbackDays = leadDays > 0 ? leadDays : 7;
+          arrive = new Date(Date.now() + fallbackDays * 86400000);
+          arrivalFrom = 'now+lead';
         }
-      });
-      showPipelineImportSummary({ fileName: file.name, success, fail, skipped: skippedSummary, total: rows.length-1, stats, failDetails: failDetails.slice(0,10) });
-      updatePipelineImportBadge({ fileName: file.name, success, fail, total: rows.length-1, stats });
-    } catch(err){
-      alert('导入失败: ' + err.message);
-      updatePipelineImportBadge({ fileName: file.name, success:0, fail:1, total:0, errorMsg: err.message, stats:{domInTransit:0,domInProd:0,osInTransit:0} });
+        const today = new Date(); today.setHours(0,0,0,0);
+        const week = arrive.getTime() <= today.getTime() ? 0 : _diffWeeksFromToday(arrive);
+        p.pipelineTickets.push({
+          type: 'domInTransit',
+          qty: transitQty,
+          week,
+          arriveDate: arrive.toISOString().slice(0,10),
+          source: 'pipeline-import',
+          arrivalFrom
+        });
+        success++;
+      }
+
+      /* 未交：预计到仓时间 = 回复出货日期 + 运输时效；空 → 生产周期(天)+运输时效 */
+      if (prodQty > 0){
+        const replyDate = replyIdx >= 0 ? _parseCellDate(row[replyIdx]) : null;
+        let arrival, arrivalFrom;
+        if (replyDate){
+          arrival = new Date(replyDate.getTime() + leadDays * 86400000);
+          arrivalFrom = 'reply+lead';
+        } else {
+          const prodCycle = Number(p.prodCycleDays) || 0;
+          const fallbackDays = prodCycle > 0 ? (prodCycle + leadDays) : Math.max(7 + leadDays, 14);
+          arrival = new Date(Date.now() + fallbackDays * 86400000);
+          arrivalFrom = 'prodCycle+lead';
+        }
+        const week = _diffWeeksFromToday(arrival);
+        p.pipelineTickets.push({
+          type: 'domInProd',
+          qty: prodQty,
+          week,
+          arriveDate: arrival.toISOString().slice(0,10),
+          source: 'pipeline-import',
+          arrivalFrom
+        });
+        success++;
+      }
     }
-  };
-  reader.readAsArrayBuffer(file);
-  event.target.value = '';
+
+    saveProducts();
+    renderProductList();
+    renderPerspective();
+    updatePipelineDataSummary();   /* 2026-09-02 增：导入后实时刷新当前在制在制数据摘要 */
+    addLog({ action: '导入在途/在制', rows: rows.length-1, success, fail, note: file.name });
+
+    const stats = { domInTransit:0, domInProd:0, osInTransit:0 };
+    Object.values(importedProducts).forEach(p => {
+      if (Array.isArray(p.pipelineTickets)){
+        p.pipelineTickets.forEach(t => { if (stats[t.type]!=null) stats[t.type] += (Number(t.qty)||0); });
+      }
+    });
+    showPipelineImportSummary({ fileName: fileName + (sheetCount > 1 ? '（工作表：' + sheetName + '）' : ''), success, fail, skipped: skippedSummary, total: rows.length-1, stats, failDetails: failDetails.slice(0,10) });
+    updatePipelineImportBadge({ fileName: fileName + (sheetCount > 1 ? '（工作表：' + sheetName + '）' : ''), success, fail, total: rows.length-1, stats });
+  } catch(err){
+    alert('导入失败: ' + err.message);
+    updatePipelineImportBadge({ fileName: fileName, success:0, fail:1, total:0, errorMsg: err.message, stats:{domInTransit:0,domInProd:0,osInTransit:0} });
+  }
 }
 
 function updatePipelineImportBadge(info){
@@ -4657,7 +4832,7 @@ function renderProductList(){
   const f = getListFilter();
   const filtered = all.filter(p => matchListFilter(p, f));
   if(filtered.length === 0){
-    $('productTbody').innerHTML = '<tr><td colspan="21" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
+    $('productTbody').innerHTML = '<tr><td colspan="22" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
     $('productTfoot').innerHTML = '';
     return;
   }
@@ -4708,6 +4883,7 @@ function renderProductList(){
       <td>${esc(p.colorSet||'--')}</td>
       <td><span class="tier-badge tier-${tier}">${tier}</span></td>
       <td>${esc(p.salesStatus||'--')}</td>
+      <td>${regMethodCellHtml(p)}</td>
       <td>${isMixedShip(p) ? `<span class="ship-badge ship-transit">🚚 混合(直发${parseDirectRatio(p)}%)</span>` : (isTransitShip(p) ? '<span class="ship-badge ship-transit">🚚 中转</span>' : '<span class="ship-badge ship-direct">直发</span>')}</td>
       <td class="cell-num">${weeks}</td>
       <td class="cell-num">${p.orderFreqDays ? num(p.orderFreqDays) + '天' : '7天'}</td>
@@ -4722,7 +4898,7 @@ function renderProductList(){
       <td><button class="stock-expand-btn" onclick="toggleListPipeline('${safeKey}',this)">${fmt(withProdTotal)} ▾</button></td>
       <td style="min-width:120px;">${esc(p.note||'--')}</td>
     </tr>
-    <tr class="stock-detail-row" id="list-pipe-${safeKey}" style="display:none;"><td colspan="19" style="padding:8px 16px;background:var(--bg-soft);">
+    <tr class="stock-detail-row" id="list-pipe-${safeKey}" style="display:none;"><td colspan="22" style="padding:8px 16px;background:var(--bg-soft);">
       <div class="panel" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
         <div><b>FBA库存</b><div>${fmt(fbaV)}</div></div>
         <div><b>海外仓库存</b><div>${fmt(osStockV)}</div></div>
@@ -4734,7 +4910,7 @@ function renderProductList(){
   });
   $('productTbody').innerHTML = html;
   $('productTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
-    <td colspan="11" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
+    <td colspan="12" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
     <td class="cell-num">${fmt(totalLatestWk)}</td>
     <td class="cell-num">${fmt(totalMonthlyAvg)}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
