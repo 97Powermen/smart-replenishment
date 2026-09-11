@@ -472,6 +472,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
 .stock-detail-row .panel .cell .lab { color:var(--text-muted); font-size:11px; }
 .stock-detail-row .panel .cell .val { font-weight:700; color:var(--text); margin-top:2px; }
 
+/* v4.28 备货清单「导入预测」分月列（M0~M5）—— 列头 ▸/▾ 整表统一切换，默认折叠
+   用显式 .prod-fc-col 标记（禁止 nth-child：历次插列都会漂移） */
+#productTable.prod-fc-collapsed .prod-fc-col { display: none; }
+#productTable thead th.prod-fc-col { background: #f1f5f9; color: #475569; }
+#productTable tbody td.prod-fc-col { background: #fafcfd; }
+/*__MARK_V428_PRODFC__*/
+
 /* Sellable-months cell */
 .sell { font-weight:700; }
 .sell.s-critical { color:var(--danger); }
@@ -794,7 +801,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
     </div>
 
     <div class="result-table-wrap is-resizable" data-page-node-id="48gwpXydMZqgbpDOiNSlBo">
-      <table class="result-table" id="productTable" style="min-width:2120px;" data-page-node-id="vlm6yahCrlrLcjLif6dd8I">
+      <table class="result-table prod-fc-collapsed" id="productTable" style="min-width:2120px;" data-page-node-id="vlm6yahCrlrLcjLif6dd8I">
         <thead data-page-node-id="oG0QI5zY1o1MBB5295krJD">
           <tr data-page-node-id="Iz3b55UZ8yuT7fzZ5XDTQZ">
             <th data-page-node-id="uJvPdqW0iG03AT2SmXalkE">#</th>
@@ -810,7 +817,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
             <th data-page-node-id="kv7dsNziaURg5QoRkijZlt">计划周期</th>
             <th data-page-node-id="IrmEZV4c5mbllUq3I3qowp">下单频率</th>
             <th data-page-node-id="yYzP96hqkpIvvAaSgYUGyt">最新周销量</th>
-            <th data-page-node-id="4BFOsJ1wR46KX64B9uO9Sr">月均需求</th>
+            <th data-page-node-id="4BFOsJ1wR46KX64B9uO9Sr">月均需求<button type="button" class="pipe-fold-btn" id="prodFcBtn" onclick="toggleProductFcCols()" title="展开/折叠导入的分月预测（M0~M5，对应导入模板「月预测M0~M5」）" data-page-node-id="ProdFcBtn">▸</button></th>
+            <th class="prod-fc-col" id="prodFcTh0" data-page-node-id="ProdFcTh0" title="导入模板「月预测M0」">M0</th>
+            <th class="prod-fc-col" id="prodFcTh1" data-page-node-id="ProdFcTh1" title="导入模板「月预测M1」">M1</th>
+            <th class="prod-fc-col" id="prodFcTh2" data-page-node-id="ProdFcTh2" title="导入模板「月预测M2」">M2</th>
+            <th class="prod-fc-col" id="prodFcTh3" data-page-node-id="ProdFcTh3" title="导入模板「月预测M3」">M3</th>
+            <th class="prod-fc-col" id="prodFcTh4" data-page-node-id="ProdFcTh4" title="导入模板「月预测M4」">M4</th>
+            <th class="prod-fc-col" id="prodFcTh5" data-page-node-id="ProdFcTh5" title="导入模板「月预测M5」">M5</th>
             <th data-page-node-id="nQMphHugQKIkUnJm4nxBqw">FBA库存</th>
             <th data-page-node-id="pCQ5vTUoXaw9fFwbEfa1cA">海外仓库存</th>
             <th data-page-node-id="KPpkz7h2EIWCMy1CAGreXc">可挪用库存</th>
@@ -4832,8 +4845,9 @@ function renderProductList(){
   const f = getListFilter();
   const filtered = all.filter(p => matchListFilter(p, f));
   if(filtered.length === 0){
-    $('productTbody').innerHTML = '<tr><td colspan="22" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
+    $('productTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">' + (all.length === 0 ? '暂无产品，请先导入产品列表。' : '无匹配筛选条件的产品。') + '</td></tr>';
     $('productTfoot').innerHTML = '';
+    renderProductFcHead(filtered);
     return;
   }
   // 分页：合计仍遍历全量，渲染只取当前页
@@ -4843,9 +4857,11 @@ function renderProductList(){
   let html = '';
   let totalFBA = 0, totalOS = 0, totalDivert = 0, totalOSTr = 0, totalDomT = 0, totalDomP = 0, totalWithProd = 0;
   let totalLatestWk = 0, totalMonthlyAvg = 0;   // 2026-09-03 合计行补「最新周销量 / 月均需求」两列
+  const totalFc = [0,0,0,0,0,0];   // v4.28 导入预测 M0~M5 合计
   filtered.forEach((p, idx) => {
     const monthlyAvg = monthlyAvgImport(p);   // 2026-09-03 口径统一：与分析结果/备货透视共用 monthlyAvgImport
     totalLatestWk += num(p.currentWeekSales); totalMonthlyAvg += monthlyAvg;
+    for(let _fi = 0; _fi < 6; _fi++) totalFc[_fi] += num(p['fcM' + _fi]);   // v4.28
     const planD = num(p.planningDays) || 84;
     const weeks = Math.max(4, Math.round(planD / 7));
     const fbaV = num(p.fbaStock);
@@ -4889,6 +4905,12 @@ function renderProductList(){
       <td class="cell-num">${p.orderFreqDays ? num(p.orderFreqDays) + '天' : '7天'}</td>
       <td class="cell-num">${fmt(p.currentWeekSales)}</td>
       <td class="cell-num">${fmt(monthlyAvg)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM0)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM1)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM2)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM3)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM4)}</td>
+      <td class="cell-num prod-fc-col">${fmt(p.fcM5)}</td>
       <td class="cell-num">${fmt(fbaV)}</td>
       <td class="cell-num">${fmt(osStockV)}</td>
       <td class="cell-num">${fmt(divertV)}</td>
@@ -4898,7 +4920,7 @@ function renderProductList(){
       <td><button class="stock-expand-btn" onclick="toggleListPipeline('${safeKey}',this)">${fmt(withProdTotal)} ▾</button></td>
       <td style="min-width:120px;">${esc(p.note||'--')}</td>
     </tr>
-    <tr class="stock-detail-row" id="list-pipe-${safeKey}" style="display:none;"><td colspan="22" style="padding:8px 16px;background:var(--bg-soft);">
+    <tr class="stock-detail-row" id="list-pipe-${safeKey}" style="display:none;"><td colspan="28" style="padding:8px 16px;background:var(--bg-soft);">
       <div class="panel" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
         <div><b>FBA库存</b><div>${fmt(fbaV)}</div></div>
         <div><b>海外仓库存</b><div>${fmt(osStockV)}</div></div>
@@ -4913,6 +4935,12 @@ function renderProductList(){
     <td colspan="12" style="text-align:right;">合计（筛选后 ${filtered.length} 个）</td>
     <td class="cell-num">${fmt(totalLatestWk)}</td>
     <td class="cell-num">${fmt(totalMonthlyAvg)}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[0])}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[1])}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[2])}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[3])}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[4])}</td>
+    <td class="cell-num prod-fc-col">${fmt(totalFc[5])}</td>
     <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num">${fmt(totalOS)}</td>
     <td class="cell-num">${fmt(totalDivert)}</td>
@@ -4926,6 +4954,7 @@ function renderProductList(){
   const pbar = paginationBar(filtered.length, curPage, 'product');
   const pbarEl = $('productPageBar');
   if(pbarEl) pbarEl.innerHTML = pbar;
+  renderProductFcHead(filtered);   // v4.28 列头显示具体月份（起始月一致时）
 }
 
 function toggleListStock(key, btn){
@@ -4942,6 +4971,43 @@ function toggleListPipeline(key, btn){
   const show = row.style.display === 'none';
   row.style.display = show ? 'table-row' : 'none';
   if(btn) btn.textContent = btn.textContent.replace(/[▾▴]/, show ? '▴' : '▾');
+}
+
+/* v4.28 备货清单「导入预测」分月列（M0~M5）—— 列头 ▸/▾ 整表统一切换（默认折叠）
+   折叠：不显示这 6 列；展开：显示导入模板里的原始分月预测，便于核对「月均需求」是怎么来的 */
+function toggleProductFcCols(){
+  const t = $('productTable');
+  if(!t) return;
+  t.classList.toggle('prod-fc-collapsed');
+  updateProductFcBtn();
+}
+/* 按钮文案跟随折叠状态（单独抽出：状态被任何路径改动后都能同步回显） */
+function updateProductFcBtn(){
+  const t = $('productTable'), b = $('prodFcBtn');
+  if(t && b) b.textContent = t.classList.contains('prod-fc-collapsed') ? '▸' : '▾';
+}
+/* 列头月份：当前产品集预测起始月一致且可识别 → 显示 YY-MM；否则回退 M0~M5（绝不静默猜） */
+function renderProductFcHead(list){
+  const arr = Array.isArray(list) ? list : Object.values(importedProducts);
+  let base = null, ok = arr.length > 0;
+  for(const _p of arr){
+    const d = parseForecastStart(_p && _p.forecastStartMonth);
+    if(!d){ ok = false; break; }
+    if(!base) base = d;
+    else if(d.getFullYear() !== base.getFullYear() || d.getMonth() !== base.getMonth()){ ok = false; break; }
+  }
+  for(let i = 0; i < 6; i++){
+    const th = $('prodFcTh' + i);
+    if(!th) continue;
+    if(ok && base){
+      const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+      th.textContent = String(d.getFullYear()).slice(2) + '-' + pad2(d.getMonth() + 1);
+      th.title = '第 ' + (i + 1) + ' 个月预测：' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '（导入模板「月预测M' + i + '」）';
+    }else{
+      th.textContent = 'M' + i;
+      th.title = '导入模板「月预测M' + i + '」= 预测起始月起第 ' + (i + 1) + ' 个月（当前产品起始月不一致或未填，故不显示具体月份）';
+    }
+  }
 }
 
 function openDetailByKey(key){
