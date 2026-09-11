@@ -358,6 +358,39 @@ tr.tail-defer-row td { background:#f3f8fd !important; border-bottom:1px dashed #
 /* v4.17 提前释放订单（预放单）提示条：紫/绿系，与灰蓝尾数顺延、橙运输回退区分 */
 .release-early-tip { background:#f0f7f0; border:1px solid #9fd0a0; border-radius:6px; padding:6px 10px; font-size:12px; line-height:1.6; color:#1f5e22; }
 tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashed #9fd0a0 !important; padding-top:3px !important; padding-bottom:3px !important; color:#1f5e22; }
+/* v4.25 角色身份与权限（真拦截）
+   配色：蓝系 = 身份/权限，与「橙运输回退 / 灰蓝尾数顺延 / 绿预放单 / 红数据待修 / 紫手工调整」区分开，
+   不表示数据有问题，只表示"谁能做什么" */
+.role-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:11px; font-size:12px; font-weight:600; line-height:18px; white-space:nowrap; border:1px solid transparent; }
+.role-badge.role-admin  { background:#e0e9fb; color:#1e3a8a; border-color:#b8c9f0; }
+.role-badge.role-entry  { background:#e8efff; color:#1d4ed8; border-color:#c7d8f7; }
+.role-badge.role-viewer { background:#f1f5f9; color:#64748b; border-color:#dbe1e8; }
+/* 无权限控件：禁用 + 弱化，mouse hover 的 title 说明需要什么权限 */
+.perm-denied { opacity:.5 !important; cursor:not-allowed !important; }
+.perm-denied:hover { opacity:.62 !important; }
+input.perm-readonly, select.perm-readonly, textarea.perm-readonly { background:#f5f6f8 !important; color:var(--text-muted) !important; cursor:not-allowed !important; }
+.perm-readonly + label, label.perm-readonly { color:var(--text-muted) !important; }
+/* 当前身份卡（用户管理页顶部） */
+.cur-identity { display:flex; align-items:flex-start; gap:14px; padding:11px 14px; margin-bottom:12px; background:var(--bg-soft); border:1px solid var(--border); border-left:4px solid #1e3a8a; border-radius:8px; }
+.cur-identity .ci-name { font-size:15px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cur-identity .ci-caps { font-size:12px; color:var(--text-secondary); line-height:1.85; margin-top:4px; }
+.cur-identity .ci-caps b { color:var(--text-primary); }
+.cur-identity .ci-hint { font-size:11.5px; color:var(--text-muted); margin-top:5px; }
+/* 权限摘要小胶囊（用户表格内） */
+.perm-chip { display:inline-block; margin:0 4px 3px 0; padding:1px 7px; border-radius:9px; background:#eef2fb; color:#33507e; font-size:11px; line-height:16px; white-space:nowrap; }
+.perm-chip.no { background:#fff; color:#bcc2ca; text-decoration:line-through; box-shadow: inset 0 0 0 1px #e8eaed; }
+.role-inline-select { padding:3px 8px; border:1px solid var(--border); border-radius:5px; font-size:12.5px; background:#fff; }
+/* 当前身份所在行：左侧蓝色竖条，与手工调整的紫色竖条区分 */
+tr.cur-user-row > td { background:#f7f9fe; }
+tr.cur-user-row > td:first-child { box-shadow: inset 3px 0 0 0 #1e3a8a; }
+/* v4.25 无「调整备货」权限 → 行内可编辑单元格 / 批次控件只读化 */
+.cell-locked { cursor:not-allowed !important; opacity:.72; background:#f7f8fa !important; }
+input[disabled].cell-date-input, select[disabled].cell-method-select,
+input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--text-muted) !important; cursor:not-allowed !important; }
+/* 表格里的次要操作按钮（重命名） */
+.btn-link-mini { background:none; border:none; padding:0 4px; font-size:12px; color:var(--primary); cursor:pointer; text-decoration:underline; }
+.btn-link-mini:hover { color:#0b4ea2; }
+.btn-link-mini.danger { color:var(--danger); }
 
 /* Expandable inventory cell */
 .stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: all .15s; }
@@ -460,14 +493,10 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     </div>
     <div class="group" data-page-node-id="ZiZ4qvzoTtspODAvLed8FR">
       <label data-page-node-id="3THGCldERaCnAuqHjnHMqY">角色：</label>
-      <select id="roleSelect" data-page-node-id="1qWahE0qUngCzVQVLq0L1O">
-        <option value="录入" data-page-node-id="C7y5EDrQ5GZMf3W4N1YH9u">录入</option>
-        <option value="管理员" data-page-node-id="fL0s3bu56RKy58xmO4CXqB">管理员</option>
-        <option value="查看者" data-page-node-id="xBBw7Mue84I1zHqq7ZSPZZ">查看者</option>
-      </select>
+      <span id="roleBadge" class="role-badge role-admin" title="" data-page-node-id="RoleBadgeSlot">--</span>
     </div>
     <div class="group" data-page-node-id="gf2qSRQ1741dsa14edBQmO">
-      <button class="btn btn-sm btn-outline" onclick="openUserModal()" data-page-node-id="JhF2jPI2WhwFwVi9CMyqrq">👤 用户管理</button>
+      <button class="btn btn-sm btn-outline" data-perm="user" onclick="openUserModal()" title="新增 / 管理用户（需用户管理权限）" data-page-node-id="JhF2jPI2WhwFwVi9CMyqrq">👤 用户管理</button>
     </div>
     <div class="divider-v" data-page-node-id="njKdyf7ginJayPnhmbqh7S"></div>
     <div class="group" data-page-node-id="uautVI0ehxzjrsFfoOxbXO">
@@ -498,7 +527,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
       <div class="icon" data-page-node-id="4LXLH2VHmj1ABGbqYPnWrQ">🚚</div>
       <h2 data-page-node-id="yocChiW7744vqpfFXNGHk0">运输方式管理（按优先级排序）</h2>
       <div class="right" data-page-node-id="r4KGtgmBY1TjHsuG1mS7Ux">
-        <button class="btn btn-sm btn-outline" onclick="addMethodRow()" data-page-node-id="XWVkUbJP8CZgXE4qbABlAC">＋ 新增方式</button>
+        <button class="btn btn-sm btn-outline" data-perm="method" onclick="addMethodRow()" title="新增运输方式（需运输方式管理权限）" data-page-node-id="XWVkUbJP8CZgXE4qbABlAC">＋ 新增方式</button>
       </div>
     </div>
     <div class="warn-box" data-page-node-id="TqIDTvVw0oshm4KBnGUo2x">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b data-page-node-id="US8zu2pDGjUHw4kwQbodDw">「是否启用」开关</b>：停用的方式<b data-page-node-id="a7sCHO2bcvY8hCd861OQAr">不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b data-page-node-id="2c6rcyp569CrThO56o0vv3">发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。🌍 <b data-page-node-id="FyWRHP9wco8PrJp6QLCbot">区域限制（v4.12）</b>：「区域」列标注线路适用区域（可填 美国/加拿大 等多值，用 / 分隔；空 = 通用）。产品备货只在<b data-page-node-id="pSY0IDd0Q7K5ltDaLPO2Ek">区域匹配</b>的线路中选择（精确相等 + 通用通配，如美国产品只能选区域=美国或通用的线路），跨区线路（如 美转加30）不会被选为常规/升舱方式。</div>
@@ -532,7 +561,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div class="cfg-row" data-page-node-id="2fbxBhVLQ2xaHhN6QFBqxK">
       <div class="cfg-label" data-page-node-id="a3HaXDfQKLp7fgehwHzLlB">FBA 上架天数</div>
       <div class="cfg-control" data-page-node-id="lT50ZEZDS3MqDuviAti0w4">
-        <input type="number" min="0" id="fbaShelfDaysInput" value="3" onchange="onFbaShelfDaysChange(this.value)" data-page-node-id="EUeEHwyNcrPQ5DDjDbuLMr">
+        <input type="number" min="0" id="fbaShelfDaysInput" data-perm-readonly="sys" value="3" onchange="onFbaShelfDaysChange(this.value)" data-page-node-id="EUeEHwyNcrPQ5DDjDbuLMr">
         <div class="hint" data-page-node-id="hQCxGXHZIXRMg0ePhRLuFK">默认 3 天</div>
       </div>
     </div>
@@ -548,7 +577,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div class="cfg-row" data-page-node-id="jha6fOH6vDtDS601FYk6DB">
       <div class="cfg-label" data-page-node-id="LFrUyuzqpfgvNvS5TH191B">释放订单周数</div>
       <div class="cfg-control" data-page-node-id="eZmh3cfqGfroUU0tAeMHEb">
-        <select id="releaseOrderWeeksInput" onchange="onReleaseOrderWeeksChange(this.value)" data-page-node-id="65tqkhsTvMjuNl6uACHE56">
+        <select id="releaseOrderWeeksInput" data-perm-readonly="sys" onchange="onReleaseOrderWeeksChange(this.value)" data-page-node-id="65tqkhsTvMjuNl6uACHE56">
           <option value="1" data-page-node-id="QVKxUOZ0MaDjjKMElRZJvz">1 周（默认：本周只放当周订单）</option>
           <option value="2" data-page-node-id="Czvdkt1QAqjRLkZknXpfTJ">2 周（本周连同下一周的订单一起放）</option>
           <option value="3" data-page-node-id="EtLoi1namW6ACgQmMHilYm">3 周（本周连同未来两周的订单一起放）</option>
@@ -570,7 +599,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
       <div class="cfg-label" data-page-node-id="knIldYrn0sitUKm7AA69MZ">启用尾数顺延</div>
       <div class="cfg-control" data-page-node-id="ZRhbJnVviKhGTBpiEKmm8T">
         <label class="cfg-switch-line" data-page-node-id="VCWi420cruRsKoxbJkf9i2">
-          <input type="checkbox" id="tailDeferToggle" checked onchange="onTailDeferToggle(this.checked)" data-page-node-id="NTQGA704YdrP74mXYFGKaU">
+          <input type="checkbox" id="tailDeferToggle" data-perm-readonly="sys" checked onchange="onTailDeferToggle(this.checked)" data-page-node-id="NTQGA704YdrP74mXYFGKaU">
           <span data-page-node-id="0Eu7Gng5WQ9egOk7JAGXU5">本周缺口低于阈值时自动顺延（默认开启）</span>
         </label>
         <div class="hint" data-page-node-id="a4Ep9dOMh94k8lEEFe4WO3">关闭后恢复原行为：缺口再小也照常排本周批次</div>
@@ -579,7 +608,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div class="cfg-row" data-page-node-id="AbRBR37HTYkHlguivrlF5q">
       <div class="cfg-label" data-page-node-id="k5Ne7Ykqd9vVVPpBeRZ9a1">周均倍数阈值</div>
       <div class="cfg-control" data-page-node-id="387eviky5F1wI74uZzErB7">
-        <select id="tailDeferThreshold" onchange="onTailDeferThresholdChange(this.value)" data-page-node-id="6ajMFAHjuPQfWlj3KJhPgY">
+        <select id="tailDeferThreshold" data-perm-readonly="sys" onchange="onTailDeferThresholdChange(this.value)" data-page-node-id="6ajMFAHjuPQfWlj3KJhPgY">
           <option value="0.5" data-page-node-id="geRZbilRg537XClCDnKwal">0.5 周需求（较激进：只顺延极小缺口）</option>
           <option value="1" selected data-page-node-id="OlTGt4xiET7gv3HNwXqo0f">1 周需求（推荐：不足一周的量不值得排单）</option>
           <option value="1.5" data-page-node-id="V7Uw5suRZ0joVAVDAB4Dw3">1.5 周需求</option>
@@ -591,7 +620,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div class="cfg-row" data-page-node-id="mzrYaN2KaumGuboxEA0eTE">
       <div class="cfg-label" data-page-node-id="9wfb13p6kS4aEITEBoQWjr">绝对数量阈值（套）</div>
       <div class="cfg-control" data-page-node-id="rSKpKXSd2s4n7nFYMOGsIi">
-        <input type="number" min="0" id="tailDeferAbsQty" value="30" onchange="onTailDeferAbsQtyChange(this.value)" data-page-node-id="xWQ1BHApL3auTzO73eBpR5">
+        <input type="number" min="0" id="tailDeferAbsQty" data-perm-readonly="sys" value="30" onchange="onTailDeferAbsQtyChange(this.value)" data-page-node-id="xWQ1BHApL3auTzO73eBpR5">
         <div class="hint" data-page-node-id="p8NPWB4flX4fXVdxUoUsDE">判定条件②：缺口 &lt; 该数值才视为尾数。与「周均倍数阈值」为<b data-page-node-id="psrRus9Zldab5IFwVRfOjm">且</b>关系（两项同时满足才顺延）；设为 0 = 不启用该门槛（仅按倍数判定）</div>
       </div>
     </div>
@@ -604,7 +633,7 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
       <h2 data-page-node-id="edd20FwPng5CiLy1hCv5SP">已导入产品列表（备货清单）</h2>
       <div class="right" data-page-node-id="IEoxuvpp6KxsWfOKHQyo5n">
         <span class="count-badge" id="listCount" data-page-node-id="zxPJzsgieMzDmuKBdvxDXw">共 0 个产品</span>
-        <button class="btn btn-primary" onclick="generatePlan()" data-page-node-id="6LYqrmAl2sVoQFYuUJVorC">🚀 生成备货方案</button>
+        <button class="btn btn-primary" data-perm="generate" onclick="generatePlan()" title="生成备货方案（需权限）" data-page-node-id="6LYqrmAl2sVoQFYuUJVorC">🚀 生成备货方案</button>
       </div>
     </div>
 
@@ -614,23 +643,23 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <!-- Toolbar -->
     <div class="toolbar" style="margin-bottom:8px;" data-page-node-id="i8HCFf6G8cLzRDbGThW0o0">
       <button class="btn btn-outline" onclick="downloadTemplate()" data-page-node-id="Xym1T2EmYlvQUpUT5qLAJR">📥 下载导入模板</button>
-      <button class="btn btn-outline" onclick="document.getElementById('xlsxInput').click()" data-page-node-id="wVTeWBACdMS3cuSC6EEeII">📤 导入 XLSX</button>
+      <button class="btn btn-outline" data-perm="import" onclick="document.getElementById('xlsxInput').click()" title="导入 XLSX（需权限）" data-page-node-id="wVTeWBACdMS3cuSC6EEeII">📤 导入 XLSX</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none;" onchange="importXlsx(event)" data-page-node-id="eNni5yMKRfXmo1PQ3lrJQ6">
       <div class="divider-v" data-page-node-id="jTgPPKeZDDJe3T1uiHeiqW"></div>
-      <button class="btn btn-outline" onclick="document.getElementById('pipelineInput').click()" data-page-node-id="kBajgRcjxKu6JORZqhq56K">📦 导入在途/在制</button>
+      <button class="btn btn-outline" data-perm="import" onclick="document.getElementById('pipelineInput').click()" title="导入在途/在制（需权限）" data-page-node-id="kBajgRcjxKu6JORZqhq56K">📦 导入在途/在制</button>
       <input type="file" id="pipelineInput" accept=".xlsx,.xls" style="display:none;" onchange="importPipelineXlsx(event)" data-page-node-id="hv1SEXC7wEnMlmlWEkJLNF">
       <button class="btn btn-sm btn-outline" onclick="downloadPipelineTemplate()" title="下载在途/在制导入模板" data-page-node-id="ulNUhIQmNOfyuSUv274Hl6">📋 模板</button>
       <label class="pipeline-mode-toggle" title="勾选后下次导入将覆盖（先清空原数据）再写入；未勾选则追加（保留原数据）" data-page-node-id="1QE1Pg8gSajUE6MFNiqOlQ">
-        <input type="checkbox" id="pipelineOverwriteMode" data-page-node-id="yOKgisVUv2wI18mfa1Abc6" />
+        <input type="checkbox" id="pipelineOverwriteMode" data-perm-readonly="import" data-page-node-id="yOKgisVUv2wI18mfa1Abc6" />
         <span style="font-size:12px;color:var(--text-secondary);" data-page-node-id="CAS1rpk9DWAXQnFMB1I8w0">覆盖模式</span>
       </label>
-      <button class="btn btn-sm btn-outline" onclick="clearAllPipelineData()" title="一键清空所有产品的国内在途/在制数据（pipelineTickets + 单字段 domInTransit/domInProd；海外仓在途 osInTransit 随库存资料导入，不属于采购在制在途，不在此清空范围）" style="color:var(--danger);" data-page-node-id="BYnW2Hz7bA0l13TfFUXfRa">🧹 清空在制在途</button>
+      <button class="btn btn-sm btn-outline" data-perm="sys" onclick="clearAllPipelineData()" title="一键清空所有产品的国内在途/在制数据（pipelineTickets + 单字段 domInTransit/domInProd；海外仓在途 osInTransit 随库存资料导入，不属于采购在制在途，不在此清空范围）" style="color:var(--danger);" data-page-node-id="BYnW2Hz7bA0l13TfFUXfRa">🧹 清空在制在途</button>
       <span id="pipelineImportStatus" class="pipeline-status" style="display:none;" data-page-node-id="xe3WSTRBOQi5VGHee3ydfE"></span>
       <span id="pipelineDataSummary" class="pipeline-summary" style="display:none;" data-page-node-id="lIe1fD7oUvaPEpYLu6W4Qn"></span>
       <div class="divider-v" data-page-node-id="rT9E2FzOIfkEoR0jSa10SN"></div>
       <button class="btn btn-outline" onclick="exportProductList()" data-page-node-id="5fRpuYyoot3UhXYAuNBHgQ">📊 导出当前列表</button>
       <div class="divider-v" data-page-node-id="kffEioTNuykPd9SKD3Sigt"></div>
-      <button class="btn btn-danger" onclick="clearAllData()" data-page-node-id="3o1tJBO1MskWlg3d35rLLb">🗑 清除数据</button>
+      <button class="btn btn-danger" data-perm="sys" onclick="clearAllData()" title="清除已导入产品数据" data-page-node-id="3o1tJBO1MskWlg3d35rLLb">🗑 清除数据</button>
     </div>
 
     <!-- Filter row (matches screenshot 1) -->
@@ -1179,19 +1208,31 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
       </div>
     </div>
 
-    <!-- 用户管理 -->
-    <div class="card" data-page-node-id="PFk9ITEkY0oY28J6TXe6t6">
+    <!-- 用户管理（v4.25：本地身份 + 角色权限真拦截） -->
+    <div class="card" id="sec-users" data-page-node-id="PFk9ITEkY0oY28J6TXe6t6">
       <div class="card-header" data-page-node-id="0UZl9HHo6180U9kwKAABkq">
         <div class="icon" data-page-node-id="432YHCcmUAmj5RuBQ4jE7O">👥</div>
-        <h2 data-page-node-id="mGqPTNb4PoSbbWD7trdxvA">用户管理（多人协作）</h2>
+        <h2 data-page-node-id="mGqPTNb4PoSbbWD7trdxvA">用户管理</h2>
+        <div class="right">
+          <span class="count-badge" id="userCount">共 0 个用户</span>
+          <button class="btn btn-sm btn-primary" data-perm="user" onclick="openUserModal()" title="新增用户（需用户管理权限）">＋ 新增用户</button>
+        </div>
       </div>
-      <div class="warn-box" data-page-node-id="JDuvggElXwZXIuqUfH5OSu">默认包含管理员账号 admin（admin / 123456）。新增用户需填写姓名、角色。导入/生成/提交等操作会写入审计日志。</div>
+      <!-- 当前身份 -->
+      <div class="cur-identity" id="currentIdentity"></div>
+      <div class="warn-box" data-page-node-id="JDuvggElXwZXIuqUfH5OSu">
+        <b>权限怎么生效：</b>角色决定能做什么 —— 没权限的功能按钮会<b>直接禁用</b>（鼠标悬停看原因），函数入口另有一层拦截兜底。
+        <b>角色不能自选</b>：顶栏「角色」只作只读展示，改角色只能在本表（且需用户管理权限）。
+        顶栏「当前用户」<b>随时可切换</b> —— 切换不受权限限制，避免把自己锁在外面。
+        <br><b>范围说明：</b>用户列表保存在<b>本机浏览器</b>，不同电脑各自独立、不互通；因此这里的作用是<b>区分职责 + 防止误操作</b>，并非安全边界。所有写操作仍会记入下方操作日志。
+      </div>
       <div class="result-table-wrap is-resizable" data-page-node-id="OB1vED6QN7zdlQfTIWzf2S">
-        <table class="result-table" id="userTable" style="min-width:900px;" data-page-node-id="2aqcZKS9XMW6sq6BkNiaeO">
+        <table class="result-table" id="userTable" style="min-width:1000px;" data-page-node-id="2aqcZKS9XMW6sq6BkNiaeO">
           <thead data-page-node-id="M29nruGMJrTziMiyzlnaDh">
             <tr data-page-node-id="0gAZ9kbmi2qqbcxQl70t08">
               <th data-page-node-id="VkAxi9ULdMXtzxWi4HxSa4">姓名</th>
               <th data-page-node-id="7NGqeiRwNPnGA0bEBu7DyN">角色</th>
+              <th>权限范围</th>
               <th data-page-node-id="egLuDB3EasHfkkxGDImpSH">创建时间</th>
               <th data-page-node-id="pkXoIlhCqtLPOFNUHcvd77">最后活动</th>
               <th data-page-node-id="3CQGQ3CQq4s2JSs7cYwNzh">操作</th>
@@ -1408,16 +1449,24 @@ tr.release-early-row td { background:#f4faf4 !important; border-bottom:1px dashe
     <div class="form-grid" data-page-node-id="D8bfgktJlS6UUCCmdWzZpS">
       <div class="form-group" data-page-node-id="ygrFHYxHn0nEHkVsVb1our">
         <label data-page-node-id="yxrZLnGfTHmHMR1nWI7MYC">姓名</label>
-        <input type="text" id="newUserName" placeholder="如 张三" data-page-node-id="Ck7A8kuZjptCeIai6UwKbA">
+        <input type="text" id="newUserName" placeholder="如 张三" maxlength="20" data-page-node-id="Ck7A8kuZjptCeIai6UwKbA">
       </div>
       <div class="form-group" data-page-node-id="B7KgYgBklVoHUa3RK3Qsrx">
         <label data-page-node-id="y6wAsFUhmKF9vqeSUB2hHh">角色</label>
-        <select id="newUserRole" data-page-node-id="qVtqFQdLYLVu6k6MNM3jGA">
-          <option value="录入" data-page-node-id="WzULdNfkjq6TIwRl3BaeBP">录入</option>
+        <select id="newUserRole" onchange="renderNewUserPermPreview()" data-page-node-id="qVtqFQdLYLVu6k6MNM3jGA">
           <option value="管理员" data-page-node-id="TvKqJfa7eLs0zkitLLaYki">管理员</option>
+          <option value="录入" data-page-node-id="WzULdNfkjq6TIwRl3BaeBP">录入</option>
           <option value="查看者" data-page-node-id="MrYrnSbH2Hs9n9E5wgLxrR">查看者</option>
         </select>
       </div>
+    </div>
+    <!-- 所选角色的权限预览（实时） -->
+    <div style="margin-top:12px;padding:9px 12px;background:var(--bg-soft);border:1px solid var(--border);border-radius:7px;font-size:12px;line-height:1.85;color:var(--text-secondary);">
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:3px;">该角色可以做什么</div>
+      <div id="newUserPermPreview"></div>
+    </div>
+    <div style="margin-top:8px;font-size:11.5px;color:var(--text-muted);line-height:1.7;">
+      新增后<b>不会</b>自动切换过去；如需以此身份操作，请在顶栏「当前用户」选择。若新增的是「查看者」，管理员可随时在本表改角色。
     </div>
     <div style="margin-top:14px;text-align:right;" data-page-node-id="9hxaSZZwjyHSBIBJVQeYwA">
       <button class="btn btn-primary" onclick="addUser()" data-page-node-id="BzkHD6ChW0gbrt9UdGORvM">添加</button>
@@ -1683,6 +1732,115 @@ function calcEstFbaArrival(rp){
 let importedProducts = {};   // {key: product}
 let results = [];            // [{product, plan, ...}]
 let currentUser = null;      // {name, role}
+
+/* ============================================================
+ * v4.25 角色权限（真拦截）
+ * ------------------------------------------------------------
+ * 前提说明（重要）：本工具是单文件纯前端应用，数据存在本机浏览器 localStorage，
+ *   无法做服务端级别的安全鉴权 —— 懂技术的人改 localStorage 仍可提权。
+ *   所以这里的「权限」定位是【防误操作 + 职责区分】，不是安全边界。
+ * 设计口径：
+ *   · 角色由账号决定，界面上【不可自选】（顶栏角色只读展示，改角色只能在用户管理里，且需 user 权限）
+ *   · 身份切换（顶栏下拉）永远可用 —— 这是防自锁的逃生门，任何角色都能切回管理员
+ *   · 无权限的操作：按钮直接禁用 + hover 说明原因；函数入口再兜一层守卫（防绕过）
+ * ============================================================ */
+const ROLE_CAPS = {
+  '管理员': ['view','export','import','generate','edit','method','sys','user'],
+  '录入':   ['view','export','import','generate','edit'],
+  '查看者': ['view','export']
+};
+const ROLE_ORDER = ['管理员','录入','查看者'];
+const CAP_LABEL = {
+  view:'查看与分析', export:'导出',
+  import:'导入数据', generate:'生成备货方案',
+  edit:'调整备货（数量 / 运输方式 / 出货日期 / 下单量）',
+  method:'运输方式管理', sys:'系统参数与清空数据', user:'用户管理'
+};
+/* 权限摘要用的短标签（表格 / 弹窗预览） */
+const CAP_SHORT = {
+  view:'查看分析', export:'导出', import:'导入数据', generate:'生成方案',
+  edit:'调整备货', method:'运输方式', sys:'系统参数', user:'用户管理'
+};
+const ROLE_DESC = {
+  '管理员': '全部权限：导入 / 生成 / 调整 / 运输方式与系统参数 / 用户管理',
+  '录入':   '可以导入数据、生成方案、调整备货；不能改运输方式、系统参数与用户',
+  '查看者': '只能查看与分析、导出结果；不能导入、生成或做任何修改'
+};
+function can(cap){
+  const u = currentUser || { role: '管理员' };
+  const caps = ROLE_CAPS[u.role] || ROLE_CAPS['管理员'];
+  return caps.indexOf(cap) >= 0;
+}
+/* 函数入口守卫：无权限 → 明确提示并返回 false，调用方 `if(!guard('x')) return;` */
+function guard(cap, actionLabel){
+  if(can(cap)) return true;
+  const u = currentUser || { name:'--', role:'--' };
+  toast(`⛔ 当前身份「${u.name}（${u.role}）」没有「${actionLabel || CAP_LABEL[cap] || cap}」权限`);
+  return false;
+}
+function roleBadgeHtml(role){
+  const cls = role === '管理员' ? 'role-admin' : (role === '录入' ? 'role-entry' : 'role-viewer');
+  return `<span class="role-badge ${cls}">${esc(role || '--')}</span>`;
+}
+/* 按当前身份刷新整个界面的权限态：带 data-perm 的按钮 / 带 data-perm-readonly 的控件 */
+function applyPermissions(){
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    const cap = el.getAttribute('data-perm');
+    const ok = can(cap);
+    if(el.dataset.permBaseDisabled === undefined) el.dataset.permBaseDisabled = el.disabled ? '1' : '';
+    if(el.dataset.permBaseTitle === undefined) el.dataset.permBaseTitle = el.getAttribute('title') || '';
+    if(!ok){
+      el.disabled = true;
+      el.classList.add('perm-denied');
+      el.title = `需要「${CAP_LABEL[cap] || cap}」权限（当前身份：${(currentUser && currentUser.role) || '--'}）` + (el.dataset.permBaseTitle ? '\n' + el.dataset.permBaseTitle : '');
+    } else {
+      if(el.dataset.permBaseDisabled !== '1') el.disabled = false;
+      el.classList.remove('perm-denied');
+      if(el.dataset.permBaseTitle) el.setAttribute('title', el.dataset.permBaseTitle);
+      else el.removeAttribute('title');
+    }
+  });
+  document.querySelectorAll('[data-perm-readonly]').forEach(el => {
+    const cap = el.getAttribute('data-perm-readonly');
+    const ro = !can(cap);
+    if(el.dataset.permBaseTitle === undefined) el.dataset.permBaseTitle = el.getAttribute('title') || '';
+    if(el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') el.disabled = ro;
+    else el.readOnly = ro;
+    el.classList.toggle('perm-readonly', ro);
+    if(ro) el.title = `需要「${CAP_LABEL[cap] || cap}」权限（当前身份：${(currentUser && currentUser.role) || '--'}）`;
+    else if(el.dataset.permBaseTitle) el.setAttribute('title', el.dataset.permBaseTitle);
+    else el.removeAttribute('title');
+  });
+  renderRoleBadge();
+  /* v4.25 运输方式表格是静态渲染的，必须在身份变化时重绘才能反映 method 权限（输入框只读 / 按钮禁用） */
+  renderMethods();
+  renderUsers();
+  renderCurrentIdentity();
+}
+/* 用户管理卡片顶部的「当前身份」摘要 */
+function renderCurrentIdentity(){
+  const el = $('currentIdentity');
+  if(!el) return;
+  const u = currentUser || { name:'--', role:'--' };
+  const caps = ROLE_CAPS[u.role] || [];
+  el.innerHTML = `<div style="flex:1;min-width:0;">
+      <div class="ci-name">
+        <span>${esc(u.name)}</span>${roleBadgeHtml(u.role)}
+        <span class="perm-chip ${u.name === 'admin' ? '' : 'no'}" style="margin:0;">${u.name === 'admin' ? '内置账号' : '自建账号'}</span>
+      </div>
+      <div class="ci-caps">${esc(ROLE_DESC[u.role] || '')}</div>
+      <div class="ci-caps" style="margin-top:2px;">${Object.keys(CAP_SHORT).map(c => `<span class="perm-chip ${caps.indexOf(c) >= 0 ? '' : 'no'}">${esc(CAP_SHORT[c])}</span>`).join('')}</div>
+      <div class="ci-hint">💡 顶栏「当前用户」随时可切换身份（切换不受权限限制）；角色只能在本表修改。</div>
+    </div>`;
+}
+function renderRoleBadge(){
+  const el = $('roleBadge');
+  if(!el) return;
+  const u = currentUser || { role:'--' };
+  el.className = 'role-badge ' + (u.role === '管理员' ? 'role-admin' : (u.role === '录入' ? 'role-entry' : 'role-viewer'));
+  el.textContent = u.role || '--';
+  el.title = ROLE_DESC[u.role] || '';
+}
 let methodConfig = [];       // [{name, pricePerKG, osToFbaDays, domToFbaDays, minBatchQty, note, enabled}]  顺序即优先级；enabled=false 停用（不参与计算）
 let fbaShelfDays = 3;        // FBA上架天数（全局设定），用于计算预计到仓时间
 /* v4.8+ 尾数顺延全局配置：{ enabled, thresholdWeeks, absQty }
@@ -1747,7 +1905,7 @@ function loadAllState(){
   const saved = lsGet(STORAGE_KEYS.CURRENT_USER, 'admin');
   currentUser = users.find(u => u.name === saved) || users[0];
   $('userSelect').value = currentUser.name;
-  $('roleSelect').value = currentUser.role;
+  renderRoleBadge();
   // 加载 FBA 上架天数
   fbaShelfDays = num(lsGet(STORAGE_KEYS.FBA_SHELF_DAYS, 3)) || 3;
   const fbaInput = $('fbaShelfDaysInput');
@@ -1774,6 +1932,8 @@ function loadAllState(){
   releaseOrderWeeks = Math.max(1, Math.min(4, num(lsGet(STORAGE_KEYS.RELEASE_WEEKS, 1)) || 1));
   const relInput = $('releaseOrderWeeksInput');
   if(relInput) relInput.value = releaseOrderWeeks;
+  /* v4.25 身份加载完立即应用权限态（按钮禁用 / 只读控件 / 角色徽章 / 用户表 / 当前身份卡） */
+  applyPermissions();
 }
 function saveProducts(){ lsSet(STORAGE_KEYS.PRODUCTS, importedProducts); }
 function saveUsers(){ lsSet(STORAGE_KEYS.USERS, currentUsersList()); }
@@ -1785,6 +1945,7 @@ function currentUsersList(){ return lsGet(STORAGE_KEYS.USERS, DEFAULT_USERS.slic
  *   ⚠️ 导入日志、导入记录快照、运输方式、用户列表均不删除
  * ============================================================ */
 function clearAllData(){
+  if(!guard('sys','清除数据')) return;
   const productCount = Object.keys(importedProducts || {}).length;
   if(productCount === 0){
     alert('当前没有已导入产品可清除。');
@@ -1851,20 +2012,50 @@ function clearAllData(){
  * ============================================================ */
 function refreshUserSelect(){
   const sel = $('userSelect');
+  if(!sel) return;
   const users = currentUsersList();
   sel.innerHTML = users.map(u => `<option value="${esc(u.name)}">${esc(u.name)}（${esc(u.role)}）</option>`).join('');
   if(currentUser) sel.value = currentUser.name;
 }
+/* v4.25 切换身份 —— 永远允许，不受权限限制（防自锁的逃生门）。
+   切换时刷新「最后活动」时间，并整体重算界面权限态。 */
 function onUserChange(){
-  const name = $('userSelect').value;
+  const sel = $('userSelect');
+  if(!sel) return;
   const users = currentUsersList();
-  currentUser = users.find(u => u.name === name) || users[0];
-  $('roleSelect').value = currentUser.role;
+  const next = users.find(u => u.name === sel.value) || users[0];
+  if(!next) return;
+  const prevName = (currentUser && currentUser.name) || '--';
+  currentUser = next;
+  const row = users.find(u => u.name === next.name);
+  if(row){ row.lastActive = fmtDate(new Date()); lsSet(STORAGE_KEYS.USERS, users); }
   lsSet(STORAGE_KEYS.CURRENT_USER, currentUser.name);
-  renderUsers();
+  refreshUserSelect();
+  applyPermissions();
+  if(prevName !== currentUser.name){
+    addLog({ action: '切换身份', rows: 1, success: 1, fail: 0, note: `${prevName} → ${currentUser.name}（${currentUser.role}）` });
+  }
 }
-function openUserModal(){ $('userModal').classList.add('show'); $('newUserName').value=''; $('newUserRole').value='录入'; $('newUserName').focus(); }
-function closeUserModal(){ $('userModal').classList.remove('show'); }
+function openUserModal(){
+  if(!guard('user')) return;
+  const m = $('userModal');
+  if(!m) return;
+  m.classList.add('show');
+  const n = $('newUserName'); if(n) n.value = '';
+  const r = $('newUserRole'); if(r) r.value = '录入';
+  renderNewUserPermPreview();
+  if(n) n.focus();
+}
+function closeUserModal(){ const m = $('userModal'); if(m) m.classList.remove('show'); }
+/* 新增用户弹窗：所选角色能做什么的实时预览 */
+function renderNewUserPermPreview(){
+  const el = $('newUserPermPreview');
+  if(!el) return;
+  const role = ($('newUserRole') || {}).value || '录入';
+  const caps = ROLE_CAPS[role] || [];
+  el.innerHTML = `<div style="margin-bottom:5px;">${esc(ROLE_DESC[role] || '')}</div>
+    <div>${Object.keys(CAP_SHORT).map(c => `<span class="perm-chip ${caps.indexOf(c) >= 0 ? '' : 'no'}">${esc(CAP_SHORT[c])}</span>`).join('')}</div>`;
+}
 /* v4.20 增：通用 modal 弹出（用于眼睛按钮查看在制在途清单） */
 function showModal(title, bodyHtml, opts){
   const t = $('pipelineModalTitle'); if(t) t.textContent = title;
@@ -1878,38 +2069,133 @@ function showModal(title, bodyHtml, opts){
 }
 function closePipelineModal(){ $('pipelineModal').classList.remove('show'); }
 function addUser(){
+  if(!guard('user')) return;
   const name = $('newUserName').value.trim();
   const role = $('newUserRole').value;
   if(!name){ alert('请输入姓名'); return; }
+  if(name.length > 20){ alert('姓名过长（最多 20 个字符）'); return; }
   const users = currentUsersList();
   if(users.find(u => u.name === name)){ alert('该姓名已存在'); return; }
-  users.push({ name, role, created: fmtDate(new Date()), lastActive: fmtDate(new Date()) });
-  saveUsers();
+  const now = fmtDate(new Date());
+  users.push({ name, role, created: now, lastActive: now });
+  lsSet(STORAGE_KEYS.USERS, users);
   refreshUserSelect();
-  $('userSelect').value = name;
-  onUserChange();
+  applyPermissions();
   closeUserModal();
   addLog({ action: '新增用户', rows: 1, success: 1, fail: 0, note: `${name}（${role}）` });
+  /* 不自动切换到新用户 —— 否则新增一个「查看者」会立刻把自己锁在外面 */
+  toast(`已新增用户「${name}（${role}）」，可在顶栏「当前用户」切换身份`);
 }
-function removeUser(name){
-  if(name === 'admin'){ alert('默认管理员不可删除'); return; }
-  if(!confirm(`确认删除用户「${name}」？`)) return;
-  const users = currentUsersList().filter(u => u.name !== name);
-  saveUsers();
+/* v4.25 用户管理统一用「下标」定位，避免把姓名拼进 onclick 字符串（含引号/特殊字符会失效） */
+function setUserRoleByIndex(i, role){
+  const users = currentUsersList();
+  const u = users[i];
+  if(!u){ return; }
+  if(!can('user')){ toast('⛔ 没有「用户管理」权限'); applyPermissions(); return; }
+  if(u.role === role) return;
+  const adminCount = users.filter(x => x.role === '管理员').length;
+  if(u.role === '管理员' && adminCount <= 1){
+    alert('⚠️ 至少需要保留一名管理员，无法把最后一名管理员改成其它角色。\n\n请先新增一名管理员，再修改该用户的角色。');
+    applyPermissions();
+    return;
+  }
+  const oldRole = u.role;
+  u.role = role;
+  lsSet(STORAGE_KEYS.USERS, users);
+  if(currentUser && currentUser.name === u.name){
+    currentUser.role = role;
+    addLog({ action: '自身角色变更', rows: 1, success: 1, fail: 0, note: `${u.name}：${oldRole} → ${role}` });
+  } else {
+    addLog({ action: '修改角色', rows: 1, success: 1, fail: 0, note: `${u.name}：${oldRole} → ${role}` });
+  }
   refreshUserSelect();
-  onUserChange();
-  addLog({ action: '删除用户', rows: 1, success: 1, fail: 0, note: name });
+  applyPermissions();
+  toast(`已将「${u.name}」的角色改为 ${role}`);
+}
+function removeUserByIndex(i){
+  if(!guard('user')) return;
+  const users = currentUsersList();
+  const u = users[i];
+  if(!u) return;
+  if(currentUser && currentUser.name === u.name){
+    alert('不能删除当前正在使用的身份。\n\n请先在顶栏切换到其它身份，再删除该用户。');
+    return;
+  }
+  const adminCount = users.filter(x => x.role === '管理员').length;
+  if(u.role === '管理员' && adminCount <= 1){
+    alert('⚠️ 至少需要保留一名管理员，无法删除最后一名管理员。');
+    return;
+  }
+  if(!confirm(`确认删除用户「${u.name}」（${u.role}）？\n\n仅影响本机用户列表，已有操作日志会保留。`)) return;
+  users.splice(i, 1);
+  lsSet(STORAGE_KEYS.USERS, users);
+  refreshUserSelect();
+  applyPermissions();
+  addLog({ action: '删除用户', rows: 1, success: 1, fail: 0, note: `${u.name}（${u.role}）` });
+  toast(`已删除用户「${u.name}」`);
+}
+function renameUserByIndex(i){
+  if(!guard('user')) return;
+  const users = currentUsersList();
+  const u = users[i];
+  if(!u) return;
+  const nn = (prompt('请输入新的姓名：', u.name) || '').trim();
+  if(!nn || nn === u.name) return;
+  if(nn.length > 20){ alert('姓名过长（最多 20 个字符）'); return; }
+  if(users.some(x => x.name === nn)){ alert('该姓名已存在'); return; }
+  const oldName = u.name;
+  u.name = nn;
+  lsSet(STORAGE_KEYS.USERS, users);
+  if(currentUser && currentUser.name === oldName){
+    currentUser.name = nn;
+    lsSet(STORAGE_KEYS.CURRENT_USER, nn);
+  }
+  refreshUserSelect();
+  applyPermissions();
+  addLog({ action: '重命名用户', rows: 1, success: 1, fail: 0, note: `${oldName} → ${nn}` });
+  toast(`已重命名为「${nn}」`);
 }
 function renderUsers(){
+  const tbody = $('userTbody');
+  if(!tbody) return;
   const users = currentUsersList();
-  $('userTbody').innerHTML = users.map(u => `
-    <tr>
-      <td>${esc(u.name)}</td>
-      <td>${esc(u.role)}</td>
+  const cnt = $('userCount');
+  if(cnt) cnt.textContent = `共 ${users.length} 个用户`;
+  if(users.length === 0){
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);padding:14px;">暂无用户</td></tr>';
+    return;
+  }
+  const adminCount = users.filter(u => u.role === '管理员').length;
+  const me = (currentUser && currentUser.name) || '';
+  const canUser = can('user');
+  tbody.innerHTML = users.map((u, i) => {
+    const isMe = u.name === me;
+    const lastAdmin = (u.role === '管理员' && adminCount <= 1);
+    /* 角色：有「用户管理」权限 → 可改的下拉；否则只读徽章 */
+    const roleCell = canUser
+      ? `<select class="role-inline-select" onchange="setUserRoleByIndex(${i}, this.value)" title="${lastAdmin ? '最后一名管理员，不可改为其它角色' : '修改该用户角色'}">
+           ${ROLE_ORDER.map(r => `<option value="${esc(r)}" ${u.role === r ? 'selected' : ''} ${(lastAdmin && r !== '管理员') ? 'disabled' : ''}>${esc(r)}</option>`).join('')}
+         </select>`
+      : roleBadgeHtml(u.role);
+    const caps = ROLE_CAPS[u.role] || [];
+    const capCell = Object.keys(CAP_SHORT).map(c =>
+      `<span class="perm-chip ${caps.indexOf(c) >= 0 ? '' : 'no'}">${esc(CAP_SHORT[c])}</span>`).join('');
+    let opCell = '<span style="color:var(--text-muted);font-size:12px;">需用户管理权限</span>';
+    if(canUser){
+      const lockDel = isMe || lastAdmin;
+      const delTip = isMe ? '不能删除当前正在使用的身份' : (lastAdmin ? '至少保留一名管理员' : '删除该用户');
+      opCell = `<button class="btn-link-mini" onclick="renameUserByIndex(${i})" title="修改姓名">重命名</button>`
+        + ` <button class="btn-link-mini danger" onclick="removeUserByIndex(${i})" title="${delTip}" ${lockDel ? 'style="opacity:.38;cursor:not-allowed;text-decoration:none;"' : ''}>删除</button>`;
+    }
+    return `<tr class="${isMe ? 'cur-user-row' : ''}">
+      <td><b>${esc(u.name)}</b>${isMe ? ' <span class="perm-chip">当前身份</span>' : ''}${u.name === 'admin' ? ' <span class="perm-chip">内置</span>' : ''}</td>
+      <td>${roleCell}</td>
+      <td style="line-height:1.95;">${capCell}</td>
       <td>${esc(u.created || '--')}</td>
       <td>${esc(u.lastActive || '--')}</td>
-      <td>${u.name === 'admin' ? '--' : `<button class="btn btn-sm btn-danger" onclick="removeUser('${esc(u.name)}')">删除</button>`}</td>
-    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--text-muted);padding:14px;">暂无用户</td></tr>';
+      <td style="white-space:nowrap;">${opCell}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -1994,6 +2280,7 @@ function resolveRegularMethod(p, methods){
   return out;
 }
 function addMethodRow(){
+  if(!guard('method','运输方式管理')) return;
   const n = methodConfig.length + 1;
   methodConfig.push({
     name: '新方式' + n,
@@ -2008,29 +2295,34 @@ function addMethodRow(){
   saveMethods(); renderMethods();
 }
 function renderMethods(){
-  $('methodTbody').innerHTML = methodConfig.map((m, idx) => {
+  /* v4.25 权限：无「运输方式管理」权限 → 单元格只读、操作按钮禁用 */
+  const canMethod = can('method');
+  const ro = canMethod ? '' : 'disabled title="需要「运输方式管理」权限（当前身份：' + ((currentUser && currentUser.role) || '--') + '）"';
+  const dis = canMethod ? '' : 'disabled';
+  const tb = $('methodTbody');
+  if(tb) tb.innerHTML = methodConfig.map((m, idx) => {
     const on = m.enabled !== false;
     return `
     <tr class="${on ? '' : 'method-disabled'}" id="method-row-${idx}">
       <td style="text-align:center;font-weight:700;color:var(--primary);font-size:14px;">${idx+1}</td>
-      <td><input class="cell-input name-input" value="${esc(m.name)}" placeholder="如 普船35" onchange="methodConfig[${idx}].name=this.value;saveMethods()"></td>
-      <td><input class="cell-input" value="${esc(m.region || '通用')}" placeholder="通用/美国/加拿大" title="线路适用区域：可填 美国/加拿大 等多值（用 / 分隔）；留空或填「通用」= 所有区域可用" onchange="methodConfig[${idx}].region=(this.value||'').trim();saveMethods()"></td>
-      <td><input class="cell-input num-input" type="number" min="0" step="0.1" value="${m.pricePerKG}" placeholder="0.0" onchange="methodConfig[${idx}].pricePerKG=Number(this.value)||0;saveMethods()"></td>
-      <td><input class="cell-input num-input" type="number" min="0" value="${m.osToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].osToFbaDays=Number(this.value)||0;saveMethods()"></td>
-      <td><input class="cell-input num-input" type="number" min="0" value="${m.domToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].domToFbaDays=Number(this.value)||0;saveMethods()"></td>
-      <td><input class="cell-input num-input" type="number" min="1" value="${m.minBatchQty}" placeholder="1" onchange="methodConfig[${idx}].minBatchQty=Math.max(1,Number(this.value)||1);saveMethods()"></td>
+      <td><input class="cell-input name-input" ${ro} value="${esc(m.name)}" placeholder="如 普船35" onchange="methodConfig[${idx}].name=this.value;saveMethods()"></td>
+      <td><input class="cell-input" ${ro} value="${esc(m.region || '通用')}" placeholder="通用/美国/加拿大" title="线路适用区域：可填 美国/加拿大 等多值（用 / 分隔）；留空或填「通用」= 所有区域可用" onchange="methodConfig[${idx}].region=(this.value||'').trim();saveMethods()"></td>
+      <td><input class="cell-input num-input" ${ro} type="number" min="0" step="0.1" value="${m.pricePerKG}" placeholder="0.0" onchange="methodConfig[${idx}].pricePerKG=Number(this.value)||0;saveMethods()"></td>
+      <td><input class="cell-input num-input" ${ro} type="number" min="0" value="${m.osToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].osToFbaDays=Number(this.value)||0;saveMethods()"></td>
+      <td><input class="cell-input num-input" ${ro} type="number" min="0" value="${m.domToFbaDays}" placeholder="0" onchange="methodConfig[${idx}].domToFbaDays=Number(this.value)||0;saveMethods()"></td>
+      <td><input class="cell-input num-input" ${ro} type="number" min="1" value="${m.minBatchQty}" placeholder="1" onchange="methodConfig[${idx}].minBatchQty=Math.max(1,Number(this.value)||1);saveMethods()"></td>
       <td style="text-align:center;">
         <label class="switch" title="${on ? '点击停用：该方式不再参与备货计算（无需删除）' : '点击启用：恢复参与备货计算'}">
-          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleMethodEnabled(${idx}, this.checked)">
+          <input type="checkbox" ${ro} ${on ? 'checked' : ''} onchange="toggleMethodEnabled(${idx}, this.checked)">
           <span class="slider"></span>
         </label>
         <span class="method-state-txt" style="color:${on ? 'var(--success)' : 'var(--text-muted)'};">${on ? '启用' : '停用'}</span>
       </td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-sm btn-outline btn-icon" onclick="sortMethodsUp(${idx})" title="上移提高优先级">↑</button>
-          <button class="btn btn-sm btn-outline btn-icon" onclick="sortMethodsDown(${idx})" title="下移降低优先级">↓</button>
-          <button class="btn btn-sm btn-danger btn-icon" onclick="delMethod(${idx})" title="删除">✕</button>
+          <button class="btn btn-sm btn-outline btn-icon" ${dis} onclick="sortMethodsUp(${idx})" title="上移提高优先级">↑</button>
+          <button class="btn btn-sm btn-outline btn-icon" ${dis} onclick="sortMethodsDown(${idx})" title="下移降低优先级">↓</button>
+          <button class="btn btn-sm btn-danger btn-icon" ${dis} onclick="delMethod(${idx})" title="删除">✕</button>
         </div>
       </td>
     </tr>`;
@@ -2064,6 +2356,7 @@ function renderDetailFilterMethod(){
 }
 /* 启用/停用开关：只改数据并保存，行内同步视觉（不整体重绘，避免打断同页其它编辑） */
 function toggleMethodEnabled(idx, checked){
+  if(!guard('method','运输方式管理')){ renderMethods(); return; }
   if(!methodConfig[idx]) return;
   methodConfig[idx].enabled = checked;
   saveMethods();
@@ -2086,14 +2379,18 @@ function toggleMethodEnabled(idx, checked){
   renderDetailFilterMethod();
 }
 function delMethod(idx){
+  if(!guard('method','运输方式管理')) return;
   if(!confirm('确认删除「'+methodConfig[idx].name+'」？')) return;
   methodConfig.splice(idx,1); saveMethods(); renderMethods();
 }
-function sortMethodsUp(idx){ if(idx<=0)return; const t=methodConfig[idx]; methodConfig[idx]=methodConfig[idx-1]; methodConfig[idx-1]=t; saveMethods(); renderMethods(); }
-function sortMethodsDown(idx){ if(idx>=methodConfig.length-1)return; const t=methodConfig[idx]; methodConfig[idx]=methodConfig[idx+1]; methodConfig[idx+1]=t; saveMethods(); renderMethods(); }
+function sortMethodsUp(idx){
+  if(!guard('method','运输方式管理')) return; if(idx<=0)return; const t=methodConfig[idx]; methodConfig[idx]=methodConfig[idx-1]; methodConfig[idx-1]=t; saveMethods(); renderMethods(); }
+function sortMethodsDown(idx){
+  if(!guard('method','运输方式管理')) return; if(idx>=methodConfig.length-1)return; const t=methodConfig[idx]; methodConfig[idx]=methodConfig[idx+1]; methodConfig[idx+1]=t; saveMethods(); renderMethods(); }
 
 /* FBA上架天数 */
 function onFbaShelfDaysChange(v){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
   fbaShelfDays = Math.max(0, num(v) || 3);
   lsSet(STORAGE_KEYS.FBA_SHELF_DAYS, fbaShelfDays);
   toast('FBA上架天数已更新为 ' + fbaShelfDays + ' 天');
@@ -2104,18 +2401,21 @@ function saveTailDeferCfg(){
   lsSet(STORAGE_KEYS.TAIL_DEFER, tailDeferCfg);
 }
 function onTailDeferToggle(on){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
   tailDeferCfg.enabled = !!on;
   saveTailDeferCfg();
   toast(on ? '尾数顺延已启用（缺口不足阈值时自动顺延）' : '尾数顺延已关闭（缺口再小也照常排本周批次）');
   if(typeof renderMethods === 'function') renderMethods();
 }
 function onTailDeferThresholdChange(v){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
   tailDeferCfg.thresholdWeeks = Math.max(0.25, num(v) || 1);
   saveTailDeferCfg();
   toast('尾数阈值已更新为不足 ' + tailDeferCfg.thresholdWeeks + ' 周需求');
 }
 /* v4.9 绝对数量阈值：缺口 < absQty 套 且 < N×周均需求 才顺延（且关系）；0 = 不启用该门槛 */
 function onTailDeferAbsQtyChange(v){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
   tailDeferCfg.absQty = Math.max(0, num(v) || 0);
   saveTailDeferCfg();
   toast(tailDeferCfg.absQty > 0
@@ -2125,6 +2425,7 @@ function onTailDeferAbsQtyChange(v){
 
 /* v4.17 提前释放订单周数（预放单）：改配置后仅存配置，提示用户重新生成方案生效 */
 function onReleaseOrderWeeksChange(v){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
   releaseOrderWeeks = Math.max(1, Math.min(4, parseInt(v, 10) || 1));
   lsSet(STORAGE_KEYS.RELEASE_WEEKS, releaseOrderWeeks);
   toast('释放订单周数已更新为 ' + releaseOrderWeeks + ' 周（预放单 ' + (releaseOrderWeeks > 1 ? '开启' : '关闭') + '），请点击「🚀 生成备货方案」后生效');
@@ -2187,7 +2488,10 @@ function fcStartBadge(p){
 function fcStartEditor(p){
   const fs = parseForecastStart(p ? p.forecastStartMonth : '');
   const val = fs ? (fs.getFullYear() + '-' + pad2(fs.getMonth()+1)) : '';
-  return `<input type="month" class="cell-date-input" style="width:122px;" value="${val}" min="2000-01" max="2100-12" data-pcode="${esc((p&&p.materialCode)||'')}" onchange="onForecastStartEdit(this)" title="修改后立即重算该产品的备货方案（手动调过的批次量会还原为算法结果）" />`;
+  /* v4.25 权限：临时修正会触发该产品重算（覆盖手工调整），归入「调整备货」能力 */
+  const ok = can('edit');
+  const dis = ok ? '' : `disabled title="需要「调整备货」权限（当前身份：${(currentUser && currentUser.role) || '--'}）"`;
+  return `<input type="month" class="cell-date-input" ${dis} style="width:122px;" value="${val}" min="2000-01" max="2100-12" data-pcode="${esc((p&&p.materialCode)||'')}" onchange="onForecastStartEdit(this)" title="${ok ? '修改后立即重算该产品的备货方案（手动调过的批次量会还原为算法结果）' : '需要「调整备货」权限'}${ok ? '' : ''}" />`;
 }
 /* v4.21 预测起始月份缺失/无法识别 → 详情头部红色警告条（解释周需求为何整体被推迟）
    v4.22 改为引导「修正导入文件后重新导入」为主，详情内临时修正仅作备选 */
@@ -2302,6 +2606,7 @@ function onForecastStartEdit(input){
 }
 /* v4.21 单产品重算 + 全量刷新（详情内修正数据后即时生效，无需整批重新生成） */
 function replanOneProduct(pcode){
+  if(!guard('edit','调整备货')) return;
   const idx = results.findIndex(r => r && r.p && (r.p.materialCode||'') === pcode);
   if(idx < 0){ renderProductList(); return; }
   const key = Object.keys(importedProducts).find(k => (importedProducts[k].materialCode||'') === pcode);
@@ -3035,6 +3340,7 @@ function downloadTemplate(){
 }
 
 function importXlsx(event){
+  if(!guard('import','导入产品')){ if(event&&event.target) event.target.value=''; return; }
   const file = event.target.files[0]; if(!file) return;
   lastImportFileName = file.name;
   const reader = new FileReader();
@@ -3148,6 +3454,7 @@ function _diffWeeksFromToday(targetDate){
 }
 
 function importPipelineXlsx(event){
+  if(!guard('import','导入在途/在制')){ if(event&&event.target) event.target.value=''; return; }
   const file = event.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
@@ -3395,6 +3702,7 @@ function updatePipelineDataSummary(){
    解决问题：测试两种场景（导入 vs 不导入）时，旧数据残留导致 planProduct 两次结果一样——
    用户以为"不导入"=空，实际 pipelineTickets 仍有上次导入的数据。*/
 function clearAllPipelineData(){
+  if(!guard('sys','清空在制在途')) return;
   let ticketCount = 0, prodCount = 0;
   Object.values(importedProducts).forEach(p => {
     if(Array.isArray(p.pipelineTickets) && p.pipelineTickets.length){
@@ -3508,6 +3816,7 @@ function viewPipelineTickets(){
 }
 /* 删除单条 pipelineTickets（多票导入/手填） */
 function deletePipelineTicket(pcode, idx){
+  if(!guard('edit','调整备货')) return;
   if(!confirm(`确认删除「${pcode}」第 ${idx+1} 条在途/在制票据？`)) return;
   const p = importedProducts[pcode];
   if(!p || !Array.isArray(p.pipelineTickets)) return;
@@ -3521,6 +3830,7 @@ function deletePipelineTicket(pcode, idx){
 }
 /* 清 0 单字段（osInTransit/domInTransit/domInProd） */
 function clearSinglePipelineField(pcode, type){
+  if(!guard('edit','调整备货')) return;
   if(!confirm(`确认清 0「${pcode}」的「${({osInTransit:'海外仓在途', domInTransit:'国内在途', domInProd:'在制未交'})[type]||type}」单字段？`)) return;
   const p = importedProducts[pcode];
   if(!p) return;
@@ -4135,6 +4445,7 @@ function openDetailByKey(key){
  * 生成方案
  * ============================================================ */
 function generatePlan(){
+  if(!guard('generate','生成备货方案')) return;
   if(Object.keys(importedProducts).length === 0){ alert('请先导入产品'); return; }
   $('progressOverlay').classList.add('show');
   $('progressTitle').textContent = '正在按模式3算法计算备货方案...';
@@ -4186,6 +4497,7 @@ function renderMetricCards(){
 }
 
 function renderResultTable(){
+  const canEdit = can('edit');   /* v4.25 权限：决定行内可编辑控件是否放行 */
   if(results.length === 0){
     $('resultTbody').innerHTML = '<tr><td colspan="28" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
     $('resultTfoot').innerHTML = '';
@@ -4339,7 +4651,7 @@ function renderResultTable(){
       <td class="cell-num">${fmt(targetInv)}</td>
       <td class="cell-num cell-plan">${fmt(r.rec)}</td>
       <td class="cell-num cell-plan">${fmt(r.actualRec)}</td>
-      <td class="cell-num cell-plan cell-note" contenteditable="true" data-orig-thisweek="${thisWeekQty}" data-pcode="${esc(p.materialCode||'')}" onblur="onResultThisWeekEdit(this)" style="font-weight:600;color:var(--primary);cursor:text;" title="点击可直接修改本周下单量">${thisWeekQty > 0 ? fmt(thisWeekQty) : '—'}</td>
+      <td class="cell-num cell-plan cell-note${canEdit ? '' : ' cell-locked'}" contenteditable="${canEdit ? 'true' : 'false'}" data-orig-thisweek="${thisWeekQty}" data-pcode="${esc(p.materialCode||'')}" onblur="onResultThisWeekEdit(this)" style="font-weight:600;color:var(--primary);${canEdit ? 'cursor:text;' : ''}" title="${canEdit ? '点击可直接修改本周下单量' : '需要「调整备货」权限（当前身份：' + ((currentUser && currentUser.role) || '--') + '）'}">${thisWeekQty > 0 ? fmt(thisWeekQty) : '—'}</td>
       <td class="cell-num">${r.sellableWeeks}周</td>
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
@@ -4536,6 +4848,7 @@ function ensureThisWeekBatch(r, w, newVal){
 }
 
 function onWeekDetailEdit(td){
+  if(!guard('edit','调整备货')) return;
   const field = td.dataset.editField;
   const pcode = td.dataset.pcode;
   const w = parseInt(td.dataset.w, 10);
@@ -4622,6 +4935,7 @@ function onWeekDetailPending(td){
 
 /* 确认更改：将 pending 值写入 replenishments，并更新到货列 */
 function confirmWeekEdits(btn){
+  if(!guard('edit','调整备货')) return;
   /* 调整4：按钮移到 section-label 右上角后，按钮本身携带 data-pcode 与 .week-confirm-bar class */
   const pcode = btn.dataset.pcode || (btn.closest('.week-confirm-bar') && btn.closest('.week-confirm-bar').dataset.pcode);
   if(!pcode) return;
@@ -4857,6 +5171,7 @@ function clearThisWeekOrder(origIdx){
 }
 
 function renderOrderTable(){
+  const canEdit = can('edit');   /* v4.25 权限：决定批次数量/日期/方式是否可编辑 */
   const allOrders = [];
   results.forEach(r => {
     if(r.noStock || r.replenishments.length === 0) return;
@@ -5454,6 +5769,7 @@ function renderDetailTable(){
 
 // 懒加载：点击时才生成周次计划表 + 批次表
 function buildDetailContent(r){
+  const canEdit = can('edit');   /* v4.25 权限：决定批次数量/日期/方式是否可编辑 */
   const p = r.p;
   /* v4.12 周次计划方式下拉 = 按产品区域过滤 */
   const methods = methodsForProduct(r.p);
@@ -5578,13 +5894,13 @@ function buildDetailContent(r){
         <td>${esc(p.materialCode||'--')}</td>
         <td>${esc(p.materialName||'--')}</td>
         <td>${esc(p.specCode||'--')}</td>
-        <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="cursor:text;" title="点击可直接修改该批数量，联动周次计划 / 备货下单表">${fmt(rp.amount)}</td>
-        <td><input type="date" value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
-        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
+        <td class="cell-num cell-plan cell-note${canEdit ? '' : ' cell-locked'}" contenteditable="${canEdit ? 'true' : 'false'}" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="${canEdit ? 'cursor:text;' : ''}" title="${canEdit ? '点击可直接修改该批数量，联动周次计划 / 备货下单表' : '需要「调整备货」权限（当前身份：' + ((currentUser && currentUser.role) || '--') + '）'}">${fmt(rp.amount)}</td>
+        <td><input type="date" ${canEdit ? '' : 'disabled '}value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
+        <td><select ${canEdit ? '' : 'disabled '}onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
         <td class="cell-num">${esc(p.site||'--')}</td>
         <td class="cell-num">${esc(p.region||'--')}</td>
-        <td><input type="text" value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
-        <td><input type="text" value="${noteVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'note')" data-pcode="${esc(p.materialCode||'')}" placeholder="可填备注..." class="cell-text-input" style="width:130px;" /></td>
+        <td><input type="text" ${canEdit ? '' : 'disabled '}value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
+        <td><input type="text" ${canEdit ? '' : 'disabled '}value="${noteVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'note')" data-pcode="${esc(p.materialCode||'')}" placeholder="可填备注..." class="cell-text-input" style="width:130px;" /></td>
         <td class="cell-num"><span class="status-pill ${status.cls}">${status.label}</span></td>
       </tr>`;
     });
@@ -6083,6 +6399,7 @@ function openDetail(idx){
 }
 
 function openDetailBuild(r, p, methods){
+  const canEdit = can('edit');   /* v4.25 权限：决定批次数量/日期/方式是否可编辑 */
   /* 调整1：规格型号与编码名称同色（去掉 chip 样式与 emoji） */
   const specBadge = $('detailSpecBadge');
   if(specBadge){
@@ -6405,13 +6722,13 @@ function openDetailBuild(r, p, methods){
         <td>${esc(p.materialCode||'--')}</td>
         <td>${esc(p.materialName||'--')}</td>
         <td>${esc(p.specCode||'--')}</td>
-        <td class="cell-num cell-plan cell-note" contenteditable="true" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="cursor:text;" title="点击可直接修改该批数量，联动周次计划 / 备货下单表">${fmt(rp.amount)}</td>
-        <td><input type="date" value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
-        <td><select onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
+        <td class="cell-num cell-plan cell-note${canEdit ? '' : ' cell-locked'}" contenteditable="${canEdit ? 'true' : 'false'}" onblur="onBatchQtyEdit(this, ${bidx})" data-pcode="${esc(p.materialCode||'')}" style="${canEdit ? 'cursor:text;' : ''}" title="${canEdit ? '点击可直接修改该批数量，联动周次计划 / 备货下单表' : '需要「调整备货」权限（当前身份：' + ((currentUser && currentUser.role) || '--') + '）'}">${fmt(rp.amount)}</td>
+        <td><input type="date" ${canEdit ? '' : 'disabled '}value="${esc(rp.arriveDate)}" onchange="onBatchFieldEdit(this, ${bidx}, 'arriveDate')" data-pcode="${esc(p.materialCode||'')}" class="cell-date-input" style="width:96px;" /></td>
+        <td><select ${canEdit ? '' : 'disabled '}onchange="onBatchFieldEdit(this, ${bidx}, 'method')" data-pcode="${esc(p.materialCode||'')}" class="cell-method-select" style="width:90px;"><option value="">--</option>${(rp.method && rp.method.name && !batchMethods.some(_m=>_m.name===rp.method.name)) ? `<option value="${esc(rp.method.name)}" selected>${esc(rp.method.name)}</option>` : ''}${batchMethods.map(m=>`<option value="${esc(m.name)}" ${rp.method && rp.method.name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}</select></td>
         <td class="cell-num">${esc(p.site||'--')}</td>
         <td class="cell-num">${esc(p.region||'--')}</td>
-        <td><input type="text" value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
-        <td><input type="text" value="${noteVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'note')" data-pcode="${esc(p.materialCode||'')}" placeholder="可填备注..." class="cell-text-input" style="width:130px;" /></td>
+        <td><input type="text" ${canEdit ? '' : 'disabled '}value="${destVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'destWarehouse')" data-pcode="${esc(p.materialCode||'')}" placeholder="可改" class="cell-text-input" style="width:95px;" /></td>
+        <td><input type="text" ${canEdit ? '' : 'disabled '}value="${noteVal}" onblur="onBatchFieldEdit(this, ${bidx}, 'note')" data-pcode="${esc(p.materialCode||'')}" placeholder="可填备注..." class="cell-text-input" style="width:130px;" /></td>
         <td class="cell-num"><span class="status-pill ${status.cls}">${status.label}</span></td>
       </tr>`;
     });
