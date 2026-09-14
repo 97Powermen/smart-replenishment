@@ -4159,7 +4159,11 @@ function applyPipelineRows(rows, fileName, sheetName, sheetCount, header){
     renderProductList();
     renderPerspective();
     updatePipelineDataSummary();   /* 2026-09-02 增：导入后实时刷新当前在制在制数据摘要 */
-    addLog({ action: '导入在途/在制', rows: rows.length-1, success, fail, note: file.name });
+    /* v4.31 修：此处原为 file.name —— v4.27 把本函数从 importPipelineXlsx 里拆出来时，
+       file 是「外部函数」的局部变量，拆出后已不在作用域。抛 ReferenceError 且发生在
+       saveProducts() 之后 → 数据其实已落库，但汇总弹框被跳过、还弹出「导入失败: file is not defined」。
+       本函数作用域内只有参数 fileName，统一用它。 */
+    addLog({ action: '导入在途/在制', rows: rows.length-1, success, fail, note: fileName /*__MARK_431_PIPELINEFILE__*/ });
 
     const stats = { domInTransit:0, domInProd:0, osInTransit:0 };
     Object.values(importedProducts).forEach(p => {
