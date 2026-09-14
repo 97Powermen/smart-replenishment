@@ -477,6 +477,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
 #productTable.prod-fc-collapsed .prod-fc-col { display: none; }
 #productTable thead th.prod-fc-col { background: #f1f5f9; color: #475569; }
 #productTable tbody td.prod-fc-col { background: #fafcfd; }
+/* v4.30 MARK_V430：两张结果表的「月均需求」也可展开导入分月预测 M0~M5（默认折叠，与备货清单同款显式类方案） */
+#resultTable.res-fc-collapsed .res-fc-col { display: none; }
+#detailTable.det-fc-collapsed .det-fc-col { display: none; }
+#resultTable thead th.res-fc-col { background: #f1f5f9; color: #475569; }
+#detailTable thead th.det-fc-col { background: #f1f5f9; color: #475569; }
+#resultTable tbody td.res-fc-col { background: #fafcfd; }
+#detailTable tbody td.det-fc-col { background: #fafcfd; }
 /*__MARK_V428_PRODFC__*/
 
 /* Sellable-months cell */
@@ -955,7 +962,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <button class="btn btn-sm btn-outline" style="align-self:flex-end;" onclick="clearResultFilters()" data-page-node-id="4IEZb2wBtVjiR4qN28TCez">🔄 清空筛选</button>
       </div>
       <div class="result-table-wrap is-resizable" data-page-node-id="Uj2ac6b5Olv17UICdL3BUM">
-        <table class="result-table" id="resultTable" style="min-width:2620px;" data-page-node-id="BPdbrN1ML6Cf0niC7KAjZD">
+        <table class="result-table res-fc-collapsed" id="resultTable" style="min-width:2740px;" data-page-node-id="BPdbrN1ML6Cf0niC7KAjZD">
           <thead data-page-node-id="1EHDYU2qCf03UH00vkm3QD">
             <tr data-page-node-id="GvUDEz0XfXt5drLXxPVELU">
               <th data-page-node-id="BxlmKnaRBM1cxYgRXrVbgl">#</th>
@@ -971,7 +978,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th data-page-node-id="TALOddpXw2K01QE5ii1x0e">近四周平均销量</th>
               <th data-page-node-id="AZN21LKO10egpwvNTOBjcO">近30天销量</th>
               <th data-page-node-id="1bl445ccyB8y2YJrMmrbom">周均需求</th>
-              /*__MARK_V429_RES_MONTH__*/<th style="width:95px;" title="导入预测（fcM0~M5）均值口径，与备货清单 / 明细页同源；不乘达成率系数 —— 修正后月均看「周均需求 × 4.33」，本列始终显示导入原值">月均需求</th>
+              /*__MARK_V429_RES_MONTH__*/<th style="width:95px;" title="导入预测（fcM0~M5）均值口径，与备货清单 / 明细页同源；不乘达成率系数 —— 修正后月均看「周均需求 × 4.33」，本列始终显示导入原值">月均需求<button type="button" class="pipe-fold-btn" id="resFcBtn" onclick="toggleResFcCols()" title="展开/折叠导入的分月预测（M0~M5，对应导入模板「月预测M0~M5」）">▸</button></th>
+              <th class="res-fc-col" id="resFcTh0" title="导入模板「月预测M0」">M0</th>
+              <th class="res-fc-col" id="resFcTh1" title="导入模板「月预测M1」">M1</th>
+              <th class="res-fc-col" id="resFcTh2" title="导入模板「月预测M2」">M2</th>
+              <th class="res-fc-col" id="resFcTh3" title="导入模板「月预测M3」">M3</th>
+              <th class="res-fc-col" id="resFcTh4" title="导入模板「月预测M4」">M4</th>
+              <th class="res-fc-col" id="resFcTh5" title="导入模板「月预测M5」">M5</th>
               <th style="width:110px;" title="达成率 = 近四周平均周销量 ÷ 原始周均需求；低于阈值时系统按档给需求系数 k，周需求/安全库存/批次量/建议下单全链路按修正后需求计算。点击表头右上方「⚖ 达成率调节」胶囊可打开清单撤销" data-page-node-id="ResAchTh">达成率 / 调节</th>
               <th data-page-node-id="PShnlSLEB92LtLFzymHO88">FBA库存<button type="button" class="pipe-fold-btn" id="pipeFoldBtn" onclick="togglePipeCols()" title="展开/折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交）" data-page-node-id="nt6240GWhOEZUbMbtGET1b">▾</button></th>
               <th class="fold-col" data-page-node-id="gihk5weNOmjIIlcsED44KC">海外仓库存</th>
@@ -1082,7 +1095,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         </div>
       </div>
       <div class="result-table-wrap is-resizable" data-page-node-id="JpCFmZTpGLKju2K9lxmmVl">
-        <table class="result-table" id="detailTable" style="min-width:1650px;" data-page-node-id="BvF13Q1PvtUcrMW8kxuHsg">
+        <table class="result-table det-fc-collapsed" id="detailTable" style="min-width:1770px;" data-page-node-id="BvF13Q1PvtUcrMW8kxuHsg">
           <thead data-page-node-id="Qgwsfb6osQIl8LHhUWjvDN">
             <tr data-page-node-id="C3e617Rc3DYF7cEAcWGCkO">
               <th style="width:42px;" data-page-node-id="CEAHUN7fav2XUDhgZyyjbi">#</th>
@@ -1094,7 +1107,13 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th style="width:60px;text-align:left;" data-page-node-id="VbGWznYHo7GZJybbpt4q43">梯队</th>
               <th style="width:95px;" data-page-node-id="OhO5Ro2QWyaqvx9rC44LKl">最新周销量</th>
               <th style="width:95px;" data-page-node-id="RKf0XuUE81GtDMCcvMqJl8">周均需求</th>
-              <th style="width:95px;" data-page-node-id="pikVenWZPwxdyfMtbbrbO2">月均需求</th>
+              <th style="width:95px;" data-page-node-id="pikVenWZPwxdyfMtbbrbO2">月均需求<button type="button" class="pipe-fold-btn" id="detFcBtn" onclick="toggleDetFcCols()" title="展开/折叠导入的分月预测（M0~M5，对应导入模板「月预测M0~M5」）">▸</button></th>
+              <th class="det-fc-col" id="detFcTh0" title="导入模板「月预测M0」">M0</th>
+              <th class="det-fc-col" id="detFcTh1" title="导入模板「月预测M1」">M1</th>
+              <th class="det-fc-col" id="detFcTh2" title="导入模板「月预测M2」">M2</th>
+              <th class="det-fc-col" id="detFcTh3" title="导入模板「月预测M3」">M3</th>
+              <th class="det-fc-col" id="detFcTh4" title="导入模板「月预测M4」">M4</th>
+              <th class="det-fc-col" id="detFcTh5" title="导入模板「月预测M5」">M5</th>
               <th style="width:95px;" data-page-node-id="BPxs6ItFDDfyEZQmeWhedv">最新周达成</th>
               <th style="width:118px;" title="近四周达成 = 近四周平均周销量 ÷ 原始周均需求（达成率调节就用这个口径）；达标即按档给需求系数 k，全链路按修正后需求计算">近四周达成 / 调节</th>
               <th style="width:95px;" data-page-node-id="Sr5Y6UmXeodHFRSZ3tZGUl">含在制总数</th>
@@ -4987,18 +5006,20 @@ function updateProductFcBtn(){
   const t = $('productTable'), b = $('prodFcBtn');
   if(t && b) b.textContent = t.classList.contains('prod-fc-collapsed') ? '▸' : '▾';
 }
-/* 列头月份：当前产品集预测起始月一致且可识别 → 显示 YY-MM；否则回退 M0~M5（绝不静默猜） */
-function renderProductFcHead(list){
+/* 列头月份：当前产品集预测起始月一致且可识别 → 显示 YY-MM；否则回退 M0~M5（绝不静默猜）。
+   通用实现：prefix = th 的 id 前缀（prodFcTh / resFcTh / detFcTh）；list 元素兼容 {p:产品} 或产品对象 */
+function renderFcHead(prefix, list){
   const arr = Array.isArray(list) ? list : Object.values(importedProducts);
   let base = null, ok = arr.length > 0;
-  for(const _p of arr){
+  for(const _x of arr){
+    const _p = (_x && _x.p) ? _x.p : (_x && _x.r && _x.r.p) ? _x.r.p : _x;
     const d = parseForecastStart(_p && _p.forecastStartMonth);
     if(!d){ ok = false; break; }
     if(!base) base = d;
     else if(d.getFullYear() !== base.getFullYear() || d.getMonth() !== base.getMonth()){ ok = false; break; }
   }
   for(let i = 0; i < 6; i++){
-    const th = $('prodFcTh' + i);
+    const th = $(prefix + i);
     if(!th) continue;
     if(ok && base){
       const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
@@ -5009,6 +5030,28 @@ function renderProductFcHead(list){
       th.title = '导入模板「月预测M' + i + '」= 预测起始月起第 ' + (i + 1) + ' 个月（当前产品起始月不一致或未填，故不显示具体月份）';
     }
   }
+}
+function renderProductFcHead(list){ renderFcHead('prodFcTh', list); }
+function renderResFcHead(list){ renderFcHead('resFcTh', list); }
+function renderDetFcHead(list){ renderFcHead('detFcTh', list); }
+/* v4.30：两张结果表的「月均需求」也可展开 M0~M5（与备货清单同款交互，各自独立折叠状态） */
+function toggleResFcCols(){
+  const t = $('resultTable'); if(!t) return;
+  t.classList.toggle('res-fc-collapsed');
+  updateResFcBtn();
+}
+function updateResFcBtn(){
+  const t = $('resultTable'), b = $('resFcBtn');
+  if(t && b) b.textContent = t.classList.contains('res-fc-collapsed') ? '▸' : '▾';
+}
+function toggleDetFcCols(){
+  const t = $('detailTable'); if(!t) return;
+  t.classList.toggle('det-fc-collapsed');
+  updateDetFcBtn();
+}
+function updateDetFcBtn(){
+  const t = $('detailTable'), b = $('detFcBtn');
+  if(t && b) b.textContent = t.classList.contains('det-fc-collapsed') ? '▸' : '▾';
 }
 
 function openDetailByKey(key){
@@ -5075,7 +5118,7 @@ function renderMetricCards(){
 function renderResultTable(){
   const canEdit = can('edit');   /* v4.25 权限：决定行内可编辑控件是否放行 */
   if(results.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="30" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="36" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「生成备货方案」。</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     return;
@@ -5124,7 +5167,7 @@ function renderResultTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    $('resultTbody').innerHTML = '<tr><td colspan="30" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    $('resultTbody').innerHTML = '<tr><td colspan="36" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     $('resultTfoot').innerHTML = '';
     const rb = $('resultPageBar'); if(rb) rb.innerHTML = '';
     renderAdjustedCount(); renderAchieveCount();
@@ -5137,6 +5180,7 @@ function renderResultTable(){
   let totalRec=0, totalActual=0, totalStockout=0, totalThisWeekRec=0;
   let totalFBA=0, totalOS=0, totalDivert=0, totalOSTr=0, totalDomT=0, totalDomP=0, totalWithProd=0;
   let totalCurSales=0, totalLast4=0, totalLast30=0, totalAvgDemand=0, totalMonthAvg=0;   /* v4.29 月均需求合计（monthlyAvgImport 同口径） */
+  let totalMonthFc=[0,0,0,0,0,0];   /* v4.30 结果表 M0~M5 分月合计 */
   let totalAchTuned=0, totalAchStop=0;   // v4.26 达成率调节：已调节产品数 / 其中停备数  // 2026-09-09 增 totalLast30：近30天销量合计（last4WeeksSales÷7×30 之累计）
   filtered.forEach((item, idx) => {
     const r = item.r;
@@ -5144,6 +5188,7 @@ function renderResultTable(){
     const tier = p.priorityTier || '99';
     totalRec += r.rec; totalActual += r.actualRec; totalStockout += r.stockoutWeeks;
     totalCurSales += num(p.currentWeekSales); totalLast4 += num(p.last4WeeksSales); totalLast30 += Math.round(num(p.last4WeeksSales) / 7 * 30); totalAvgDemand += num(r.avgWeeklyDemand); totalMonthAvg += num(monthlyAvgImport(r.p));
+    for(let _fi=0; _fi<6; _fi++) totalMonthFc[_fi] += num(p['fcM' + _fi]);
     if(num(r.achieveK) !== 1) totalAchTuned++;
     if(r.achieveStop) totalAchStop++;
     /* 本周下单量：本次放单窗口（orderWeek < 释放周数）的批次合计 —— v4.17 预放单后含未来 N-1 周的提前释放批 */
@@ -5232,6 +5277,12 @@ function renderResultTable(){
       <td class="cell-num" title="近四周平均销量 ÷ 7 × 30（按近期实际销售速度折算的月销量）">${fmt(Math.round(num(p.last4WeeksSales) / 7 * 30))}</td>
       <td class="cell-num">${fmt(r.avgWeeklyDemand.toFixed(1))}${achieveChipHtml(r)}</td>
       <td class="cell-num" title="导入预测 fcM0~M5 均值（与备货清单/明细页同口径），不乘达成率系数">${fmt(monthlyAvgImport(r.p))}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM0)}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM1)}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM2)}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM3)}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM4)}</td>
+      <td class="cell-num res-fc-col">${fmt(p.fcM5)}</td>
       <td class="cell-num">${achieveRateCellHtml(r)}</td>
       <td class="cell-num">${fmt(fbaV)}</td>
       <td class="cell-num fold-col">${fmt(osStockV)}</td>
@@ -5248,7 +5299,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="30" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="30" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="30" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="36" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="36" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="36" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -5258,8 +5309,14 @@ function renderResultTable(){
     <td class="cell-num" title="近四周平均销量合计 ÷ 7 × 30（按近期实际销售速度折算的月销量合计）">${fmt(totalLast30)}</td>
     <td class="cell-num">${fmt(totalAvgDemand.toFixed(1))}</td>
     <td class="cell-num" title="导入预测月均合计（monthlyAvgImport 口径）">${fmt(totalMonthAvg)}</td>
-    <td class="cell-num">${fmt(totalFBA)}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[0])}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[1])}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[2])}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[3])}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[4])}</td>
+    <td class="cell-num res-fc-col">${fmt(totalMonthFc[5])}</td>
     <td class="cell-num" title="已按达成率调节的产品数（含停备）；点上方「⚖ 达成率调节」胶囊可看清单">${totalAchTuned > 0 ? ('已调节 ' + totalAchTuned + (totalAchStop > 0 ? '（停备 ' + totalAchStop + '）' : '')) : '—'}</td>
+    <td class="cell-num">${fmt(totalFBA)}</td>
     <td class="cell-num fold-col">${fmt(totalOS)}</td>
     <td class="cell-num fold-col">${fmt(totalDivert)}</td>
     <td class="cell-num fold-col">${fmt(totalOSTr)}</td>
@@ -5276,6 +5333,7 @@ function renderResultTable(){
   </tr>`;
   const rb = $('resultPageBar'); if(rb) rb.innerHTML = paginationBar(filtered.length, curPage, 'result');
   renderAdjustedCount();   // v4.24 主表「已调整」计数胶囊同步
+  renderResFcHead(filtered);   // v4.30 结果表 M0~M5 列头月份（起始月一致时显示 YY-MM）
 }
 
 function toggleResultStock(key, btn){
@@ -6364,7 +6422,7 @@ function renderDetailTable(){
   const tbody = $('detailTbody');
   if(!tbody) return;
   if(results.length === 0){
-    tbody.innerHTML = '<tr><td colspan="18" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「🚀 生成备货方案」。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" style="color:var(--text-muted);text-align:center;padding:24px;">尚未生成方案，请先点击「🚀 生成备货方案」。</td></tr>';
     const dtf0 = $('detailTfoot'); if(dtf0) dtf0.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品';
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
@@ -6447,7 +6505,7 @@ function renderDetailTable(){
     if(cmp) filtered.sort(cmp);
   }
   if(filtered.length === 0){
-    tbody.innerHTML = '<tr><td colspan="18" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" style="color:var(--text-muted);text-align:center;padding:24px;">无匹配筛选条件的产品</td></tr>';
     const dtf1 = $('detailTfoot'); if(dtf1) dtf1.innerHTML = '';
     const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 0 个产品（筛选后）/ 总 ' + results.length;
     const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = '';
@@ -6456,6 +6514,7 @@ function renderDetailTable(){
   }
   /* 2026-09-03 合计行：遍历全量 filtered（含跨页），与 body 单元格同口径累计 */
   let tCurSales = 0, tAvgDemand = 0, tMonthAvg = 0, tWithProd = 0, tRec = 0, tThisWeek = 0, tStockout = 0;
+  let tMonthFc = [0,0,0,0,0,0];   /* v4.30 明细表 M0~M5 分月合计 */
   let tAchTuned = 0, tAchStop = 0;   // v4.26 明细合计行：已按达成率调节 / 其中停备
   filtered.forEach(({ r }) => {
     const p = r.p;
@@ -6475,6 +6534,7 @@ function renderDetailTable(){
     tCurSales += num(p.currentWeekSales);
     tAvgDemand += wkDemand;
     tMonthAvg += monthAvg;
+    for(let _fi=0; _fi<6; _fi++) tMonthFc[_fi] += num(p['fcM' + _fi]);
     tWithProd += fbaV + osV + divertV + osInV + domT + domP;
     tRec += num(r.actualRec);
     tThisWeek += (r.replenishments || []).filter(rp => isRelOrder(rp.orderWeek)).reduce((s, rp) => s + num(rp.amount), 0);
@@ -6548,6 +6608,12 @@ function renderDetailTable(){
       <td class="cell-num">${fmt(curWeekSales)}</td>
       <td class="cell-num">${fmt(weeklyDemand.toFixed(1))}${achieveChipHtml(r)}</td>
       <td class="cell-num">${fmt(monthlyForecast)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM0)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM1)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM2)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM3)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM4)}</td>
+      <td class="cell-num det-fc-col">${fmt(p.fcM5)}</td>
       <td class="cell-num ${rateCls}" title="最新周销量 ${fmt(curWeekSales)} ÷ 周均需求 ${fmt(rawWkDmd.toFixed(1))}">${rateTxt}</td>
       <td class="cell-num">${achieveRateCellHtml(r)}</td>
       <td class="cell-num">${fmt(withProdTotal)}</td>
@@ -6561,7 +6627,7 @@ function renderDetailTable(){
       </td>
     </tr>
     <tr id="${detailId}" class="stock-detail-row" data-loaded="0" style="display:none;">
-      <td colspan="18" style="padding:14px 18px;">
+      <td colspan="24" style="padding:14px 18px;">
         <span style="color:var(--text-muted);font-size:13px;">⏳ 加载中...</span>
       </td>
     </tr>`;
@@ -6574,6 +6640,12 @@ function renderDetailTable(){
       <td class="cell-num">${fmt(tCurSales)}</td>
       <td class="cell-num">${fmt(tAvgDemand.toFixed(1))}</td>
       <td class="cell-num">${fmt(tMonthAvg)}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[0])}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[1])}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[2])}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[3])}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[4])}</td>
+      <td class="cell-num det-fc-col">${fmt(tMonthFc[5])}</td>
       <td>--</td>
       <td class="cell-num" title="已按达成率调节的产品数（含停备）">${tAchTuned > 0 ? ('已调节 ' + tAchTuned + (tAchStop > 0 ? '（停备 ' + tAchStop + '）' : '')) : '—'}</td>
       <td class="cell-num">${fmt(tWithProd)}</td>
@@ -6587,6 +6659,7 @@ function renderDetailTable(){
   const cnt = $('detailCount'); if(cnt) cnt.textContent = '共 ' + filtered.length + ' 个产品（筛选后）/ 总 ' + results.length;
   renderAdjustedCount();   // v4.23 头部「✏️ 已调整 N / 总数」胶囊
   renderAchieveCount();    // v4.26 头部「⚖ 达成率调节 N / 总数」胶囊
+  renderDetFcHead(filtered);   // v4.30 明细表 M0~M5 列头月份
   const dpb = $('detailPageBar'); if(dpb) dpb.innerHTML = paginationBar(filtered.length, curPage, 'detail');
 }
 
