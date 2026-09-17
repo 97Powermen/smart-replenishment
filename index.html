@@ -634,7 +634,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="icon" data-page-node-id="4EEjVCYOILncf9RJZ9huzi">🕓</div>
       <h2 data-page-node-id="2BXa5FDDkhT6GoU1r94Syn">尾数顺延</h2>
     </div>
-    <div class="warn-box" data-page-node-id="ay3mZ1EqQMoWFMXdC6QKPL">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b data-page-node-id="wrYVguEGixoC3YzVYyFcQ6">顺延一两周</b>、等缺口累积足够后一次性集中下单。<b data-page-node-id="baUKzVqzCEdJy6eN8IpXfG">尾数顺延</b>即按此规则：本周应下单量<b data-page-node-id="6L2FXTdaxZI5gJ07euz27X">同时低于以下两项阈值</b>（与关系：① 周均倍数阈值 = N × 周均需求；② 绝对数量阈值，默认 30 套）且推演未来<b data-page-node-id="SEKo8PiHOhJUtledmAo0eu">不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b data-page-node-id="9xaDnWYFA4FXpnwJVIZDAU">强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
+    <div class="warn-box" data-page-node-id="ay3mZ1EqQMoWFMXdC6QKPL">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b data-page-node-id="wrYVguEGixoC3YzVYyFcQ6">顺延一两周</b>、等缺口累积足够后一次性集中下单。<b data-page-node-id="baUKzVqzCEdJy6eN8IpXfG">尾数顺延</b>即按此规则：本周应下单量<b data-page-node-id="6L2FXTdaxZI5gJ07euz27X">满足以下任一顺延条件</b>（① 周均倍数阈值 = N × 周均需求 与 ② 绝对数量阈值（默认 30 套）为<b data-page-node-id="TailWarnAndB">且</b>关系；③ <b data-page-node-id="TailWarnBoxB">最低起备箱数</b>（默认 5 箱）为<b data-page-node-id="TailWarnOrB">独立条件</b>：实际下单不足 5 箱就先不备）且推演未来<b data-page-node-id="SEKo8PiHOhJUtledmAo0eu">不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b data-page-node-id="9xaDnWYFA4FXpnwJVIZDAU">强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
     <div class="cfg-row" data-page-node-id="VWRhEDC2OoJAhgGfyyzgsw">
       <div class="cfg-label" data-page-node-id="knIldYrn0sitUKm7AA69MZ">启用尾数顺延</div>
       <div class="cfg-control" data-page-node-id="ZRhbJnVviKhGTBpiEKmm8T">
@@ -662,6 +662,14 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="cfg-control" data-page-node-id="rSKpKXSd2s4n7nFYMOGsIi">
         <input type="number" min="0" id="tailDeferAbsQty" data-perm-readonly="sys" value="30" onchange="onTailDeferAbsQtyChange(this.value)" data-page-node-id="xWQ1BHApL3auTzO73eBpR5">
         <div class="hint" data-page-node-id="p8NPWB4flX4fXVdxUoUsDE">判定条件②：缺口 &lt; 该数值才视为尾数。与「周均倍数阈值」为<b data-page-node-id="psrRus9Zldab5IFwVRfOjm">且</b>关系（两项同时满足才顺延）；设为 0 = 不启用该门槛（仅按倍数判定）</div>
+      </div>
+    </div>
+    <div class="cfg-row" data-page-node-id="TailMinBoxRow">
+      <div class="cfg-label" data-page-node-id="TailMinBoxLabel">最低起备箱数</div>
+      <div class="cfg-control" data-page-node-id="TailMinBoxCtrl">
+        <input type="number" min="0" step="1" id="tailMinCartons" data-perm-readonly="sys" value="5" onchange="onTailMinCartonsChange(this.value)" data-page-node-id="TailMinBoxInput">
+        <div class="hint" data-page-node-id="TailMinBoxHint">判定条件③（<b data-page-node-id="TailMinBoxHintOr1">独立条件</b>，与上面两项为<b data-page-node-id="TailMinBoxHintOr2">或</b>关系）：实际下单箱数 = 缺口 ÷ 单箱数量<b data-page-node-id="TailMinBoxHintCeil">向上取整</b>，不足该箱数一律<b data-page-node-id="TailMinBoxHintNo">先不备</b>（顺延到缺口累积够再一起下）。默认 5 箱；设为 0 = 不启用该门槛。</div>
+        <div class="hint" data-page-node-id="TailMinBoxHintEx">例：单箱 24 套、门槛 5 箱（= 120 套）—— 缺口 100 套会下成 120 套（正好 5 箱）→ <b data-page-node-id="TailMinBoxHintEx1">放行</b>；缺口 90 套 → 4 箱 → <b data-page-node-id="TailMinBoxHintEx2">顺延</b>。单箱数量取该产品的「单箱数量(套)」列，未导入时按默认 24 套。</div>
       </div>
     </div>
   </div>
@@ -1498,18 +1506,18 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         </div>
 
         <div class="algo-block" data-page-node-id="HUhHwTF8Lj8Q4Un8cILtWF">
-          <div class="algo-step" data-page-node-id="gEcLDVbAMFjNzLMoxHrPq8"><b data-page-node-id="KlqCUsRTmVq6mxLu3Ci84g">⑧ 尾数顺延（2026-09-04 v4.8；v4.9 起双阈值且关系）</b></div>
+          <div class="algo-step" data-page-node-id="gEcLDVbAMFjNzLMoxHrPq8"><b data-page-node-id="KlqCUsRTmVq6mxLu3Ci84g">⑧ 尾数顺延（2026-09-04 v4.8；v4.9 起双阈值且关系；v4.32 起加「最低起备箱数」独立或条件）</b></div>
           <table class="result-table" style="width:100%;" data-page-node-id="Brst1r6zemgbvCwkH8YmcX">
             <thead data-page-node-id="0ENwRakFOvmy3sX7Uamhx8"><tr data-page-node-id="2GLOLDsAMWu5eJs8xGK5xZ"><th style="width:160px;" data-page-node-id="CiBC5mSUbpny14wtT7t4mI">项</th><th data-page-node-id="msCb4r8tbnoU7QlMDXIAZb">规则</th></tr></thead>
             <tbody data-page-node-id="AhtIsYykW5JUeMc4sb3jmx">
-              <tr data-page-node-id="ts3C6BqmY7EDLf42GyBG6j"><td data-page-node-id="VuHA2iSjnWxaOMdVaoBB5D">触发条件</td><td data-page-node-id="JW7o5zFvxVEsKgwfcQCJlx">衔接档本 cadence 应下量 <b data-page-node-id="IqkN6jfOfSPaNoXAQXPigC">qty &gt; 0</b>，且<b data-page-node-id="Q7b8VybtXaLd5Gj4Qg2FNB">同时满足</b>两项阈值（且关系）：① <b data-page-node-id="BOFaKuRzTwVjQoxpBjeKDA">qty &lt; 周均倍数线</b>（N × 周均需求，默认 1 周）；② <b data-page-node-id="ZDILcYafTdF3zKzVw3XFBq">qty &lt; 绝对数量阈值</b>（默认 30 套，可配 0 = 关闭该项）—— 即「低于 N 周的量」<b data-page-node-id="WZun10GXlpBUb2tGZO5pyC">且</b>「低于 N 套」都成立才视为尾数；<b data-page-node-id="vyFByAygQ63BE358VTlnwJ">且推演全程无真断货</b>（firstStockout &lt; 0）</td></tr>
+              <tr data-page-node-id="ts3C6BqmY7EDLf42GyBG6j"><td data-page-node-id="VuHA2iSjnWxaOMdVaoBB5D">触发条件</td><td data-page-node-id="JW7o5zFvxVEsKgwfcQCJlx">衔接档本 cadence 应下量 <b data-page-node-id="IqkN6jfOfSPaNoXAQXPigC">qty &gt; 0</b>，且<b data-page-node-id="Q7b8VybtXaLd5Gj4Qg2FNB">同时满足</b>两项阈值（且关系）：① <b data-page-node-id="BOFaKuRzTwVjQoxpBjeKDA">qty &lt; 周均倍数线</b>（N × 周均需求，默认 1 周）；② <b data-page-node-id="ZDILcYafTdF3zKzVw3XFBq">qty &lt; 绝对数量阈值</b>（默认 30 套，可配 0 = 关闭该项）—— 即「低于 N 周的量」<b data-page-node-id="WZun10GXlpBUb2tGZO5pyC">且</b>「低于 N 套」都成立才视为尾数；③ <b data-page-node-id="TailAlgoB1">v4.32 最低起备箱数</b>（默认 5 箱，0 = 关闭）为<b data-page-node-id="TailAlgoB2">独立或条件</b> —— 实际下单箱数 = ceil(缺口 ÷ 单箱数量)，不足 5 箱即顺延，不看①②是否成立；<b data-page-node-id="vyFByAygQ63BE358VTlnwJ">且推演全程无真断货</b>（firstStockout &lt; 0）</td></tr>
               <tr data-page-node-id="A8E86FXjS7oxjCFLcCyhz7"><td data-page-node-id="qaiVmMKhUIJeDS0DUh0dBh">动作</td><td data-page-node-id="5vbvSPlLHhzZWObYPbvmqw">本 cadence <b data-page-node-id="nynyISOWD69n8HLTiTvzrO">不排批次</b>，缺口滚入下一 cadence —— 库存随需求自然消耗，下轮缺口 ≈ 本轮 + 1 个下单频率窗口的需求，达到阈值后一次性集中下单（对应实际「几套先不下，过一两周再下，下单更集中」）</td></tr>
               <tr data-page-node-id="GQOttBj8jJqI33fq5Q2Ew7"><td data-page-node-id="Pfk3B2yMgqHksfEo6bz9m0">断货防呆</td><td data-page-node-id="bsJh143ILARsiYpfOcJB6w">存在真断货风险（firstStockout ≥ 0 / 到货周前已断货需补）→ <b data-page-node-id="hUCD6pi0ABPE2NoTcpjVHn">强制下单</b>，尾数规则不生效 —— 顺延只用于无断货风险的场景，不会因延后而增加缺货周</td></tr>
-              <tr data-page-node-id="0aJsUTRfIgdDOP17RlOYnN"><td data-page-node-id="s16pj3Sm5KRGuAe35fUBn8">不启用情形</td><td data-page-node-id="9FreZKndrw1XRI5pGGHHfX">配置开关关闭；周均需求 ≤ 0（无需求产品，倍数线=0）；应急档（量=到货周安全线，恒 ≥ 阈值）；缺口 ≥ 任意启用阈值（说明缺得够多，照常下单）</td></tr>
+              <tr data-page-node-id="0aJsUTRfIgdDOP17RlOYnN"><td data-page-node-id="s16pj3Sm5KRGuAe35fUBn8">不启用情形</td><td data-page-node-id="9FreZKndrw1XRI5pGGHHfX">配置开关关闭；周均需求 ≤ 0（无需求产品，倍数线=0）；应急档（量=到货周安全线，恒 ≥ 阈值）；①② 与 ③ 均不成立（说明缺得够多，照常下单）；单箱数量未导入时按默认 24 套折算</td></tr>
               <tr data-page-node-id="bjXCa8j2lQ4OaXGxVPJNrj"><td data-page-node-id="AjEJFcnAXSKzidWgwOTvs0">醒目标注</td><td data-page-node-id="sIIljVKFuYRvnDcdEypeh0">本周被顺延 → 分析结果表行下灰蓝提示条 + 单品详情头部提示条 + 导出末列「尾数顺延」（本周顺延量）；可直接点击「本周下单量」单元格手动补单</td></tr>
             </tbody>
           </table>
-          <div class="algo-note" data-page-node-id="m3v5rN3CLdaFwcfqLn4M6C">阈值在「基础数据 → 尾数顺延」可配置（开关 + 周均倍数 0.5/1/1.5/2 周 + 绝对数量阈值套数，两项为且关系）。总下单量不因顺延减少，只是把零碎小单合并为集中大单。</div>
+          <div class="algo-note" data-page-node-id="m3v5rN3CLdaFwcfqLn4M6C">阈值在「基础数据 → 尾数顺延」可配置（开关 + 周均倍数 0.5/1/1.5/2 周 + 绝对数量阈值套数，两项为且关系；v4.32 加「最低起备箱数」默认 5 箱，为独立或条件）。总下单量不因顺延减少，只是把零碎小单合并为集中大单。</div>
         </div>
 
         <div class="algo-block" data-page-node-id="FGIBctZ3aYzBaY65axvCaj">
@@ -2017,12 +2025,17 @@ function renderRoleBadge(){
 }
 let methodConfig = [];       // [{name, pricePerKG, osToFbaDays, domToFbaDays, minBatchQty, note, enabled}]  顺序即优先级；enabled=false 停用（不参与计算）
 let fbaShelfDays = 3;        // FBA上架天数（全局设定），用于计算预计到仓时间
-/* v4.8+ 尾数顺延全局配置：{ enabled, thresholdWeeks, absQty }
+/* v4.8+ 尾数顺延全局配置：{ enabled, thresholdWeeks, absQty, minCartons }   __MARK_432_MINBOX__
    enabled=false 关闭（本周缺口再小也照下）；
    thresholdWeeks = 判定条件①：缺口不足「N × 周均需求」视为尾数顺延（默认 1 = 不足 1 周需求）；
    absQty = 判定条件②：缺口不足「绝对数量阈值」套视为尾数（默认 30；0 = 不启用该门槛）。
-   两个条件为【且】关系：缺口 < N×周均需求 且 缺口 < absQty（absQty>0 时）才顺延。 */
-let tailDeferCfg = { enabled: true, thresholdWeeks: 1, absQty: 30 };
+   条件①与②为【且】关系：缺口 < N×周均需求 且 缺口 < absQty（absQty>0 时）才顺延。
+   v4.32 minCartons = 判定条件③「最低起备箱数」（默认 5；0 = 不启用）：
+     实际下单量 = ceil(缺口 ÷ 单箱数量) 箱 —— 不足 minCartons 箱一律先不备（顺延，等缺口累积够再下）。
+     与①②为【或】关系（独立生效）：只要箱数不足，不看①②是否成立。
+     必须独立成或条件 —— 按默认单箱 24 套，5 箱 = 120 套，而 absQty 默认仅 30 套：
+     若并入且关系会被 30 套完全覆盖、永远不起作用（且方向相反：且越多越难顺延）。 */
+let tailDeferCfg = { enabled: true, thresholdWeeks: 1, absQty: 30, minCartons: 5 };
 /* v4.17 提前释放订单周数（预放单）：默认 1 = 现状（本周只放 orderWeek=0 的批次）。
    >1（如 2/3）时，节假日/长假前把未来 N-1 周该放的订单批次也在本周一次性放出去
    （PO 提前下发，各批的需求出货日期/到货周不变 —— 不是把两三周的量合并成一单集中出货）。
@@ -2096,23 +2109,31 @@ function loadAllState(){
   const fbaInput = $('fbaShelfDaysInput');
   if(fbaInput) fbaInput.value = fbaShelfDays;
   /* v4.8+ 加载尾数顺延配置 + 回填设置 UI
-     老配置缺 absQty 字段（undefined/null/''）→ 补默认 30；显式存 0 = 不启用绝对门槛（仅按倍数判定） */
+     老配置缺 absQty 字段（undefined/null/''）→ 补默认 30；显式存 0 = 不启用绝对门槛（仅按倍数判定）
+     v4.32 同理：缺 minCartons 字段 → 补默认 5；显式存 0 = 不启用「最低起备箱数」门槛（禁 num(x)||5 写法） */
   const _td = lsGet(STORAGE_KEYS.TAIL_DEFER, null);
   let _absQty = 30;
   if(_td && typeof _td === 'object' && _td.absQty !== undefined && _td.absQty !== null && _td.absQty !== ''){
     _absQty = Math.max(0, num(_td.absQty) || 0);
   }
+  let _minCartons = 5;
+  if(_td && typeof _td === 'object' && _td.minCartons !== undefined && _td.minCartons !== null && _td.minCartons !== ''){
+    _minCartons = Math.max(0, num(_td.minCartons) || 0);
+  }
   tailDeferCfg = _td && typeof _td === 'object'
     ? { enabled: _td.enabled !== false,
         thresholdWeeks: Math.max(0.25, num(_td.thresholdWeeks) || 1),
-        absQty: _absQty }
-    : { enabled: true, thresholdWeeks: 1, absQty: 30 };
+        absQty: _absQty,
+        minCartons: _minCartons }
+    : { enabled: true, thresholdWeeks: 1, absQty: 30, minCartons: 5 };
   const tailDeferToggle = $('tailDeferToggle');
   if(tailDeferToggle) tailDeferToggle.checked = tailDeferCfg.enabled;
   const tailDeferTh = $('tailDeferThreshold');
   if(tailDeferTh) tailDeferTh.value = tailDeferCfg.thresholdWeeks;
   const tailDeferAbs = $('tailDeferAbsQty');
   if(tailDeferAbs) tailDeferAbs.value = tailDeferCfg.absQty;
+  const tailMinBox = $('tailMinCartons');
+  if(tailMinBox) tailMinBox.value = tailDeferCfg.minCartons;
   /* v4.26 加载达成率调节配置 + 回填设置 UI */
   achieveCfg = normalizeAchieveCfg(lsGet(STORAGE_KEYS.ACHIEVE, null));
   fillAchieveUI();
@@ -2630,6 +2651,15 @@ function onTailDeferAbsQtyChange(v){
   toast(tailDeferCfg.absQty > 0
     ? '绝对数量阈值已更新为 ' + tailDeferCfg.absQty + ' 套（缺口低于该值 且 低于周均倍数阈值才顺延）'
     : '绝对数量阈值已关闭（仅按周均倍数阈值判定）');
+}
+/* v4.32 最低起备箱数（条件③，独立或条件）：不足该箱数一律先不备；0 = 不启用 */
+function onTailMinCartonsChange(v){
+  if(!guard('sys','系统参数')){ loadAllState(); return; }
+  tailDeferCfg.minCartons = Math.max(0, Math.floor(num(v) || 0));
+  saveTailDeferCfg();
+  toast(tailDeferCfg.minCartons > 0
+    ? '最低起备箱数已更新为 ' + tailDeferCfg.minCartons + ' 箱（实际下单不足该箱数一律先不备，与另两项为或关系）'
+    : '最低起备箱数已关闭（不再按箱数下限拦截，仅按周均倍数/绝对数量阈值判定）');
 }
 
 /* v4.26 达成率调节：配置读写 + UI 回填（阈值 / 系数 / 安全阀） */
@@ -3352,12 +3382,29 @@ function planProduct(p){
   const tailDeferOn = (tailDeferCfg.enabled !== false) && avgWeeklyDemand > 0;
   const tailThreshold = avgWeeklyDemand * (num(tailDeferCfg.thresholdWeeks) || 1);
   const tailAbsLimit = Math.max(0, num(tailDeferCfg.absQty) || 0);   /* v4.9 条件②；0 = 不启用 */
-  /* 尾数判定（且关系）→ 需开启 + 双阈值均超才算尾数；可读描述串（结果表/详情/导出用） */
-  const tailIsTail = (q) => tailDeferOn && q > 0 && q < tailThreshold && (tailAbsLimit <= 0 || q < tailAbsLimit);
-  const tailDesc = () => {
+  /* v4.32 条件③「最低起备箱数」（默认 5；0 = 不启用）。口径（2026-09-17 用户拍板）：
+     按「取整后实际箱数」= ceil(缺口 ÷ 单箱数量)。
+     例：单箱 24 套，缺口 100 套 → 实际会下 120 套 = 正好 5 箱 → 放行；缺口 90 套 → 4 箱 → 顺延。 */
+  const tailMinCartons = Math.max(0, num(tailDeferCfg.minCartons) || 0);
+  const tailCartonsOf = (q) => cartonSize > 0 ? Math.ceil(q / cartonSize) : 0;
+  /* 尾数判定 → 返回触发原因（"" = 不顺延）：
+     "minBox"    = v4.32 条件③，独立【或】条件：实际箱数不足 → 直接顺延，不看①②；
+     "threshold" = 条件①②，【且】关系：低于周均倍数线 且 低于绝对阈值。
+     可读描述串 tailDesc(reason, q) 供结果表提示条 / 单品详情 / 导出共用。 */
+  const tailReason = (q) => {
+    if(!tailDeferOn || q <= 0) return "";
+    if(tailMinCartons > 0 && tailCartonsOf(q) < tailMinCartons) return "minBox";
+    if(q < tailThreshold && (tailAbsLimit <= 0 || q < tailAbsLimit)) return "threshold";
+    return "";
+  };
+  const tailIsTail = (q) => tailReason(q) !== "";
+  const tailDesc = (reason, q) => {
+    if(reason === "minBox"){
+      return `不足最低起备 ${tailMinCartons} 箱（本批 ${fmt(q)} 套 ≈ ${tailCartonsOf(q)} 箱，单箱 ${fmt(cartonSize)} 套）`;
+    }
     let parts = [`低于周均倍数线 ${fmt(Math.round(tailThreshold))} 套（${tailDeferCfg.thresholdWeeks} × 周均 ${fmt(Math.round(avgWeeklyDemand))}）`];
     if(tailAbsLimit > 0) parts.push(`低于绝对阈值 ${fmt(tailAbsLimit)} 套`);
-    return parts.join(' 且 ');
+    return parts.join(" 且 ");
   };
   let tailDeferTotalQty = 0;     /* 整计划期所有顺延缺口合计 */
   let tailDeferThisWeekQty = 0;  /* cadence0（本周）顺延量：>0 = 本周缺口被顺延未排 */
@@ -3519,7 +3566,9 @@ function planProduct(p){
          cadence 批次（到货更晚、但仍在断货周之前）接力，不会形成不可救断货。
          若 aw 前已有真断货（earlier>=0）→ 必须本批尽快排 / 升舱，绝不顺延（断货防呆）。
          应急档（aw >= firstStockout，qty=安全线）不经此分支，恒强制下单。 */
-      if(qty > 0 && tailIsTail(qty)){
+      /* v4.32 触发原因：tailWhy = "minBox"（条件③或）/ "threshold"（条件①②且）/ ""（不顺延） */
+      const tailWhy = tailReason(qty);
+      if(tailWhy){
         let earlier = -1;
         for(let t=reachFrom; t<aw && t<weeks; t++){
           if(weeklyPlan[t].stockout > 0){ earlier = t; break; }
@@ -3528,7 +3577,7 @@ function planProduct(p){
           tailDeferTotalQty += qty;
           if(cadenceOrderWeek === 0){
             tailDeferThisWeekQty = qty;
-            tailDeferNote = `本周缺口 ${fmt(qty)} 套视为尾数（${tailDesc()}），已顺延至后续下单周集中下单`;
+            tailDeferNote = `本周缺口 ${fmt(qty)} 套视为尾数（${tailDesc(tailWhy, qty)}），已顺延至后续下单周集中下单`;
           }
           batchCount++;
           continue;
@@ -5303,7 +5352,7 @@ function renderResultTable(){
       <td class="${stockoutCls}">${r.stockoutWeeks}</td>
       <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
       <td><button class="btn btn-sm btn-outline" onclick="openDetail(${item.origIdx})">详情</button></td>
-    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="36" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="36" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="36" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
+    </tr>${r.regFallbackNote ? `<tr class="route-fallback-row"><td colspan="36" class="route-fallback-tip">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</td></tr>` : ''}${r.tailDeferThisWeekQty > 0 ? `<tr class="tail-defer-row"><td colspan="36" class="tail-defer-tip">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数/起备阈值，已顺延至后续下单周集中下单'))}</td></tr>` : ''}${(relWeeks() > 1 && relList.length > 0) ? `<tr class="release-early-row"><td colspan="36" class="release-early-tip">🎯 预放单（释放 ${relWeeks()} 周）：本周连同未来 ${relList.length} 批（${fmt(relQty)} 套）的订单一起放单 —— 仅 PO 提前下发，各批需求出货日期 / 预计到仓不变（合计 ${fmt(thisWeekQty)} 套 = 当周 ${fmt(thisWeekQty - relQty)} + 提前释放 ${fmt(relQty)}）</td></tr>` : ''}`;
   });
   $('resultTbody').innerHTML = html;
   $('resultTfoot').innerHTML = `<tr style="font-weight:700;background:var(--bg-soft);">
@@ -6697,7 +6746,7 @@ function buildDetailContent(r){
   </div>
   ${fcStartWarn(r)}
   ${r.regFallbackNote ? `<div class="route-fallback-tip" style="margin:0 0 12px;">⚠️ 运输方式回退：${esc(r.regFallbackNote)}</div>` : ''}
-  ${r.tailDeferThisWeekQty > 0 ? `<div class="tail-defer-tip" style="margin:0 0 12px;">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数阈值，已顺延至后续下单周集中下单'))}</div>` : ''}
+  ${r.tailDeferThisWeekQty > 0 ? `<div class="tail-defer-tip" style="margin:0 0 12px;">🕓 尾数顺延：${esc(r.tailDeferNote || ('本周缺口 ' + fmt(r.tailDeferThisWeekQty) + ' 套低于尾数/起备阈值，已顺延至后续下单周集中下单'))}</div>` : ''}
   <div class="section-label week-section-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;">
     <span>📅 周次计划（共 ${r.weeks} 周）<span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">末尾三列（本周下单量 / 需求出货日期 / 运输方式）可直接编辑：日期选择日历、运输方式下拉选择</span></span>
     <button class="btn btn-sm btn-confirm week-confirm-bar" data-pcode="${esc(p.materialCode||'')}" onclick="confirmWeekEdits(this)" style="display:none;">✓ 确认更改</button>
