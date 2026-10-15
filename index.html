@@ -16,8 +16,8 @@
   --primary: #6366f1;
   --primary-light: #eef2ff;
   --primary-deep: #4f46e5;
-  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #7c83ff 45%, #a78bfa 100%);
-  --gradient-brand-soft: linear-gradient(135deg, #6d77f3 0%, #9080ff 60%, #b59bfa 100%);
+  --gradient-brand: linear-gradient(135deg, #5f63e0 0%, #6f72ea 55%, #8579ee 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #646ad9 0%, #7a76e6 60%, #9186ef 100%);
   --danger: #d93025;
   --danger-light: #fce8e6;
   --warning: #e37400;
@@ -31,34 +31,39 @@
   --text-secondary: #4b5563;
   --text-muted: #9ca3af;
   --radius: 10px;
-  --shadow: 0 1px 3px rgba(99,102,241,.06), 0 1px 2px rgba(0,0,0,.04);
-  --shadow-hover: 0 8px 22px rgba(99,102,241,.18);
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --control-h: 34px;
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-hover: 0 6px 16px rgba(16,24,40,.10);
+  --shadow-brand: 0 4px 14px rgba(79,70,229,.16);
 }
+/*__MARK_434_UI__ 视觉精修：① 收敛紫蓝渐变与紫色投影 ② 压缩导航/说明区占位 ③ 统一按钮、圆角、表单控件 */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
 .container { max-width: 100%; margin: 0; padding: 16px 28px 60px; }
 
 /* Brand header (purple-blue gradient) */
-.brand-header { position: relative; overflow: hidden; padding: 22px 28px 24px; border-radius: 16px; background: var(--gradient-brand); color: #fff; box-shadow: 0 10px 28px rgba(99,102,241,.20), inset 0 0 0 1px rgba(255,255,255,.08); margin-bottom: 18px; }
+.brand-header { position: relative; overflow: hidden; padding: 15px 22px 16px; border-radius: var(--radius-lg); background: var(--gradient-brand); color: #fff; box-shadow: var(--shadow-brand), inset 0 0 0 1px rgba(255,255,255,.10); margin-bottom: 12px; }
 .brand-header::before { content:""; position:absolute; right:-90px; top:-90px; width:280px; height:280px; border-radius:50%; background: radial-gradient(circle, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 70%); pointer-events:none; }
-.brand-header::after  { content:""; position:absolute; left:38%; top:-60px; width:200px; height:200px; border-radius:50%; background: radial-gradient(circle, rgba(167,139,250,.35) 0%, rgba(167,139,250,0) 70%); pointer-events:none; }
+.brand-header::after  { content:""; position:absolute; left:34%; top:-70px; width:230px; height:230px; border-radius:50%; background: radial-gradient(circle, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 70%); pointer-events:none; }
 .brand-row { display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; position:relative; z-index:1; }
 .brand-left { display:flex; align-items:center; gap:14px; min-width:0; }
 .brand-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.home-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:999px; background: rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); color:#fff; font-size:13.5px; font-weight:600; text-decoration:none; transition: all .2s; white-space:nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.home-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:999px; background: rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24); color:#fff; font-size:13px; font-weight:600; text-decoration:none; transition: background .18s, box-shadow .18s; white-space:nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
 .home-btn:hover { background: rgba(255,255,255,.28); transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.16); }
-.brand-logo { flex-shrink:0; width:56px; height:56px; border-radius:14px; background:#fff; color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:30px; box-shadow: 0 8px 20px rgba(0,0,0,.18), inset 0 0 0 1px rgba(99,102,241,.08); }
+.brand-logo { flex-shrink:0; width:46px; height:46px; border-radius:12px; background:#fff; color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:23px; box-shadow: 0 3px 10px rgba(16,24,40,.16), inset 0 0 0 1px rgba(99,102,241,.06); }
 .brand-text { min-width:0; }
-.brand-text h1 { font-size:24px; font-weight:700; color:#fff; letter-spacing:.5px; line-height:1.2; }
-.brand-text .ver { font-size:12px; font-weight:500; padding:2px 8px; border-radius:10px; background:rgba(255,255,255,.18); margin-left:6px; vertical-align:middle; }
-.brand-text p { color:rgba(255,255,255,.85); font-size:13px; margin-top:4px; letter-spacing:.3px; }
+.brand-text h1 { font-size:20px; font-weight:700; color:#fff; letter-spacing:.4px; line-height:1.25; }
+.brand-text .ver { font-size:11px; font-weight:500; padding:2px 7px; border-radius:999px; background:rgba(255,255,255,.16); margin-left:6px; vertical-align:middle; }
+.brand-text p { color:rgba(255,255,255,.82); font-size:12px; margin-top:3px; letter-spacing:.2px; }
 
 /* Segmented control nav (4 pages) — 参考 warehouse-pricing 顶部分段切换器 */
-.seg-tabs { display:inline-flex; gap:4px; padding:5px; border-radius:999px; background: rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.22); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); flex-wrap:wrap; }
-.seg-tab { display:inline-flex; align-items:center; gap:6px; padding:10px 22px; border-radius:999px; font-size:13.5px; font-weight:600; text-decoration:none; color: rgba(255,255,255,.85); background: transparent; border: 1px solid transparent; transition: all .2s; cursor:pointer; white-space:nowrap; }
+.seg-tabs { display:inline-flex; gap:3px; padding:4px; border-radius:999px; background: rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.20); box-shadow: inset 0 1px 0 rgba(255,255,255,.10); flex-wrap:wrap; }
+.seg-tab { display:inline-flex; align-items:center; gap:5px; padding:7px 15px; border-radius:999px; font-size:13px; font-weight:600; text-decoration:none; color: rgba(255,255,255,.82); background: transparent; border: 1px solid transparent; transition: background .18s, color .18s; cursor:pointer; white-space:nowrap; }
 .seg-tab:hover { color:#fff; background: rgba(255,255,255,.12); }
 .seg-tab.active { background:#fff; color: var(--primary-deep); border-color:#fff; box-shadow: 0 4px 12px rgba(0,0,0,.14); }
-.seg-tab .emoji { font-size:14px; }
+.seg-tab .emoji { font-size:13px; opacity:.92; }
 
 /* Quick nav (legacy, hidden under new brand) */
 .quick-nav { display:none; }
@@ -69,16 +74,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 @keyframes pageFade { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
 
 /* Page section header banner */
-.page-banner { display:flex; align-items:center; gap:14px; padding: 16px 20px; border-radius: var(--radius); background: linear-gradient(135deg, rgba(99,102,241,.08) 0%, rgba(167,139,250,.08) 100%); border: 1px solid var(--border); margin-bottom: 16px; }
-.page-banner .icon { width:36px; height:36px; border-radius:8px; background:var(--gradient-brand); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-.page-banner .title { font-size:16px; font-weight:700; color:var(--text); }
-.page-banner .subtitle { font-size:12.5px; color:var(--text-secondary); margin-top:2px; }
+/* v4.34 视觉精修：页面条目由「大色块横幅」压缩为单行条 —— 副标题与标题同行，去掉与下方卡片标题重复的视觉重音 */
+.page-banner { display:flex; align-items:center; gap:10px; padding: 9px 14px; border-radius: var(--radius-sm); background: #fff; border: 1px solid var(--border); border-left: 3px solid var(--primary); margin-bottom: 12px; }
+.page-banner .icon { width:24px; height:24px; border-radius:6px; background: var(--primary-light); color: var(--primary-deep); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.page-banner .title { font-size:14px; font-weight:700; color:var(--text); }
+.page-banner .subtitle { font-size:12px; color:var(--text-muted); }
+.page-banner > div:not(.icon) { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; min-width:0; }
 
 /* Collab bar */
-.collab-bar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:18px; box-shadow:var(--shadow); font-size:13px; }
-.collab-bar .group { display:flex; align-items:center; gap:6px; }
-.collab-bar label { color:var(--text-secondary); font-weight:500; }
-.collab-bar select, .collab-bar input { padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+/* v4.34 视觉精修：协作条收紧高度，右侧提示收成小胶囊，去掉零散留白 */
+.collab-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius: var(--radius-sm); padding:8px 14px; margin-bottom:12px; box-shadow:var(--shadow); font-size:12.5px; }
+.collab-bar .group { display:flex; align-items:center; gap:5px; }
+.collab-bar label { color:var(--text-muted); font-weight:500; }
+.collab-bar select, .collab-bar input { padding:0 8px; height:28px; border:1px solid var(--border); border-radius:6px; font-size:12.5px; background:#fff; color:var(--text); }
+.collab-bar .divider-v { height:18px; margin:0 2px; }
+.collab-bar > .group[style*="margin-left:auto"] { background:var(--bg); padding:3px 10px; border-radius:999px; border:1px solid var(--border); }
 .status-badge { padding:3px 12px; border-radius:14px; font-size:12px; font-weight:600; }
 .status-草稿 { background:#eceff1; color:#455a64; }
 .status-校验中 { background:var(--warning-light); color:var(--warning); }
@@ -86,8 +96,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .status-已归档 { background:var(--primary-light); color:var(--primary); }
 
 /* Cards */
-.card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; border: 1px solid var(--border); }
-.card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--primary-light); }
+.card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 14px; border: 1px solid var(--border); }
+.card-header { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .card-header .icon { width: 32px; height: 32px; border-radius: 6px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 .card-header h2 { font-size: 17px; font-weight: 600; color: var(--text); }
 .card-header .right { margin-left:auto; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--text-secondary); }
@@ -97,7 +107,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .divider-v { width:1px; height:24px; background:var(--border); margin:0 4px; }
 
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all .2s; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; transition: background .18s, box-shadow .18s, border-color .18s, color .18s; }
+.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-deep); box-shadow: var(--shadow-hover); }
 .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
@@ -106,7 +117,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .btn-confirm:hover { background: #0d7a3e; }
 .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--danger); }
 .btn-danger:hover { background: var(--danger-light); }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-sm { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
 .btn:disabled { opacity:.5; cursor:not-allowed; }
 
 /* Form grid */
@@ -122,9 +133,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .cfg-row .cfg-label { width:220px; flex:0 0 220px; padding-top:9px; font-size:13px; font-weight:600; color:var(--text); line-height:1.5; }
 .cfg-row .cfg-control { flex:1 1 auto; display:flex; flex-direction:column; gap:4px; min-width:0; }
 .cfg-row .cfg-control .hint { font-size:11px; color:var(--text-muted); line-height:1.5; }
-.cfg-row input[type=number], .cfg-row select { padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; color:var(--text); background:#fff; max-width:260px; transition:border-color .2s; }
-.cfg-row input:focus, .cfg-row select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-light); }
-.cfg-switch-line { display:flex; align-items:center; gap:8px; font-size:13px; padding:9px 0; color:var(--text); }
+.cfg-row input[type=number], .cfg-row select { padding:0 12px; height:var(--control-h); border:1px solid var(--border); border-radius: var(--radius-sm); font-size:13.5px; color:var(--text); background:#fff; max-width:260px; transition:border-color .2s, box-shadow .2s; }
+.cfg-row input:focus, .cfg-row select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(99,102,241,.12); }
+.cfg-switch-line { display:flex; align-items:center; gap:10px; font-size:13px; padding:9px 0; color:var(--text); cursor:pointer; }
+/* v4.34 视觉精修：配置项开关由原生方块 checkbox 改为与运输方式表同款胶囊开关（纯 CSS，未改 DOM / 未动事件与权限属性） */
+.cfg-switch-line input[type=checkbox] { -webkit-appearance:none; appearance:none; position:relative; flex:0 0 auto; width:38px; height:21px; margin:0; border-radius:999px; background:#cbd5e1; cursor:pointer; transition:background .2s; }
+.cfg-switch-line input[type=checkbox]::after { content:""; position:absolute; top:2.5px; left:2.5px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(16,24,40,.28); transition:transform .2s; }
+.cfg-switch-line input[type=checkbox]:checked { background:var(--primary); }
+.cfg-switch-line input[type=checkbox]:checked::after { transform:translateX(17px); }
+.cfg-switch-line input[type=checkbox]:disabled { opacity:.5; cursor:not-allowed; }
+.cfg-switch-line input[type=checkbox]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
 .section-label { font-size:13px; font-weight:600; color:var(--text-secondary); margin:4px 0 10px; }
 
 /* Filter row */
@@ -153,8 +171,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .cell-text-input { width:100%; box-sizing:border-box; padding:0 3px; border:1px solid var(--border); border-radius:4px; font-size:12px; background:#fff; color:var(--text); outline:none; font-family:inherit; text-align:center; }
 .cell-text-input:hover { border-color:var(--primary-light); }
 .cell-text-input:focus { border-color:var(--primary); box-shadow:0 0 0 2px rgba(99,102,241,.12); }
-.row-actions { display:inline-flex; gap:4px; align-items:center; justify-content:center; }
-.row-actions .btn { padding:4px 8px; font-size:12px; line-height:1; min-width:26px; }
+/* v4.34 视觉精修：行内操作按钮改「静默 → 悬停显色」（原为蓝框/红框常驻，9 行表格噪音大） */
+.row-actions { display:inline-flex; gap:2px; align-items:center; justify-content:center; }
+.row-actions .btn { padding:5px 7px; font-size:12px; line-height:1; min-width:24px; border:1px solid transparent; background:transparent; color:var(--text-muted); box-shadow:none; }
+.row-actions .btn:hover { background:var(--primary-light); color:var(--primary-deep); box-shadow:none; transform:none; }
+.row-actions .btn.btn-outline, .row-actions .btn.btn-danger { border-color:transparent; background:transparent; color:var(--text-muted); }
+.row-actions .btn.btn-danger:hover { background:var(--danger-light); color:var(--danger); }
 .row-actions .btn-icon { padding:5px 7px; }
 
 /* 运输方式「是否启用」开关 */
@@ -162,17 +184,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .switch input { opacity:0; width:0; height:0; }
 .switch .slider { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:22px; transition:background .2s; }
 .switch .slider::before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
-.switch input:checked + .slider { background:var(--success, #22c55e); }
+/* v4.34：开关统一用品牌色（绿色在本系统已表示「健康/成功」等数据语义，开关再用绿会与之混淆） */
+.switch input:checked + .slider { background:var(--primary); }
 .switch input:checked + .slider::before { transform:translateX(18px); }
 .method-state-txt { font-size:12px; color:var(--text-secondary); margin-left:6px; }
 tr.method-disabled td { opacity:.55; }
 tr.method-disabled .cell-input { background:#f8fafc; }
+.switch input:disabled + .slider { opacity:.5; cursor:not-allowed; }
+/*__MARK_434B_UI__*/
 
 /* Metric cards (4-card grid for analysis result section) */
 .metric-cards { display:grid; grid-template-columns: repeat(5, 1fr); gap:14px; margin-bottom:18px; }
-.metric-card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:18px 20px; text-align:center; transition: box-shadow .2s; }
+.metric-card { background:#fff; border:1px solid var(--border); border-radius: var(--radius-sm); padding:16px 18px; text-align:center; transition: box-shadow .2s; }
 .metric-card:hover { box-shadow: var(--shadow-hover); }
-.metric-card .value { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.metric-card .value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing:-.5px; }
 .metric-card .value.accent { color: var(--primary); }
 .metric-card .value.danger { color: var(--danger); }
 .metric-card .value.success { color: var(--success); }
@@ -181,12 +206,12 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .metric-card.accent { border-color: var(--primary-light); }
 
 /* Result recommendation box (green) */
-.reco-box { background: var(--success-light); border: 1px solid #81c995; border-radius: 6px; padding: 14px 18px; font-size: 13px; line-height: 1.7; color: #0d5223; }
+.reco-box { background: var(--success-light); border: 1px solid #81c995; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12.5px; line-height: 1.75; color: #0d5223; }
 .reco-box strong { color: #0d5223; }
 .reco-box b { color: var(--success); font-weight: 700; }
 
 /* Tables */
-.result-table-wrap { overflow: auto; max-height: 460px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.result-table-wrap { overflow: auto; max-height: 460px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; }
 .result-table-wrap.no-scroll { max-height: none; }
 /* 可自由拉伸的表格容器（仿对话框右下角）：
    - resize:vertical 开启浏览器原生高度拉伸
@@ -195,7 +220,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
    - 背景画一个右下角斜纹抓手，给出明显的拖拽提示（不再只靠浏览器那个几乎看不见的小三角） */
 .result-table-wrap.is-resizable {
   resize: vertical;
-  min-height: 220px;
+  min-height: 150px;
   max-height: min(80vh, 900px);
   background-image:
     linear-gradient(135deg, transparent 0 68%, rgba(0,0,0,.22) 68% 72%, transparent 72% 82%, rgba(0,0,0,.22) 82% 86%, transparent 86%);
@@ -204,9 +229,9 @@ tr.method-disabled .cell-input { background:#f8fafc; }
   background-attachment: local;
   background-size: 16px 16px;
 }
-.result-table { width:100%; border-collapse: collapse; font-size: 12.5px; }
+.result-table { width:100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .result-table th, .result-table td { padding: 2px 4px; border-bottom: 1px solid var(--border); white-space: nowrap; text-align: left; }
-.result-table thead th { background: var(--primary-light); color: var(--text); font-weight: 600; position: sticky; top: 0; z-index: 2; text-align: center; }
+.result-table thead th { background: #eef2f9; color: #33415c; font-weight: 600; position: sticky; top: 0; z-index: 2; text-align: center; box-shadow: inset 0 -1px 0 #d5dded; }
 /* 备货下单表：抬头全部居左 */
 #orderTable thead th { text-align: left; }
 /* 本品下单批次表：抬头与内容居左（数量列保留居中） */
@@ -251,15 +276,15 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .progress-box .ptext { font-size:12px; color:var(--text-muted); margin-top:8px; text-align:center; }
 
 /* Float buttons */
-.float-actions { position: fixed; right: 24px; bottom: 32px; display: flex; flex-direction: column; gap: 10px; z-index: 8000; }
-.float-btn { width: 46px; height: 46px; border-radius: 50%; background: var(--primary); color: #fff; border: none; box-shadow: 0 6px 18px rgba(99,102,241,.45); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+.float-actions { position: fixed; right: 20px; bottom: 26px; display: flex; flex-direction: column; gap: 8px; z-index: 8000; }
+.float-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--primary); color: #fff; border: none; box-shadow: 0 3px 10px rgba(16,24,40,.18), 0 1px 3px rgba(16,24,40,.12); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background .18s, transform .18s, box-shadow .18s; }
 .float-btn:hover { background: var(--primary-deep); transform: translateY(-2px); }
-.float-btn.active { background: var(--success); box-shadow: 0 4px 14px rgba(24,128,56,.35); }
+.float-btn.active { background: var(--success); box-shadow: 0 3px 10px rgba(16,24,40,.18); }
 
 /* Modal */
 .modal-mask { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9500; align-items:center; justify-content:center; padding:20px; }
 .modal-mask.show { display:flex; }
-.modal-content { background:#fff; border-radius:10px; max-width:1280px; width:100%; max-height:90vh; overflow:auto; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,.3); }
+.modal-content { background:#fff; border-radius: var(--radius-lg); max-width:1280px; width:100%; max-height:90vh; overflow:auto; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,.3); }
 .modal-content h3 { font-size:18px; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid var(--primary-light); display:flex; align-items:center; }
 .modal-content h3 .close { margin-left:auto; cursor:pointer; color:var(--text-muted); font-size:22px; line-height:1; }
 .modal-content .detail-spec-badge { margin-left:6px; font-size:13px; font-weight:400; color:var(--text); padding:0; border-radius:0; display:inline-block; background:transparent; }
@@ -275,7 +300,7 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 
 /* Import records */
 .rec-list { max-height:480px; overflow-y:auto; }
-.rec-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; transition:all .15s; cursor:pointer; background:var(--bg); }
+.rec-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius: var(--radius-sm); margin-bottom:8px; transition: border-color .15s, box-shadow .15s, transform .15s; cursor:pointer; background:var(--bg); }
 .rec-item:hover { border-color:var(--primary); box-shadow:0 2px 8px rgba(99,102,241,.12); transform:translateY(-1px); }
 .rec-item .rec-icon { width:36px; height:36px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
 .rec-item .rec-body { flex:1; min-width:0; }
@@ -311,7 +336,10 @@ tr.method-disabled .cell-input { background:#f8fafc; }
 .rec-clear-btn:hover { background:var(--danger); color:#fff; }
 
 /* Warn box */
-.warn-box { background:var(--warning-light); border:1px solid #f0c27b; border-radius:6px; padding:10px 14px; font-size:13px; color:#7a4b00; margin-bottom:14px; }
+/* v4.34 视觉精修：说明块由「黄色警示」降级为中性说明 —— 全站 10 处用法均为口径说明、无一是真警告；
+   保留左侧色条作视觉锚点。真警告语义由 .fc-warn-tip / .route-fallback-tip / .pipeline-status.err 等专有类承担 */
+.warn-box { background:#f8fafc; border:1px solid var(--border); border-left:3px solid #b0bccc; border-radius: var(--radius-sm); padding:10px 14px; font-size:12.5px; line-height:1.75; color:var(--text-secondary); margin-bottom:12px; }
+.warn-box b { color:var(--text); font-weight:600; }
 
 /* Status pills for 备货分析透视 */
 .status-pill { display:inline-block; padding:3px 10px; border-radius:11px; font-size:11.5px; font-weight:600; white-space:nowrap; }
@@ -421,12 +449,12 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
 .btn-link-mini.danger { color:var(--danger); }
 
 /* Expandable inventory cell */
-.stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: all .15s; }
+.stock-expand-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--border); border-radius: var(--radius-sm); background:#fff; font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; transition: background .15s, border-color .15s, color .15s; }
 .stock-expand-btn:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary-deep); }
 .stock-expand-btn .arrow { transition: transform .2s; font-size:10px; color:var(--text-muted); }
 .stock-expand-btn.open .arrow { transform: rotate(180deg); }
 /* 调整2：表头 FBA库存 旁的展开折叠按钮 */
-.pipe-fold-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:4px; padding:0; border:1px solid var(--border); border-radius:4px; background:#fff; font-size:11px; color:var(--text-muted); cursor:pointer; vertical-align:middle; transition: all .15s; }
+.pipe-fold-btn { display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; margin-left:4px; padding:0; border:1px solid var(--border); border-radius:5px; background:#fff; font-size:11px; color:var(--text-muted); cursor:pointer; vertical-align:middle; transition: background .15s, border-color .15s, color .15s; }
 .pipe-fold-btn:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary-deep); }
 /* 调整2：折叠明细列（海外仓库存/可挪用/海外仓在途/国内在途/在制未交），基于 nth-child 隐藏特定列 */
 /* v4.26：改用显式 .fold-col 标记，弃用 nth-child（每次插列都会整体漂移，曾误藏「周均需求」「达成率/调节」） */
@@ -988,7 +1016,8 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
               <th data-page-node-id="TALOddpXw2K01QE5ii1x0e">近四周平均销量</th>
               <th data-page-node-id="AZN21LKO10egpwvNTOBjcO">近30天销量</th>
               <th data-page-node-id="1bl445ccyB8y2YJrMmrbom" title="真实预测周均需求（导入预测换算）。达成率调节只作用于备货，不改本列显示值">周均需求</th>
-              /*__MARK_V429_RES_MONTH__*/<th style="width:95px;" title="导入预测（fcM0~M5）均值口径，与备货清单 / 明细页同源；不乘达成率系数；v4.33 起「周均需求」同为真实预测口径，本列始终显示导入原值">月均需求<button type="button" class="pipe-fold-btn" id="resFcBtn" onclick="toggleResFcCols()" title="展开/折叠导入的分月预测（M0~M5，对应导入模板「月预测M0~M5」）">▸</button></th>
+              <!-- v4.29 月均需求列（marker: MARK_V429_RES_MONTH，注意：此处必须是 HTML 注释，写成 /*...*/ 会被渲染成可见文字） -->
+              <th style="width:95px;" title="导入预测（fcM0~M5）均值口径，与备货清单 / 明细页同源；不乘达成率系数；v4.33 起「周均需求」同为真实预测口径，本列始终显示导入原值">月均需求<button type="button" class="pipe-fold-btn" id="resFcBtn" onclick="toggleResFcCols()" title="展开/折叠导入的分月预测（M0~M5，对应导入模板「月预测M0~M5」）">▸</button></th>
               <th class="res-fc-col" id="resFcTh0" title="导入模板「月预测M0」">M0</th>
               <th class="res-fc-col" id="resFcTh1" title="导入模板「月预测M1」">M1</th>
               <th class="res-fc-col" id="resFcTh2" title="导入模板「月预测M2」">M2</th>
