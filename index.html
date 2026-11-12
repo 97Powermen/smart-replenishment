@@ -599,7 +599,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <button class="btn btn-sm btn-outline" data-perm="method" onclick="addMethodRow()" title="新增运输方式（需运输方式管理权限）" data-page-node-id="XWVkUbJP8CZgXE4qbABlAC">＋ 新增方式</button>
       </div>
     </div>
-    <div class="warn-box" data-page-node-id="TqIDTvVw0oshm4KBnGUo2x">每种运输方式有独立的"国内→FBA 时效"与"最小批次量"。算法会按"最便宜且能在到货周前到达"原则自动选方式：先按优先级从前往后匹配，命中"国内到 FBA 时效 ≤ 当周"的第一个即可；命中方式后再按其最小批次量向上取整。↑ / ↓ 可调整优先级。<b data-page-node-id="US8zu2pDGjUHw4kwQbodDw">「是否启用」开关</b>：停用的方式<b data-page-node-id="a7sCHO2bcvY8hCd861OQAr">不参与备货计算、也不出现在批次下拉里</b>（无需删除，随时可重新开启）；已排好的历史批次不受影响，重新生成方案后生效。🚚 <b data-page-node-id="2c6rcyp569CrThO56o0vv3">发货模式=中转</b>的产品，总前置期 = 国内到FBA时效 + 海外仓到FBA时效（海外仓需留出备货发货时间），并额外要求海外仓保有「海外仓保底天数 × 月均预测」的库存。🌍 <b data-page-node-id="FyWRHP9wco8PrJp6QLCbot">区域限制（v4.12）</b>：「区域」列标注线路适用区域（可填 美国/加拿大 等多值，用 / 分隔；空 = 通用）。产品备货只在<b data-page-node-id="pSY0IDd0Q7K5ltDaLPO2Ek">区域匹配</b>的线路中选择（精确相等 + 通用通配，如美国产品只能选区域=美国或通用的线路），跨区线路（如 美转加30）不会被选为常规/升舱方式。</div>
+    <div class="warn-box" data-page-node-id="TqIDTvVw0oshm4KBnGUo2x"><b>选方式</b>：按优先级从上往下匹配，取第一个「国内到FBA时效 ≤ 到货周」的线路（能赶上、且最便宜），再按其最小批次量向上取整。↑ ↓ 可调优先级。<br><b>停用</b>：不参与备货计算、不进批次下拉；已有批次不变，重新生成后生效。<br><b>中转模式</b>：总前置期 = 国内到FBA + 海外仓到FBA，且海外仓须保有「保底天数 × 月均预测」的库存。<br><b>区域</b>：留空 = 通用，多区域用 / 分隔；跨区线路（如 美转加30）不会被选为常规或升舱方式。</div>
     <div class="result-table-wrap is-resizable" data-page-node-id="CA4PZGpEgDMwr0IgMIf2vM">
       <table class="result-table" id="methodTable" style="min-width:1300px;table-layout:fixed;" data-page-node-id="vxJt6POPNqb4TEflohieOs">
         <thead data-page-node-id="BI2JYX7dDUdYg8FRGEAc4i">
@@ -626,7 +626,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="icon" data-page-node-id="WvpMNMLgXnb1XD7Af01aCd">📦</div>
       <h2 data-page-node-id="t5p4Zpo8yWaFirStkUtYEI">FBA 上架天数</h2>
     </div>
-    <div class="warn-box" data-page-node-id="3eNf5aEk0VLucPhegS6gid">FBA上架天数指货物到达FBA仓库后，完成接收、贴标、上架等处理并可售所需的时间（天）。此参数用于计算「预计到仓时间」= 需求出货日期 + 运输方式时效 + FBA上架天数。</div>
+    <div class="warn-box" data-page-node-id="3eNf5aEk0VLucPhegS6gid">货物到 FBA 仓后完成接收、贴标、上架并可售所需的天数；用于计算「预计到仓时间 = 需求出货日期 + 运输方式时效 + FBA 上架天数」。</div>
     <div class="cfg-row" data-page-node-id="2fbxBhVLQ2xaHhN6QFBqxK">
       <div class="cfg-label" data-page-node-id="a3HaXDfQKLp7fgehwHzLlB">FBA 上架天数</div>
       <div class="cfg-control" data-page-node-id="lT50ZEZDS3MqDuviAti0w4">
@@ -642,7 +642,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="icon" data-page-node-id="aEyxR0eYppEs3Jaf29UHSo">🎯</div>
       <h2 data-page-node-id="XoavEmruhDy5lcypVKBnu2">提前释放订单（预放单）</h2>
     </div>
-    <div class="warn-box" data-page-node-id="dRX4OM814Sw2VWUXGA7yAH">长假/节假日（如国庆）常需要<b data-page-node-id="tpSwdfZXgCGKSBKRMBF7QG">提前放单</b>：本周把未来 1~2 周该下的订单批次也一并下出去（PO 提前下发），各批次的<b data-page-node-id="61FN0iLZYql4ptQ2rPzIZP">需求出货日期 / 预计到仓时间保持原计划不变</b> —— 不是把两三周的量合并成一单集中出货，只是下单动作提前。本周下单量、备货下单表会同步包含这些提前释放的批次。</div>
+    <div class="warn-box" data-page-node-id="dRX4OM814Sw2VWUXGA7yAH"><b>提前放单</b>：长假前把未来 1~2 周该下的批次一并下出去，各批的出货日期 / 到仓时间保持不变 —— 只是下单动作提前，不是把几周的量合并成一单。<br><b>影响</b>：本周下单量、备货下单表会包含这些提前释放的批次。</div>
     <div class="cfg-row" data-page-node-id="jha6fOH6vDtDS601FYk6DB">
       <div class="cfg-label" data-page-node-id="LFrUyuzqpfgvNvS5TH191B">释放订单周数</div>
       <div class="cfg-control" data-page-node-id="eZmh3cfqGfroUU0tAeMHEb">
@@ -663,7 +663,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="icon" data-page-node-id="4EEjVCYOILncf9RJZ9huzi">🕓</div>
       <h2 data-page-node-id="2BXa5FDDkhT6GoU1r94Syn">尾数顺延</h2>
     </div>
-    <div class="warn-box" data-page-node-id="ay3mZ1EqQMoWFMXdC6QKPL">实际备货中，缺口只有几套/几箱的小单不会单独下单，采购会<b data-page-node-id="wrYVguEGixoC3YzVYyFcQ6">顺延一两周</b>、等缺口累积足够后一次性集中下单。<b data-page-node-id="baUKzVqzCEdJy6eN8IpXfG">尾数顺延</b>即按此规则：本周应下单量<b data-page-node-id="6L2FXTdaxZI5gJ07euz27X">满足以下任一顺延条件</b>（① 周均倍数阈值 = N × 周均需求 与 ② 绝对数量阈值（默认 30 套）为<b data-page-node-id="TailWarnAndB">且</b>关系；③ <b data-page-node-id="TailWarnBoxB">最低起备箱数</b>（默认 5 箱）为<b data-page-node-id="TailWarnOrB">独立条件</b>：实际下单不足 5 箱就先不备）且推演未来<b data-page-node-id="SEKo8PiHOhJUtledmAo0eu">不会断货</b> → 本周暂不下单，缺口自动滚入后续下单周合并；若缺口接近断货风险则<b data-page-node-id="9xaDnWYFA4FXpnwJVIZDAU">强制下单保不断货</b>（不因尾数延后而断货）。顺延结果在 分析结果表（行下提示条）/ 单品详情 / 导出（末列「尾数顺延」）醒目标注，也可直接点击「本周下单量」单元格手动补单。</div>
+    <div class="warn-box" data-page-node-id="ay3mZ1EqQMoWFMXdC6QKPL"><b>规则</b>：缺口太小不单独下单，顺延到后续周累积后合并下单。<br><b>顺延条件</b>：（① 周均倍数阈值 = N × 周均需求 <b>且</b> ② 绝对数量阈值，默认 30 套）<b>或</b> ③ 最低起备箱数（默认 5 箱，实际下单不足 5 箱就先不备），且推演<b>不断货</b> → 本周不下单，缺口滚入后续下单周。<br><b>防呆</b>：接近断货风险时<b>强制下单</b>，不因顺延而断货。<br><b>查看</b>：结果表行下提示条 / 单品详情 / 导出末列「尾数顺延」；也可点「本周下单量」手动补单。</div>
     <div class="cfg-row" data-page-node-id="VWRhEDC2OoJAhgGfyyzgsw">
       <div class="cfg-label" data-page-node-id="knIldYrn0sitUKm7AA69MZ">启用尾数顺延</div>
       <div class="cfg-control" data-page-node-id="ZRhbJnVviKhGTBpiEKmm8T">
@@ -709,13 +709,8 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="icon" data-page-node-id="AchCardIcon">⚖</div>
       <h2 data-page-node-id="AchCardTitle">达成率调节</h2>
     </div>
-    <div class="warn-box" data-page-node-id="AchCardWarn">达成率低的产品，实际计划里通常要<b>减少备货</b>甚至<b>不备货</b>（预测虚高，按预测跑出来的建议量偏大）。
-      <b>达成率调节</b>把这一步交给系统：按「<b>近四周平均周销量 ÷ 原始周均需求</b>」算出达成率，低于阈值就给该产品一个<b>备货系数 k</b>：
-      <b>k 只作用在算出来的备货量上</b>（本批建议量 × k），<b>不改预测需求</b> —— 预测虚高就少备、卖不动就不备。
-      因此表格里的「周均需求」「安全库存」「目标库存」一律显示<b>真实预测值</b>，少备货只体现在「建议备货量 / 本周下单量」上；也不会改你导入的原始数据。
-      生成方案后可在结果页「⚖ 达成率调节」清单里逐条撤销、改系数或批量恢复。</div>
-    <div class="ach-tip" data-page-node-id="AchCardValve"><b>安全阀（不会误砍缺货品）</b>：达成率低有两种原因 —— ①真的卖不动；②没货可卖（断货 / 上架慢）。
-      第 ② 种砍备货会雪上加霜。所以当<b>现有可售库存不足 N 周需求</b>、或<b>前 M 周内出现断货</b>时，系统判为「缺货型低达成」，<b>不降备货</b>，只在清单里提示。</div>
+    <div class="warn-box" data-page-node-id="AchCardWarn"><b>作用</b>：达成率低的产品少备货甚至不备货（预测虚高）。系统按「<b>近四周平均周销量 ÷ 原始周均需求</b>」算达成率，低于阈值给出<b>备货系数 k</b>。<br><b>k 只作用在算出来的备货量上</b>（本批建议量 × k），<b>不改预测需求</b> —— 表里的「周均需求 / 安全库存 / 目标库存」始终是真实预测值，也不改你导入的原始数据；少备货只体现在「建议备货量 / 本周下单量」。<br><b>撤销</b>：生成方案后在结果页「⚖ 达成率调节」清单里逐条撤销、改系数或批量恢复。</div>
+    <div class="ach-tip" data-page-node-id="AchCardValve"><b>安全阀（不会误砍缺货品）</b>：达成率低可能是卖不动，也可能是没货可卖。当<b>可售库存不足 N 周需求</b>或<b>前 M 周出现断货</b>时，判为「缺货型低达成」，<b>不降备货</b>，只在清单里提示。</div>
     <div class="cfg-row" data-page-node-id="AchRowToggle">
       <div class="cfg-label" data-page-node-id="AchLabelToggle">启用达成率调节</div>
       <div class="cfg-control" data-page-node-id="AchCtrlToggle">
@@ -1064,7 +1059,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
           <button class="btn btn-sm btn-outline" onclick="toggleExpandAllDetail(this)" data-page-node-id="QvEcYDaN7ghKpDHn9h07qE">📂 全部展开</button>
         </div>
       </div>
-      <div class="warn-box" data-page-node-id="fhVxfa1B86yPLHjVLU0UA8">点击行展开/收起单个产品的周次计划与下单批次。每个产品的明细含 2 个子表：① 周次模拟（周/期初可售/到货/需求/期末可售/缺货/建议下单/方式）② 本品下单批次（需求出货日期/运输方式/数量）。<br><b style="color:#6d28d9;">✏️ 手工调整过的产品会自动带紫色「已调整」标记</b>（行底色 + 料品编码旁标签），可用「调整状态」筛选或「已调整优先」排序，改完关闭详情也不会搞混；重新「🚀 生成备货方案」即恢复为算法结果、标记清空。</div>
+      <div class="warn-box" data-page-node-id="fhVxfa1B86yPLHjVLU0UA8"><b>展开</b>：点行展开单个产品的周次计划与下单批次，含 2 个子表 —— ① 周次模拟（期初可售 / 到货 / 需求 / 期末可售 / 缺货 / 建议下单 / 方式）② 本品下单批次（出货日期 / 方式 / 数量）。<br><b style="color:#6d28d9;">✏️ 已调整</b>：手工改过的产品带紫色标记（行底色 + 编码旁标签），可按「调整状态」筛选或「已调整优先」排序；重新生成方案后恢复算法结果、标记清空。</div>
       <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:8px 0 12px;border-bottom:1px dashed var(--border-light);margin-bottom:10px;" data-page-node-id="ehkxaPGDH50f5k6VKL8pF8">
         <div class="form-group" style="margin:0;" data-page-node-id="N64hP45xVCrnvYR3taXmqb">
           <label style="font-size:12px;color:var(--text-muted);" data-page-node-id="ooTqvD6N1CAL7sXO9NU56p">三级</label>
@@ -1199,7 +1194,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <button class="btn btn-sm btn-outline" onclick="copyOrderTable()" data-page-node-id="nM3SWxRcFJEzDgeqIBqHO3">📋 一键复制</button>
       </div>
     </div>
-    <div class="warn-box" data-page-node-id="HXnyuzJlyjGKlRSRUYbraT">每个产品可能按多个"周次+运输方式"被拆成多批。本表仅展示<b data-page-node-id="Vc0GmRRapAC5kB7jfQf2AE">本周需下单</b>的批次（根据生产交期推算 orderWeek=0），可延后的批次下周分析时再下。每周滚动备货，需求变动也能及时管控。</div>
+    <div class="warn-box" data-page-node-id="HXnyuzJlyjGKlRSRUYbraT">每个产品会按「周次 + 运输方式」拆成多批，本表只列<b>本周需下单</b>的批次（按生产交期推算），可延后的批次下周分析时再下。</div>
     <div class="result-table-wrap is-resizable" data-page-node-id="WCZkPcHrY51InweVWDu8rm">
       <table class="result-table" id="orderTable" style="min-width:1200px;" data-page-node-id="kfRkIkMH9GMMa1gOkZjlUM">
         <thead data-page-node-id="ZFmfb38BEjCRYUmjq8mQ5A">
@@ -1318,11 +1313,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         </div>
       </div>
 
-      <div class="warn-box" data-page-node-id="dXxMXaTsHG6kRZzJRaVBkA">
-        状态规则：按「当前库存可售时间」判定 &lt; 1 月 <b data-page-node-id="mFTGISdA3H1EH506UAi3l5">紧急（红，仅当本周需下单）</b> ｜ &lt; 2 月 <b data-page-node-id="E7WwYFXfU4O0KgQtBwa10L">紧张（橙）</b> ｜ &lt; 3 月 <b data-page-node-id="Jna99ZfDjCuqQkkw80LQwx">健康（绿）</b> ｜ &lt; 4 月 <b data-page-node-id="rxn7stupSvUP1aiM3lCFNc">预呆滞（深绿）</b> ｜ ≥ 4 月 <b data-page-node-id="mby5HSmk5PWVBXDZonR2cG">呆滞（蓝）</b> ｜ 无周需求 <b data-page-node-id="kkybHMz82rOvYfbSaDSc07">无需求（灰）</b>。<br data-page-node-id="THPBD8DkONnKkPHw6SkOdQ">
-        「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= FBA + 海外仓 + 挪用 + 海外仓在途 + 国内在途 + 在制未交（全部库存+在途/在制汇总）。<br data-page-node-id="eSNRl7UzVqHvWyMeKr1Gkn">
-        可售时间（月）四列口径：<b data-page-node-id="PYARpcsJXfRcDHf3SJNn4y">当前库存可售时间</b> = 当前库存 ÷ 月均需求；<b data-page-node-id="8Hgrwle15lLSFEN2dVxFzG">含在制总数可售时间</b> = 含在制总数 ÷ 月均需求；<b data-page-node-id="kjnSoPDkchGNf9MuqM2Jgj">含本周下单量可售时间</b> = (含在制总数 + 本周下单量) ÷ 月均需求；<b data-page-node-id="vNu6TNW8aMgLDiyeHAwWsH">含本周下单量实际可售时间</b> = (含在制总数 + 本周下单量) ÷ (近四周平均销量 ÷ 7 × 30)，分母用近期实际销量月速度（非预测月均）。
-      </div>
+      <div class="warn-box" data-page-node-id="dXxMXaTsHG6kRZzJRaVBkA"><b>状态</b>（按当前库存可售时间）：&lt;1 月 <b>紧急</b>（红，仅当本周需下单）｜ &lt;2 月 <b>紧张</b>（橙）｜ &lt;3 月 <b>健康</b>（绿）｜ &lt;4 月 <b>预呆滞</b>（深绿）｜ ≥4 月 <b>呆滞</b>（蓝）｜ 无周需求 <b>无需求</b>（灰）。<br><b>库存口径</b>：「当前库存」= FBA + 海外仓 + 海外仓在途 + 挪用；「含在制总数」= 当前库存 + 国内在途 + 在制未交。<br><b>可售时间（月）</b>：当前 = 当前库存 ÷ 月均需求｜含在制 = 含在制总数 ÷ 月均需求｜含本周下单 = (含在制总数 + 本周下单量) ÷ 月均需求｜含本周下单·实际 = 同分子 ÷（近四周平均销量 ÷ 7 × 30）。</div>
 
       <div class="result-table-wrap is-resizable" data-page-node-id="CnGbkkFwJF0UzpMpZFh7YG">
         <table class="result-table" id="perspectiveTable" style="min-width:2400px;" data-page-node-id="H5F0kB7sGqAbX484GuV3xM">
@@ -1412,12 +1403,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       </div>
       <!-- 当前身份 -->
       <div class="cur-identity" id="currentIdentity"></div>
-      <div class="warn-box" data-page-node-id="JDuvggElXwZXIuqUfH5OSu">
-        <b>权限怎么生效：</b>角色决定能做什么 —— 没权限的功能按钮会<b>直接禁用</b>（鼠标悬停看原因），函数入口另有一层拦截兜底。
-        <b>角色不能自选</b>：顶栏「角色」只作只读展示，改角色只能在本表（且需用户管理权限）。
-        顶栏「当前用户」<b>随时可切换</b> —— 切换不受权限限制，避免把自己锁在外面。
-        <br><b>范围说明：</b>用户列表保存在<b>本机浏览器</b>，不同电脑各自独立、不互通；因此这里的作用是<b>区分职责 + 防止误操作</b>，并非安全边界。所有写操作仍会记入下方操作日志。
-      </div>
+      <div class="warn-box" data-page-node-id="JDuvggElXwZXIuqUfH5OSu"><b>生效</b>：没权限的按钮直接禁用（悬停看原因），函数入口另有一层拦截兜底。<br><b>角色不可自选</b>：顶栏「角色」只读，改角色只能在本表（需用户管理权限）；「当前用户」随时可切，不受权限限制（避免自锁）。<br><b>范围</b>：用户列表存在本机浏览器，各电脑独立不互通；作用是<b>区分职责 + 防误操作</b>，<b>并非安全边界</b>。所有写操作记入下方日志。</div>
       <div class="result-table-wrap is-resizable" data-page-node-id="OB1vED6QN7zdlQfTIWzf2S">
         <table class="result-table" id="userTable" style="min-width:1000px;" data-page-node-id="2aqcZKS9XMW6sq6BkNiaeO">
           <thead data-page-node-id="M29nruGMJrTziMiyzlnaDh">
@@ -1443,7 +1429,7 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
         <button class="rec-clear-btn" style="display:inline-block;" onclick="toggleAlgoDoc()" data-page-node-id="VDzmFQBfHOrf6pVTeJDlEe">展开 / 收起</button>
       </div>
       <div id="algoDoc" style="display:none;" data-page-node-id="0r2mtGWLBbC1kB75gjGVbr">
-        <div class="warn-box" style="margin-bottom:10px;" data-page-node-id="s2TCFYMRas7i1jHJ8HEPGT">以下为「生成备货方案」的需求计算逻辑说明，供核对口径使用。核心链路：<b data-page-node-id="UEpAAE6qqcbCL6xH3JS7H8">月度预测 → 周需求 → 到货基线 → 库存模拟 → 缺口识别 → 备货量计算 → 批次下单</b>。</div>
+        <div class="warn-box" style="margin-bottom:10px;" data-page-node-id="s2TCFYMRas7i1jHJ8HEPGT">以下为「生成备货方案」的计算逻辑说明，供核对口径：<b>月度预测 → 周需求 → 到货基线 → 库存模拟 → 缺口识别 → 备货量计算 → 批次下单</b>。</div>
 
         <div class="algo-block" data-page-node-id="ewlSCuMpzDZNLwghPJLDLn">
           <div class="algo-step" data-page-node-id="W6lF7hIA5yuCvlGlTzM9qj"><b data-page-node-id="ESxoD1tVsqAFE5fv1I40iD">① 输入（产品级字段）</b></div>
