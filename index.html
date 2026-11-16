@@ -584,14 +584,14 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
 /* ===== v4.39 产品档案页（marker: MARK_439_ARCHIVE_CSS） ===== */
 .arch-dirty-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--primary-light); border:1px solid #c7c9f5; border-radius:var(--radius-sm); padding:7px 12px; margin:0 0 10px; font-size:12.5px; font-weight:600; color:var(--primary-deep); }
 .arch-dirty-bar .btn{ flex:none; }
-#archiveTable{ table-layout:fixed; min-width:2750px; }
+#archiveTable{ table-layout:fixed; min-width:2780px; }
 #archiveTable td.arch-freeze-1, #archiveTable th.arch-freeze-1{ position:sticky; left:0; z-index:3; background:#fafbfc; }
-#archiveTable td.arch-freeze-2, #archiveTable th.arch-freeze-2{ position:sticky; left:150px; z-index:3; background:#fafbfc; box-shadow:1px 0 0 var(--border); }
+#archiveTable td.arch-freeze-2, #archiveTable th.arch-freeze-2{ position:sticky; left:200px; z-index:3; background:#fafbfc; box-shadow:1px 0 0 var(--border); }
 #archiveTable thead th.arch-freeze-1, #archiveTable thead th.arch-freeze-2{ z-index:4; background:#eef2f9; }
 #archiveTable th{ text-align:left; }
 #archiveTable td{ padding:3px 6px; font-size:12.5px; vertical-align:middle; }
-#archiveTable td.arch-ro{ background:#f7f8fa; color:var(--text-muted); font-weight:600; white-space:nowrap; }
-#archiveTable td.arch-cell{ cursor:text; }
+#archiveTable td.arch-ro{ background:#f7f8fa; color:var(--text-muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#archiveTable td.arch-cell{ cursor:text; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #archiveTable td.arch-cell:hover{ background:#f5f8ff; box-shadow:inset 0 0 0 1px #dfe4f5; }
 #archiveTable td.arch-cell:focus{ outline:2px solid var(--primary); outline-offset:-2px; background:#fff; color:var(--text); }
 #archiveTable td.arch-must-empty{ background:#fff2f2; }
@@ -4329,11 +4329,11 @@ function renderArchLackBanner(){
  *        由顶部「档案已修改 N 个 → 重新生成方案」显式触发。
  * ========================================================================== */
 const ARCH_FIELDS = [
-  { id:'materialCode',    label:'料品编码',        type:'text',   w:150, ro:true },
+  { id:'materialCode',    label:'料品编码',        type:'text',   w:200, ro:true },
   { id:'materialName',    label:'存货名称',        type:'text',   w:180 },
-  { id:'specCode',        label:'料品规格',        type:'text',   w:130 },
-  { id:'categoryLevel3',  label:'三级',            type:'text',   w:120 },
-  { id:'colorSet',        label:'颜色套装',        type:'text',   w:100 },
+  { id:'specCode',        label:'料品规格',        type:'text',   w:160 },
+  { id:'categoryLevel3',  label:'三级',            type:'text',   w:200 },
+  { id:'colorSet',        label:'颜色套装',        type:'text',   w:90  },
   { id:'priorityTier',    label:'梯队',            type:'text',   w:70  },
   { id:'casesPerUnit',    label:'单箱数量(套)',    type:'int',    w:110, min:1,   must:true, title:'缺省按 24 套/箱计算；备货量按箱取整就靠它' },
   { id:'boxVolume',       label:'单箱体积(m³)',    type:'num',    w:110, min:0 },
@@ -5020,6 +5020,8 @@ function _parseCellDate(v){
   if (v == null || v === '') return null;
   if (v instanceof Date && !isNaN(v.getTime())) return v;
   if (typeof v === 'number' && isFinite(v)) {
+    /* v4.43 Excel 日期序列号范围约 25569(1970)~80000(2119)；超范围（如时间戳）直接判非法 */
+    if (v < 0 || v > 80000) return null;
     const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v * 86400000));
     return isNaN(d.getTime()) ? null : d;
   }
@@ -5037,13 +5039,21 @@ function _parseCellDate(v){
   return null;
 }
 
+/* v4.43 安全 ISO 日期：Invalid Date 绝不抛「Invalid time value」，返回 '' 由调用方兜底 */
+function _safeIso(d){
+  if(!d || !(d instanceof Date) || isNaN(d.getTime())) return '';
+  try { return d.toISOString().slice(0,10); } catch(e){ return ''; }
+}
+
 /* 两个 Date 相距几周，向上取整，最小 0 */
 function _diffWeeksFromToday(targetDate){
   if(!targetDate) return 0;
+  /* v4.43 Invalid Date 保护：getTime() 返回 NaN 时不再向下污染 */
+  if(!(targetDate instanceof Date) || isNaN(targetDate.getTime())) return 0;
   const today = new Date();
   today.setHours(0,0,0,0);
   const ms = targetDate.getTime() - today.getTime();
-  if (ms <= 0) return 0;
+  if (ms <= 0 || !isFinite(ms)) return 0;
   return Math.max(0, Math.ceil(ms / (7 * 86400000)));
 }
 
@@ -5154,7 +5164,11 @@ function applyPipelineRows(rows, fileName, sheetName, sheetCount, header){
         fail++; failDetails.push({ code, reason:'在途数量 与 未交数量 均为 0' }); continue;
       }
 
-      const leadDays = Math.max(0, Number(row[leadIdx]) || 0);
+      /* v4.43 运输时效必须是「天数」，这里若被读成 Date 对象 / 时间戳 / 超大数，
+         会污染下面的 new Date(... + leadDays*86400000) 溢出成 Invalid Date → toISOString 抛「Invalid time value」。
+         只接受 0~3650 的合理天数，超出按 0 兜底（宁可少算时效，也不让整表导入失败）。 */
+      let leadDays = Math.max(0, Number(row[leadIdx]) || 0);
+      if(!isFinite(leadDays) || leadDays > 3650) leadDays = 0;
 
       if (!Array.isArray(p.pipelineTickets)) p.pipelineTickets = [];
 
@@ -5190,7 +5204,7 @@ function applyPipelineRows(rows, fileName, sheetName, sheetCount, header){
           type: 'domInTransit',
           qty: transitQty,
           week,
-          arriveDate: arrive.toISOString().slice(0,10),
+          arriveDate: _safeIso(arrive),
           source: 'pipeline-import',
           arrivalFrom
         });
@@ -5215,7 +5229,7 @@ function applyPipelineRows(rows, fileName, sheetName, sheetCount, header){
           type: 'domInProd',
           qty: prodQty,
           week,
-          arriveDate: arrival.toISOString().slice(0,10),
+          arriveDate: _safeIso(arrival),
           source: 'pipeline-import',
           arrivalFrom
         });
