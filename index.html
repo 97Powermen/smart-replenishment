@@ -620,8 +620,8 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
       <div class="brand-right" data-page-node-id="TdCxt8qWS1NA6ff9ekYIJH">
         <a class="home-btn" href="https://97powermen.github.io/supply-chain-hub/" target="_blank" rel="noopener" title="返回 supply-chain-hub 门户" data-page-node-id="bZNUO1mDI9q8QjXMnfVvJA"><span class="emoji" data-page-node-id="xwE4b0fGmqFMebd0OKQHZV">🏠</span>主页</a>
         <nav class="seg-tabs" id="brandTabs" data-page-node-id="uZGgrH9FackYhtOniLjEJa">
-          <a class="seg-tab active" data-page="page-basics" href="#page-basics" data-page-node-id="7NfAYKBBeI0JRE4pvoZdZY"><span class="emoji" data-page-node-id="eELVx5KJB8EydnCe65ezfb">📋</span>基础数据</a>
-                    <a class="seg-tab" data-page="page-archive" href="#page-archive"><span class="emoji">🗂</span>产品档案</a>
+          <a class="seg-tab" data-page="page-archive" href="#page-archive"><span class="emoji">🗂</span>产品档案</a>
+                    <a class="seg-tab active" data-page="page-basics" href="#page-basics" data-page-node-id="7NfAYKBBeI0JRE4pvoZdZY"><span class="emoji" data-page-node-id="eELVx5KJB8EydnCe65ezfb">📋</span>基础数据</a>
           <a class="seg-tab" data-page="page-result" href="#page-result" data-page-node-id="OZ30xJBG1YHwFAZRuTrjIY"><span class="emoji" data-page-node-id="BxEFNt4WLVLODaFuigyR7Z">📊</span>分析结果</a>
           <a class="seg-tab" data-page="page-perspective" href="#page-perspective" data-page-node-id="ZSWepol1WKN5r7P8qnMf8r"><span class="emoji" data-page-node-id="JwQqM45f6TfWCisCrAkaja">🔍</span>备货透视</a>
           <a class="seg-tab" data-page="page-order" href="#page-order" data-page-node-id="JKjRo0A7heb1GbJtZvdSzs"><span class="emoji" data-page-node-id="Ci6RgQG9wjItVvklFDFHqF">📦</span>备货下单</a>
@@ -655,7 +655,78 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
   </div>
 
   <!-- ============================================================
-   * Page 1: 基础数据
+   * Page 1: 产品档案库（v4.39 建页，marker: MARK_439_ARCHIVE；v4.40 升级为独立主数据层，marker: MARK_440_ARCHIVE_LIB）
+   * 这里渲染的是【档案库】archiveMaster，全公司级、可以比本期产品列表大；
+   * 导入运营表时按料品编码 JOIN 档案库，档案字段一律以库为准（运营表里的档案列不采信）。
+   * ============================================================ -->
+  <div class="page-section" id="page-archive">
+    <div class="page-banner">
+      <div class="icon">🗂</div>
+      <div>
+        <div class="title">产品档案</div>
+        <div class="subtitle">全公司档案库，季度维护一次；导入运营表时按编码自动抓取，预测 / 库存 / 在途仍走导入</div>
+      </div>
+    </div>
+
+    <div class="fc-start-banner" id="archLackBanner" style="display:none;"></div>
+
+    <div class="arch-dirty-bar" id="archDirtyBar" style="display:none;">
+      <span id="archDirtyText">档案已修改</span>
+      <button class="btn btn-sm btn-confirm" onclick="regenAfterArchiveEdit()" data-perm="generate">重新生成方案</button>
+      <button class="btn btn-sm btn-outline" onclick="clearArchDirty()">先忽略</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🗂</div>
+        <h2>档案清单</h2>
+        <div class="right">
+          <span id="archCountLabel" style="font-size:12px;color:var(--text-secondary);">共 0 个产品</span>
+        </div>
+      </div>
+
+      <div class="toolbar" style="margin-bottom:10px;">
+        <input id="archSearch" oninput="renderArchiveTable()" placeholder="搜索 编码 / 名称 / 规格 / 三级" style="width:230px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;">
+        <select id="archFilter" onchange="renderArchiveTable()" style="height:30px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;padding:0 6px;">
+          <option value="">全部产品</option>
+          <option value="lack">仅缺关键档案</option>
+          <option value="dirty">仅本次改过的</option>
+        </select>
+        <div class="divider-v"></div>
+        <button class="btn btn-sm btn-outline" data-perm="edit" onclick="archAddRow()">＋ 新增产品</button>
+        <button class="btn btn-sm btn-outline" onclick="exportArchiveXlsx()" title="导出全部档案（23 列，纯档案，改完可直接读回）">💾 导出档案备份</button>
+        <a class="btn btn-sm btn-outline" href="templates/产品档案模板.xlsx" download="产品档案模板.xlsx" title="下载空白档案模板（23 列，带必填标识 / 下拉 / 填写说明），填完用「关联档案文件」一次读入">📥 档案模板</a>
+
+        <div class="divider-v"></div>
+        <button class="btn btn-sm btn-outline" id="archFileLinkBtn" onclick="archFileLink()" title="关联本地或共享盘上的档案 xlsx，之后可一键读取/回写（Chrome / Edge）">🔗 关联档案文件</button>
+        <button class="btn btn-sm btn-outline" id="archFileReadBtn" data-perm="import" style="display:none;" onclick="archFileRead()" title="从这个文件读取最新档案并合并进系统">⬇ 从文件读取</button>
+        <button class="btn btn-sm btn-outline" id="archFileWriteBtn" data-perm="import" style="display:none;" onclick="archFileWrite()" title="把系统里的档案回写到这个文件">⬆ 回写到文件</button>
+        <span id="archFileLabel" style="font-size:12px;color:var(--text-muted);">未关联文件</span>
+
+        <div class="divider-v"></div>
+        <!-- v4.41 批量设值整组包一层：作为单个 flex item 一起换行，不再被拆成「下拉在一行、按钮掉到下一行」 -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">批量设值</span>
+          <select id="archBatchField" style="height:30px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;padding:0 6px;"></select>
+          <input id="archBatchValue" placeholder="新值" style="width:96px;height:30px;padding:0 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;">
+          <button class="btn btn-sm btn-outline" data-perm="edit" onclick="applyArchiveBatch()" title="把该字段设为上面的值，作用于当前筛选出来的产品">应用到筛选结果</button>
+        </div>
+      </div>
+
+      <div class="result-table-wrap is-resizable">
+        <table class="result-table" id="archiveTable">
+          <thead><tr id="archTheadRow"></tr></thead>
+          <tbody id="archiveTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="warn-box" style="margin-top:10px;"><b>档案库</b>：全部产品的主数据，可以比本期列表多。<b>本期跑哪些品</b>由「基础数据 → 导入 XLSX」决定，那张表只带编码 / 库存 / 预测 / 销量，档案字段一律按编码自动抓（运营表里的档案列不采信）。<br><b>进库两条路</b>：「🔗 关联档案文件」读本地 xlsx（表头写「编码 / 装箱数 / 交期」也认），或「＋ 新增产品」手工补。<b>保存 ≠ 重算</b>：改完需点上方「重新生成方案」。带 <b style="color:#cf1322;">*</b> 的关键字段缺失会按默认值算（单箱 24 套、计划周期 84 天、运输方式回退、区域用全池）。</div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+   * Page 1b: 基础数据
    * 包含：运输方式管理 / 产品导入 / 在途在制
    * ============================================================ -->
   <div class="page-section active" id="page-basics" data-page-node-id="FXIl1HCMG1QifIlbNiCmNC">
@@ -960,77 +1031,6 @@ input[disabled].cell-text-input { background:#f5f6f8 !important; color:var(--tex
   </div>
 
   </div><!-- /page-basics -->
-
-  <!-- ============================================================
-   * Page 1b: 产品档案库（v4.39 建页，marker: MARK_439_ARCHIVE；v4.40 升级为独立主数据层，marker: MARK_440_ARCHIVE_LIB）
-   * 这里渲染的是【档案库】archiveMaster，全公司级、可以比本期产品列表大；
-   * 导入运营表时按料品编码 JOIN 档案库，档案字段一律以库为准（运营表里的档案列不采信）。
-   * ============================================================ -->
-  <div class="page-section" id="page-archive">
-    <div class="page-banner">
-      <div class="icon">🗂</div>
-      <div>
-        <div class="title">产品档案</div>
-        <div class="subtitle">全公司档案库，季度维护一次；导入运营表时按编码自动抓取，预测 / 库存 / 在途仍走导入</div>
-      </div>
-    </div>
-
-    <div class="fc-start-banner" id="archLackBanner" style="display:none;"></div>
-
-    <div class="arch-dirty-bar" id="archDirtyBar" style="display:none;">
-      <span id="archDirtyText">档案已修改</span>
-      <button class="btn btn-sm btn-confirm" onclick="regenAfterArchiveEdit()" data-perm="generate">重新生成方案</button>
-      <button class="btn btn-sm btn-outline" onclick="clearArchDirty()">先忽略</button>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="icon">🗂</div>
-        <h2>档案清单</h2>
-        <div class="right">
-          <span id="archCountLabel" style="font-size:12px;color:var(--text-secondary);">共 0 个产品</span>
-        </div>
-      </div>
-
-      <div class="toolbar" style="margin-bottom:10px;">
-        <input id="archSearch" oninput="renderArchiveTable()" placeholder="搜索 编码 / 名称 / 规格 / 三级" style="width:230px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;">
-        <select id="archFilter" onchange="renderArchiveTable()" style="height:30px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;padding:0 6px;">
-          <option value="">全部产品</option>
-          <option value="lack">仅缺关键档案</option>
-          <option value="dirty">仅本次改过的</option>
-        </select>
-        <div class="divider-v"></div>
-        <button class="btn btn-sm btn-outline" data-perm="edit" onclick="archAddRow()">＋ 新增产品</button>
-        <button class="btn btn-sm btn-outline" onclick="exportArchiveXlsx()" title="导出全部档案（23 列，纯档案，改完可直接读回）">💾 导出档案备份</button>
-        <a class="btn btn-sm btn-outline" href="templates/产品档案模板.xlsx" download="产品档案模板.xlsx" title="下载空白档案模板（23 列，带必填标识 / 下拉 / 填写说明），填完用「关联档案文件」一次读入">📥 档案模板</a>
-
-        <div class="divider-v"></div>
-        <button class="btn btn-sm btn-outline" id="archFileLinkBtn" onclick="archFileLink()" title="关联本地或共享盘上的档案 xlsx，之后可一键读取/回写（Chrome / Edge）">🔗 关联档案文件</button>
-        <button class="btn btn-sm btn-outline" id="archFileReadBtn" data-perm="import" style="display:none;" onclick="archFileRead()" title="从这个文件读取最新档案并合并进系统">⬇ 从文件读取</button>
-        <button class="btn btn-sm btn-outline" id="archFileWriteBtn" data-perm="import" style="display:none;" onclick="archFileWrite()" title="把系统里的档案回写到这个文件">⬆ 回写到文件</button>
-        <span id="archFileLabel" style="font-size:12px;color:var(--text-muted);">未关联文件</span>
-
-        <div class="divider-v"></div>
-        <!-- v4.41 批量设值整组包一层：作为单个 flex item 一起换行，不再被拆成「下拉在一行、按钮掉到下一行」 -->
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;">
-          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">批量设值</span>
-          <select id="archBatchField" style="height:30px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;padding:0 6px;"></select>
-          <input id="archBatchValue" placeholder="新值" style="width:96px;height:30px;padding:0 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;">
-          <button class="btn btn-sm btn-outline" data-perm="edit" onclick="applyArchiveBatch()" title="把该字段设为上面的值，作用于当前筛选出来的产品">应用到筛选结果</button>
-        </div>
-      </div>
-
-      <div class="result-table-wrap is-resizable">
-        <table class="result-table" id="archiveTable">
-          <thead><tr id="archTheadRow"></tr></thead>
-          <tbody id="archiveTbody"></tbody>
-        </table>
-      </div>
-
-      <div class="warn-box" style="margin-top:10px;"><b>档案库</b>：全部产品的主数据，可以比本期列表多。<b>本期跑哪些品</b>由「基础数据 → 导入 XLSX」决定，那张表只带编码 / 库存 / 预测 / 销量，档案字段一律按编码自动抓（运营表里的档案列不采信）。<br><b>进库两条路</b>：「🔗 关联档案文件」读本地 xlsx（表头写「编码 / 装箱数 / 交期」也认），或「＋ 新增产品」手工补。<b>保存 ≠ 重算</b>：改完需点上方「重新生成方案」。带 <b style="color:#cf1322;">*</b> 的关键字段缺失会按默认值算（单箱 24 套、计划周期 84 天、运输方式回退、区域用全池）。</div>
-    </div>
-  </div>
-
 
   <!-- ============================================================
    * Page 2: 分析结果
