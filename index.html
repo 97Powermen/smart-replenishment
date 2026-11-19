@@ -3458,6 +3458,17 @@ function planProduct(p){
   const safetyStock = Math.round(avgWeeklyDemand * safetyWeeks);
   /* 兼容旧展示字段：v4.33 起 rawSafetyStock === safetyStock（都按真实预测算，不打折） */
   const rawSafetyStock = safetyStock;
+  /* v4.44 海外仓保底缺口：仅中转/混合有效（直发不触发）。
+     目标保底量 = osBufferDays × 日均需求（日均 = 周均 ÷ 7）。
+     缺口 = max(0, 目标量 − (海外仓库存 + 挪用库存))；海外仓在途(osInTransit)不算
+     （osInTransit = 已从海外仓发往 FBA 的量，不抵扣保底）。按箱向上取整，保底刚性不打折。 */
+  const osBufferNeed = (isTransit || isMixed) && osBufferDays > 0
+    ? (() => {
+        const target = Math.round(osBufferDays * avgWeeklyDemand / 7);
+        const gap = Math.max(0, target - (num(p.osStock) + num(p.divertStock)));
+        return gap > 0 ? Math.ceil(gap / cartonSize) * cartonSize : 0;
+      })()
+    : 0;
 
   // 月均需求 = 用于 maxBatchSize
   const fcs = [num(p.fcM0), num(p.fcM1), num(p.fcM2), num(p.fcM3), num(p.fcM4), num(p.fcM5)].filter(v => v > 0);
@@ -3514,6 +3525,7 @@ function planProduct(p){
   // 抽出为内部函数便于应急多批循环复用（同 cadence 周内多批调多次 + 单一 cadence 周单批调一次）。
   // 入参 qty 为本批上限量（cadence = maxBatchSize）；moq/按箱取整/子批拆分/到期周超期丢弃 全在内部处理。
   // 返回 { placed, lastArriveWeek }：本批次任一子批实际到货（<weeks 内）即 placed=true, 用于 cadence 推进判断。
+  let osBufferApplied = false;   /* v4.44 海外仓保底只补一次（首个海外仓子批），后续批次按正常比例不重复补 */
   function placeBatch(subOrderWeek, subMethod, qty){
     const moq = methodMOQ(subMethod);
     let subQty = qty;
@@ -3536,7 +3548,9 @@ function planProduct(p){
     const orderDateComputed = addWeeks(new Date(), subOrderWeek);
     const arriveDateComputed = addDays(orderDateComputed, prodDays);
 
-    /* 实际口径：按折后总量 orderQty 拆直发 / 海外仓子批（比例不变） */
+    /* 实际口径：按折后总量 orderQty 拆直发 / 海外仓子批（比例不变）
+       v4.44 海外仓保底：混合/中转下，海外仓子批量 = max(比例量, 保底缺口 osBufferNeed)。
+       保底刚性不打折、只补一次（超出比例的部分即「补海外仓保底」的额外量）。 */
     let directQty = 0, osQty = 0;
     if(isMixed){
       directQty = Math.round(orderQty * directRatio / 100);
@@ -3548,6 +3562,13 @@ function planProduct(p){
     } else {
       directQty = orderQty;
     }
+    /* v4.44 保底补仓：本批补足保底缺口（仅混合/中转 + 首次；直发 osBufferNeed=0 不触发） */
+    let bufferAdd = 0;
+    if(osBufferNeed > 0 && !osBufferApplied){
+      bufferAdd = osBufferNeed;
+      osBufferApplied = true;
+    }
+    if(bufferAdd > 0) osQty = Math.max(osQty, bufferAdd);
     /* 决策口径子批（不打折）：只喂 extraArrivals，保证排单节奏与 k=1 时一致 */
     let decDirect = 0, decOs = 0;
     if(isMixed){
@@ -3560,6 +3581,8 @@ function planProduct(p){
     } else {
       decDirect = subQty;
     }
+    /* v4.44 决策口径同步补保底（与实际口径同源 bufferAdd，两轨一致） */
+    if(bufferAdd > 0) decOs = Math.max(decOs, bufferAdd);
 
     let lastAw = null;
     let placed = false;
