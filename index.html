@@ -3458,11 +3458,13 @@ function planProduct(p){
   const safetyStock = Math.round(avgWeeklyDemand * safetyWeeks);
   /* 兼容旧展示字段：v4.33 起 rawSafetyStock === safetyStock（都按真实预测算，不打折） */
   const rawSafetyStock = safetyStock;
-  /* v4.44 海外仓保底缺口：仅中转/混合有效（直发不触发）。
+  /* v4.45 海外仓保底缺口：仅纯中转有效（直发/混合不触发）。
      目标保底量 = osBufferDays × 日均需求（日均 = 周均 ÷ 7）。
      缺口 = max(0, 目标量 − (海外仓库存 + 挪用库存))；海外仓在途(osInTransit)不算
-     （osInTransit = 已从海外仓发往 FBA 的量，不抵扣保底）。按箱向上取整，保底刚性不打折。 */
-  const osBufferNeed = (isTransit || isMixed) && osBufferDays > 0
+     （osInTransit = 已从海外仓发往 FBA 的量，不抵扣保底）。按箱向上取整，保底刚性不打折。
+     注：混合模式不参与保底——混合只是「本次备货按比例拆一部分发海外仓」，
+     不是「海外仓要维持保底水位」，故不强制补仓（否则会放大整体备货量）。 */
+  const osBufferNeed = isTransit && osBufferDays > 0
     ? (() => {
         const target = Math.round(osBufferDays * avgWeeklyDemand / 7);
         const gap = Math.max(0, target - (num(p.osStock) + num(p.divertStock)));
@@ -3549,7 +3551,7 @@ function planProduct(p){
     const arriveDateComputed = addDays(orderDateComputed, prodDays);
 
     /* 实际口径：按折后总量 orderQty 拆直发 / 海外仓子批（比例不变）
-       v4.44 海外仓保底：混合/中转下，海外仓子批量 = max(比例量, 保底缺口 osBufferNeed)。
+       v4.45 海外仓保底：仅纯中转下，海外仓子批量 = max(比例量, 保底缺口 osBufferNeed)。
        保底刚性不打折、只补一次（超出比例的部分即「补海外仓保底」的额外量）。 */
     let directQty = 0, osQty = 0;
     if(isMixed){
@@ -3562,7 +3564,7 @@ function planProduct(p){
     } else {
       directQty = orderQty;
     }
-    /* v4.44 保底补仓：本批补足保底缺口（仅混合/中转 + 首次；直发 osBufferNeed=0 不触发） */
+    /* v4.45 保底补仓：本批补足保底缺口（仅纯中转 + 首次；直发/混合 osBufferNeed=0 不触发） */
     let bufferAdd = 0;
     if(osBufferNeed > 0 && !osBufferApplied){
       bufferAdd = osBufferNeed;
