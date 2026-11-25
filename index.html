@@ -4927,17 +4927,26 @@ async function updateArchFileBar(){
     btnLink.textContent = '🔗 关联档案文件';
   }
 }
-/* v4.46 清除关联：解除本机与档案文件的绑定，方便其他同事重新关联他们自己的文件。
-   只删 IndexedDB 里的文件句柄，不影响已读进档案库的数据（archiveMaster 不动）。 */
+/* v4.46 清除关联：解除本机与档案文件的绑定，并把已读进档案库的数据一并清空，
+   让其他同事重新关联自己的文件时从干净状态开始。 */
 async function archFileClear(){
   const h = await archFileLoadHandle().catch(() => null);
   if(!h){ toast('当前没有关联文件'); return; }
-  if(!confirm('解除「' + h.name + '」的关联？\n\n只会解除本机与这个文件的绑定，已经读进档案库的数据不会受影响。\n解除后，其他同事就可以关联他们自己的档案文件了。')) return;
+  const n = archiveCount();
+  if(!confirm('解除「' + h.name + '」的关联，并清空档案库？\n\n' +
+    (n > 0 ? '档案库里已读进的 ' + n + ' 个产品档案会被一起清除。\n' : '') +
+    '本期产品列表（基础数据里导入的）不受影响。\n\n' +
+    '清除后，其他同事就可以重新关联他们自己的档案文件。')) return;
   try {
     await archFileDropHandle();
+    /* 同时清空档案库主数据（豪哥 2026-11-25：换同事档案时要连数据一起清，否则新旧档案混在一起） */
+    archiveMaster = {};
+    saveArchiveMaster();
+    if(typeof renderArchiveTable === 'function') renderArchiveTable();
+    if(typeof renderArchLackBanner === 'function') renderArchLackBanner();
     await updateArchFileBar();
-    addLog({ action:'清除档案文件关联', rows:0, success:1, fail:0, note: h.name });
-    toast('已解除「' + h.name + '」的关联');
+    addLog({ action:'清除档案文件关联并清空档案库', rows:n, success:1, fail:0, note: h.name });
+    toast(n > 0 ? '已解除关联并清空 ' + n + ' 个产品档案' : '已解除「' + h.name + '」的关联');
   } catch(e){ alert('清除关联失败：' + ((e && e.message) || e)); }
 }
 async function archFileLink(){
